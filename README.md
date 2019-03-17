@@ -33,14 +33,13 @@ and all nodes agree to an ordering, then execution can be performed coordination
 This insight is used by Calvin/FaunaDB to create a strictly serialized CP database. Nodes coordinate only to establish
 transaction order, then run the transactions locally.
 
-In Replicant we turn the knob further: Nodes do not coordinate to establish order, or for any other reason.
-Instead, nodes gossip transactions asynchronously, whenever they are able to connect. Each node calculates the same
-global order for transactions.
+In Replicant we turn the knob further: Nodes do not coordinate to establish order, or for any other reason. Instead of coordinating to establish global order, nodes calculate a global order for transactions locally, using a deterministic function of the transaction, its parent, and its parameters (e.g., a hash).
 
-When a transactions are received out of order, the state of the database is rewound and the transactions are replayed
-in the correct order.
+Transactions are gossiped between nodes asynchronously, whenever they are able to connect. Transactions will be received
+out of order. When this happens, the state of the database is rewound as necessary, and the transactions are replayed in the correct order.
 
-Consensus is achieved when all (or at least a majority) of known nodes have acknowledged a particular transaction.
+Consensus is achieved when all (or at least a majority) of known nodes have acknowledged up to a particular point in a
+history of transactions.
 
 The result is a disconnected DB with casual+ consistency that allows full multikey/multistatement transactions, and no
 manual conflict resolution required of developers.
