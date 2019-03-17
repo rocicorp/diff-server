@@ -81,7 +81,7 @@ foreign keys, indexes) will be delegated.
 
 If a transaction fails, it has no effect on subsequent transactions.
 
-## Consensus/Finalization
+# Consensus/Finalization
 
 A transaction can be considered finalized when all the known nodes (which can be stored in the database) have ack'd the transaction.
 
@@ -93,6 +93,12 @@ Note that it is also possible to tweak the consensus rules. You can decide that 
 peers have acked the write. To do that just change the ordering rule of transactions to sort such finalized transactions before others at the same branch point.
 
 This might be useful in cases where nodes are client devices which can go offline for long/indefinite periods.
+
+# Side Effects
+
+In practice, applications don't just store and read data from their own database, they interact with outside systems. For example: sending confirmation emails, transfering money between bank accounts, etc. Unlike the underlying databases, these interactions with external systems can't always be easily rewound.
+
+Replicant supports such interactions by tracking when a transaction is finalized. Side-effects that can't be undone should simply not be done until the relevant transaction is finalized.
 
 # Other ideas
 
