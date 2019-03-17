@@ -24,6 +24,10 @@ sees succeed locally may later be rolled back if conflicting concurrent transact
 same is true in some sense for any totally or sticky available database, since writes one peer performs might be undone
 by conflicting writes on another peer.
 
+# Status
+
+This is just an idea I've been kicking around for awhile. I know that there is probably lots of related research and I'm trying to find it all. There are [issues](https://github.com/aboodman/replicant/issues) with the design that I'm working through.
+
 # Intuition
 
 Replicant draws inspirating from [Calvin](http://cs.yale.edu/homes/thomson/publications/calvin-sigmod12.pdf). The key insight in Calvin is that the problem of _ordering_
