@@ -30,21 +30,27 @@ Replicant draws inspirating from Calvin/FaunaDB. The key insight in Calvin is th
 transactions can be separated from the problem of _executing_ transactions. As long as transactions are pure functions,
 and all nodes agree to an ordering, then execution can be performed coordination-free by each node independently.
 
-This insight is used by Calvin/FaunaDB to create a strictly serialized CP database. Nodes coordinate to establish
-transaction order, resulting in loss of availability.
+This insight is used by Calvin/FaunaDB to create a strictly serialized CP database. Nodes coordinate only to establish
+transaction order, then run the transactions locally.
 
-In Replicant we use the same insight differently. Nodes do not coordinate to establish a total order. Instead, a function
-exists on each node that can calculate a global order for transactions locally. Nodes gossip transactions asynchronously,
-and execute them locally. When a transactions are received out of order, some must be replayed from an old state.
-The result is a disconnected DB with casual+ consistency that allows full multikey/multistatement transactions.
+In Replicant we turn the knob further: Nodes do not coordinate to establish order, or for any other reason.
+Instead, nodes gossip transactions asynchronously, whenever they are able to connect. Each node calculates the same
+global order for transactions.
+
+When a transactions are received out of order, the state of the database is rewound and the transactions are replayed
+in the correct order.
+
+Consensus is achieved when all (or at least a majority) of known nodes have acknowledged a particular transaction.
+
+The result is a disconnected DB with casual+ consistency that allows full multikey/multistatement transactions, and no
+manual conflict resolution required of developers.
 
 # Requirements
 
 You will need:
 
 1. Some underlying database
-2. A way to efficiently snapshot and restore versions of that database (it's better if (1) supports this natively,
-but not strictly required)
+2. A way to efficiently snapshot and restore versions of that database (it's better if the underlying db supports this natively, but not strictly required)
 3. A way to serialize multikey/statement transactions and parameters to them
 
 # Sketch
@@ -87,8 +93,9 @@ parent, thus its hash will change, and thus its a different transaction. So the 
 replaced with just the node that did the merge.
 
 Note that it is also possible to tweak the consensus rules. You can decide that consensus is achieved when only a majority of
-peers have acked the write. To do that just change the ordering rule of transactions to sort "acked" transactions before
-others.
+peers have acked the write. To do that just change the ordering rule of transactions to sort such finalized transactions before others at the same branch point.
+
+This might be useful in cases where nodes are client devices which can go offline for long/indefinite periods.
 
 # Other ideas
 
