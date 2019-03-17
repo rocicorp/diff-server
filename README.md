@@ -14,7 +14,7 @@ Existing databases used in this model (PouchDB, Firebase, Realm, Noms, etc) have
   transactions is very difficult.
   
 Replicant is a consensus layer that can be added on top of any existing database that turns that database into an
-automatically-synchronizing transactional database without requiring the devleoper to manually merge concurrent changes
+automatically-synchronizing transactional database without requiring the developer to manually merge concurrent changes
 or handle conflicts.
 
 Formally, the resulting database supports sticky availability and casual+ consistency.
