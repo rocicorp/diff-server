@@ -1,6 +1,6 @@
 # Summary
 
-Applications frequently need to store data client-side to support disconnected operation.
+Application built on an n-tier or peer-to-peer architecture frequently need to store data on clients to support disconnected operation.
 
 Such applications require some form of _replication_ in order to periodically:
 
@@ -13,33 +13,32 @@ Existing databases used in this model (PouchDB, Firebase, Realm, Noms, etc) have
 * Lack of support for multikey/multistatement transactions. In a concurrent setting, implementing correct applications without
   transactions is very difficult.
   
-Replicant is a consensus layer that can be added on top of any existing database that turns that database into an
-automatically-synchronizing transactional database without requiring the developer to manually merge concurrent changes
+Replicant is a consensus layer that can be added on top of any existing single-node database that turns that database into a
+distributed, replicated, transactional database, without requiring the developer to manually merge concurrent changes
 or handle conflicts.
 
-Formally, the resulting database supports sticky availability and casual+ consistency.
+Formally, the resulting distributed database is [sticky available](https://jepsen.io/consistency) and [casual+ consistent](https://jepsen.io/consistency/models/causal), which is the [highest consistency level possible](http://www.cs.cornell.edu/lorenzo/papers/cac-tr.pdf) for an available database.
 
-Manual conflict resolution is not required. The tradeoff is that some transactions that one peer runs and
+The tradeoff is that some transactions that one peer runs and
 sees succeed locally may later be rolled back if conflicting concurrent transactions occurred. However, note that the
 same is true in some sense for any totally or sticky available database, since writes one peer performs might be undone
 by conflicting writes on another peer.
 
 # Intuition
 
-Replicant draws inspirating from Calvin/FaunaDB. The key insight in Calvin is that the problem of _ordering_
+Replicant draws inspirating from [Calvin](http://cs.yale.edu/homes/thomson/publications/calvin-sigmod12.pdf). The key insight in Calvin is that the problem of _ordering_
 transactions can be separated from the problem of _executing_ transactions. As long as transactions are pure functions,
 and all nodes agree to an ordering, then execution can be performed coordination-free by each node independently.
 
-This insight is used by Calvin/FaunaDB to create a strictly serialized CP database. Nodes coordinate only to establish
-transaction order, then run the transactions locally.
+This insight is used by Calvin to create a high-throughput, strictly serialized CP database without the need for physical clocks. Calvin nodes coordinate only to establish transaction order, then run the transactions locally.
 
-In Replicant we turn the knob further: Nodes do not coordinate to establish order, or for any other reason. Instead of coordinating to establish global order, nodes calculate a global order for transactions locally, using a deterministic function of the transaction, its parent, and its parameters (e.g., a hash).
+In Replicant we turn the knob further: nodes do not coordinate to establish order, or for any other reason. Instead of coordinating to establish order, nodes calculate a total order for transactions locally, using a deterministic function of the transaction, its parent, its parameters (e.g., a hash), and other details.
 
 Transactions are gossiped between nodes asynchronously, whenever they are able to connect. Transactions will be received
 out of order. When this happens, the state of the database is rewound as necessary, and the transactions are replayed in the correct order.
 
 Consensus is achieved when all (or at least a majority) of known nodes have acknowledged up to a particular point in a
-history of transactions.
+history of transactions. The set of known node is managed using the same consensus rules.
 
 The result is a disconnected DB with casual+ consistency that allows full multikey/multistatement transactions, and no
 manual conflict resolution required of developers.
