@@ -74,8 +74,7 @@ The database is a log of all transactions ever run. Each transaction contains:
 Because the database is distributed among many nodes, the log can have branches where multiple nodes executed transactions
 against a state in parallel.
 
-The state of the DB at any point in time is the summation of all the transactions up to that moment. The order transactions
-are run in to calculate this state is deterministic. At any point where the log forks, the transactions are run in order of their hash.
+When a node receives some transactions from a peer that creates a fork in its history, the node begins _replaying_ all transactions newer than that fork in the correct order. Once the set of transactions in the fork is complete, the node adds a special _merge transaction_ that becomes the new parent of both sides of the fork.
 
 Transactions can fail, for a variety of reasons, including enforcing database invariants. It is up to the developer to check
 ensure any invariants are validated inside each transaction. However, depending on underlying database, much of this (e.g.,
