@@ -104,5 +104,5 @@ data. The result would be a highly available, low-latency, distributed database 
 serializability. Such a database would be far more performant than strict serializable databases, and not much harder to
 use.
 
-To increase performance, some ideas from CRDTs could be introduced. One could allow parallel writes to unrelated keys,
-for example.
+To increase performance further, some concurrent writes could be re-introduced. For example, you could allow two transactions that access different subsets of keys to be run "in parallel". This would mean that such transactions would not need to be
+replayed in serial, you'd just merge their effects together.
