@@ -2,7 +2,7 @@
 
 Applications frequently need to store data client-side to support disconnected operation.
 
-Such applications require some form of _synchronization_ in order to periodically:
+Such applications require some form of _replication_ in order to periodically:
 
 1. Push data to the server and peers
 2. Get new data from the server and peers
