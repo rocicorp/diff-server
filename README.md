@@ -22,7 +22,7 @@ Formally, the resulting distributed database is [sticky available](https://jepse
 The tradeoff is that some transactions that one peer runs and
 sees succeed locally may later be rolled back if conflicting concurrent transactions occurred. However, note that the
 same is true in some sense for any totally or sticky available database, since writes one peer performs might be undone
-by conflicting writes on another peer.
+by conflicting writes on another peer. Replicant increases the granularity of these potentially reverted writes from a single key to an entire transaction, thus enabling transactional integrity in an automatically synchronizing system without manual conflict resolution.
 
 # Status
 
