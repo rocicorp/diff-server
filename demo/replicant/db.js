@@ -40,7 +40,7 @@ async function push(dbPath, logPath) {
     const f = await fs.open(logPath, 'a');
     for (let l; l = local[i]; i++) {
         const [name, args] = await getOpFromCommit(dbPath, l);
-        await f.writeFile([l, name, args].join(' ') + '\n');
+        await f.writeFile([l, name, JSON.stringify(args)].join(' ') + '\n');
     }
     await f.close();
 }
@@ -115,8 +115,11 @@ async function commit(db, branch, opName, args) {
     const val = db.root_ || await db.get();
     const f = await tmp.file();
     await fs.writeFile(f.path, JSON.stringify(val));
+    const f2 = await tmp.file();
+    await fs.writeFile(f2.path, JSON.stringify(args));
     const jsonRef = await noms('json', 'in', db.path_, f.path);
-    const metaRef = await noms('struct', 'new', db.path_, 'name', opName, 'args', JSON.stringify(args));
+    const argsRef = await noms('json', 'in', db.path_, f2.path);
+    const metaRef = await noms('struct', 'new', db.path_, 'name', opName, 'args', `@${argsRef}`);
     await noms('commit', '--allow-dupe=1', '--meta-p', `op=${metaRef}`, `'${jsonRef}'`, `${db.path_}::${branch}`);
     const [noDate] = (await noms('struct', 'del', `${db.path_}::${branch}.meta`, 'date')).split('.');
     await noms('sync', `${db.path_}::${noDate}`, `${db.path_}::${branch}`);
@@ -153,8 +156,8 @@ async function hasBranch(dbPath, branch) {
 async function getOpFromCommit(dbPath, ref) {
     return (await Promise.all([
         noms('show', `${dbPath}::#${ref}.meta.op.name`),
-        noms('show', `${dbPath}::#${ref}.meta.op.args`),
-    ])).map(s => s.substr(1, s.length - 2));
+        noms('json', 'out', '--indent=""', `${dbPath}::#${ref}.meta.op.args`, '@'),
+    ])).map(s => JSON.parse(s));
 }
 
 module.exports = {Database, opCmd, push, pull, rebase};
