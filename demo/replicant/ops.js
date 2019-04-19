@@ -1,9 +1,10 @@
 module.exports = [
     setColor,
     toggleColor,
-    sum,
     append,
     goDogGo,
+    addWidgets,
+    sendWidget,
 ];
 
 async function setColor(db, name) {
@@ -18,13 +19,6 @@ async function toggleColor(db) {
     db.set(val);
 }
 
-async function sum(db, inc) {
-    const val = await db.get();
-    val.total = val.total || 0;
-    val.total += parseInt(inc);
-    db.set(val);
-}
-
 async function append(db, text) {
     const val = await db.get();
     val.words = val.words || [];
@@ -35,4 +29,18 @@ async function append(db, text) {
 async function goDogGo(db) {
     const val = await db.get();
     await append(db, `Go dog go, the light is ${val.color || 'red'} now!`);
+}
+
+async function addWidgets(db, inc) {
+    const val = await db.get();
+    val.widgets = (val.widgets || 0) + parseInt(inc);
+    db.set(val);
+}
+
+async function sendWidget(db) {
+    const val = await db.get();
+    if (val.widgets) {
+        val.widgets--;
+    }
+    db.set(val);
 }

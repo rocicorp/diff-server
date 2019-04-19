@@ -17,8 +17,7 @@ class Database {
     }
 
     async get() {
-        const datasets = await noms('ds', this.path_);
-        if (datasets.indexOf(this.branch_) == -1) {
+        if (!await hasBranch(this.path_, this.branch_)) {
             return {};
         }
         return JSON.parse(await noms('json', 'out', `${this.path_}::${this.branch_}.value`, '@'));
@@ -34,18 +33,13 @@ async function opCmd(dbName, opName, args) {
 }
 
 async function push(dbPath, logPath) {
-    const local = (await noms('log', '--oneline', `${dbPath}::${LOCAL_BRANCH}`)).split('\n')
-        .map(line => line.split(' ')[0])
-        .reverse();
+    const local = await getLog(dbPath, LOCAL_BRANCH);
     await touch(logPath);
     const remote = (await fs.readFile(logPath, {encoding: 'utf8', flag: 'r'})).split('\n');
     let i = remote.findIndex((v, i) => v.split(' ')[0] != local[i]);
     const f = await fs.open(logPath, 'a');
     for (let l; l = local[i]; i++) {
-        const [name, args] = (await Promise.all([
-            noms('show', `${dbPath}::#${l}.meta.op.name`),
-            noms('show', `${dbPath}::#${l}.meta.op.args`),
-        ])).map(s => s.substr(1, s.length - 2));
+        const [name, args] = await getOpFromCommit(dbPath, l);
         await f.writeFile([l, name, args].join(' ') + '\n');
     }
     await f.close();
@@ -53,20 +47,12 @@ async function push(dbPath, logPath) {
 
 async function pull(dbPath, logPath) {
     // find place where remote branch and log diverge
-    let remote = [];
-    try {
-        remote = (await noms('log', '--oneline', `${dbPath}::${REMOTE_BRANCH}`)).split('\n')
-            .map(line => line.split(' ')[0])
-            .reverse();
-    } catch (e) {
-    }
-
+    const remote = await getLog(dbPath, REMOTE_BRANCH);
     await touch(logPath);
     const log = (await fs.readFile(logPath, {encoding: 'utf8', flag: 'r'}))
         .split('\n')
         .filter(v => v)
-        .map(v => v.split(' '))
-        .reverse();
+        .map(v => v.split(' '));
     let i = log.findIndex((v, i) => v[0] != remote[i]);
 
     if (i != remote.length) {
@@ -78,10 +64,7 @@ async function pull(dbPath, logPath) {
     // For each remaining commit in the log, we may already have it locally (eg if we ourselves pushed it).
     // Otherwise, we have to build it by replaying.
 
-    const local = (await noms('log', '--oneline', `${dbPath}::${LOCAL_BRANCH}`)).split('\n')
-        .map(line => line.split(' ')[0])
-        .reverse();
-
+    const local = await getLog(dbPath, LOCAL_BRANCH);
     for (let l; l = log[i]; i++) {
         const [commitRef, opName, ...opArgs] = l;
         if (!local.indexOf(commitRef) > -1) {
@@ -91,10 +74,30 @@ async function pull(dbPath, logPath) {
 }
 
 async function rebase(dbPath) {
-    // if head of remote exists in local, then nothing to do (local is a ff)
+    const local = await getLog(dbPath, LOCAL_BRANCH);
+    const remote = await getLog(dbPath, REMOTE_BRANCH);
+
+    // Find place where remote and local branch diverge
+    let i = local.findIndex((v, idx) => v != remote[idx]);
+    
+    // If this spot is the end of remote branch, then nothing to do, this is a fast forward.
+    if (i == remote.length) {
+        console.log("fast-forward - nothing to do");
+        return;
+    }
+
     // otherwise:
     // - replay each operation onto a temporary branch
     // - update local when done
+    await deleteBranch(dbPath, 'tmp');
+    await noms('sync', `${dbPath}::${REMOTE_BRANCH}`, `${dbPath}::tmp`);
+    let ref;
+    for (let l; l = local[i]; i++) {
+        const [name, args] = await getOpFromCommit(dbPath, l);
+        await runOp(dbPath, "tmp", name, args);
+    }
+    await noms('sync', `${dbPath}::tmp`, `${dbPath}::${LOCAL_BRANCH}`);
+    await deleteBranch(dbPath, 'tmp');
 }
 
 async function runOp(dbName, branch, opName, args) {
@@ -114,7 +117,7 @@ async function commit(db, branch, opName, args) {
     await fs.writeFile(f.path, JSON.stringify(val));
     const jsonRef = await noms('json', 'in', db.path_, f.path);
     const metaRef = await noms('struct', 'new', db.path_, 'name', opName, 'args', JSON.stringify(args));
-    await noms('commit', '--meta-p', `op=${metaRef}`, `'${jsonRef}'`, `${db.path_}::${branch}`);
+    await noms('commit', '--allow-dupe=1', '--meta-p', `op=${metaRef}`, `'${jsonRef}'`, `${db.path_}::${branch}`);
     const [noDate] = (await noms('struct', 'del', `${db.path_}::${branch}.meta`, 'date')).split('.');
     await noms('sync', `${db.path_}::${noDate}`, `${db.path_}::${branch}`);
     return noDate;
@@ -127,4 +130,31 @@ async function noms(...args) {
     return r.trim();
 }
 
-module.exports = {Database, opCmd, push, pull};
+async function getLog(dbPath, branch) {
+    if (!await hasBranch(dbPath, branch)) {
+        return [];
+    }
+    return (await noms('log', '--oneline', `${dbPath}::${branch}`)).split('\n')
+        .map(line => line.split(' ')[0])
+        .reverse();
+}
+
+async function deleteBranch(dbPath, branch) {
+    if (await hasBranch(dbPath, branch)) {
+        await noms('ds', '-d', `${dbPath}::${branch}`);
+    }
+}
+
+async function hasBranch(dbPath, branch) {
+    const datasets = await noms('ds', dbPath);
+    return datasets.indexOf(branch) > -1;
+}
+
+async function getOpFromCommit(dbPath, ref) {
+    return (await Promise.all([
+        noms('show', `${dbPath}::#${ref}.meta.op.name`),
+        noms('show', `${dbPath}::#${ref}.meta.op.args`),
+    ])).map(s => s.substr(1, s.length - 2));
+}
+
+module.exports = {Database, opCmd, push, pull, rebase};
