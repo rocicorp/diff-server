@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 
 const program = require('commander');
-const {Database, commit, push} = require('./db');
-const ops = require('./ops');
+const {opCmd, push, pull} = require('./db');
 
 program
     .command('op <db> <name> [args...]')
@@ -14,14 +13,9 @@ program
     .description('Pushes new local ops to the server')
     .action(push);
 
-async function opCmd(dbName, opName, args) {
-    const db = new Database(dbName);
-    const op = ops.find(o => o.name == opName);
-    if (!op) {
-        throw new Error('Unknown op: ' + opName);
-    }
-    await op(db, ...args);
-    await commit(db, opName, args);
-}
+program
+    .command('pull <db> <log>')
+    .description('Pulls remote ops from server')
+    .action(pull);
 
 program.parse(process.argv);
