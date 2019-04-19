@@ -2,7 +2,7 @@ module.exports = [
     setColor,
     toggleColor,
     append,
-    goDogGo,
+    dog,
     stockWidgets,
     sellWidget,
 ];
@@ -26,7 +26,7 @@ async function append(db, text) {
     db.set(val);
 }
 
-async function goDogGo(db) {
+async function dog(db) {
     const val = await db.get();
     await append(db, `Go dog go, the light is ${val.color || 'red'} now!`);
 }
