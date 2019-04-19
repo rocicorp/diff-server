@@ -23,4 +23,8 @@ program
     .description('Rebase local changes onto remote')
     .action(rebase);
 
+
 program.parse(process.argv);
+if (!program.args.length) {
+    program.help();
+}
