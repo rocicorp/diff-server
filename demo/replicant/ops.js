@@ -28,7 +28,8 @@ async function append(db, text) {
 
 async function dog(db) {
     const val = await db.get();
-    await append(db, `Go dog go, the light is ${val.color || 'red'} now!`);
+    const word = val.color == 'red' ? 'Stop' : 'Go';
+    await append(db, `${word} dog ${word.toLowerCase()}, the light is ${val.color} now!`);
 }
 
 async function stockWidgets(db, inc) {
