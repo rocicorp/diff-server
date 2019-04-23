@@ -3,6 +3,11 @@ import Client from './Client.js';
 import './App.css';
 
 class App extends Component {
+  constructor() {
+    this.state = {
+      ops: [],
+    }
+  }
   render() {
     const panelStyle = {flex: 1, margin: '1em'};
     return (
