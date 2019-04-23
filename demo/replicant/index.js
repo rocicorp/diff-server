@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 const program = require('commander');
-const {opCmd, push, pull, rebase} = require('./db');
+const {opCmd, push, pull, rebase, sync} = require('./db');
 
 program
     .option('-v,--verbose', 'Print verbosely to the console', false);
@@ -26,6 +26,10 @@ program
     .description('Rebase local changes onto remote')
     .action(rebase);
 
+program
+    .command('sync <db> <log>')
+    .description('pull && rebase && push')
+    .action(sync)
 
 program.parse(process.argv);
 if (!program.args.length) {

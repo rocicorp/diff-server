@@ -1,11 +1,13 @@
-const fs = require('fs').promises;
 const tmp = require('tmp-promise');
 const util = require('util');
 const touch = require('touch');
+const fs = require('fs');
 const { exec, spawn } = require('child_process');
 const pexec = util.promisify(exec);
 const _ = require('underscore');
 const program = require('commander');
+const [open, readFile, writeFile, write, close] = ['open', 'readFile', 'writeFile', 'write', 'close']
+    .map(n => util.promisify(fs[n]));
 
 const ops = require('./ops');
 
@@ -43,19 +45,20 @@ async function push(dbPath, logPath) {
         .findIndex(([localRef, logRef]) => localRef != logRef);
     if (forkPoint == -1) {
         console.log('Server is already up to date. Nothing to do.')
-        return;
+        return true;
     }
     if (forkPoint != log.length) {
         console.error("Non fast-forward push not allowed. Pull first.");
-        return;
+        return false;
     }
 
-    const f = await fs.open(logPath, 'a');
+    const fd = await open(logPath, 'a');
     for (let i = forkPoint, l; l = local[i]; i++) {
         const [source, name, args] = await getOpFromCommit(dbPath, l);
-        await f.writeFile([l, source, name, JSON.stringify(args)].join(' ') + '\n');
+        await write(fd, [l, source, name, JSON.stringify(args)].join(' ') + '\n');
     }
-    await f.close();
+    await close(fd);
+    return true;
 }
 
 async function pull(dbPath, logPath) {
@@ -68,11 +71,11 @@ async function pull(dbPath, logPath) {
         .findIndex(([remoteRef, logRef]) => remoteRef != logRef);
     if (forkPoint == -1) {
         console.log("remote is unchanged - nothing to do");
-        return;
+        return true;
     }
     if (forkPoint != remote.length) {
         console.error('eep: remote has changed in non-ff way');
-        return;
+        return false;
     }
 
     // For each remaining commit in the log, we may already have it locally (eg if we ourselves pushed it).
@@ -85,6 +88,8 @@ async function pull(dbPath, logPath) {
             await runOp(dbPath, REMOTE_BRANCH, source, opName, JSON.parse(opArgs.join(' ')));
         }
     }
+
+    return true;
 }
 
 async function rebase(dbPath) {
@@ -97,21 +102,32 @@ async function rebase(dbPath) {
     // If this spot is the end of remote branch, then nothing to do, this is a fast forward.
     if (i == remote.length) {
         console.log("fast-forward - nothing to do");
-        return;
+        return true;
     }
 
     // otherwise:
     // - replay each operation onto a temporary branch
     // - update local when done
     await deleteBranch(dbPath, 'tmp');
-    await noms('sync', `${dbPath}::${REMOTE_BRANCH}`, `${dbPath}::tmp`);
+    if (await hasBranch(`${dbPath}`, `${REMOTE_BRANCH}`)) {
+        await noms('sync', `${dbPath}::${REMOTE_BRANCH}`, `${dbPath}::tmp`);
+    }
     let ref;
     for (let l; l = local[i]; i++) {
         const [source, name, args] = await getOpFromCommit(dbPath, l);
         await runOp(dbPath, "tmp", source, name, args);
     }
-    await noms('sync', `${dbPath}::tmp`, `${dbPath}::${LOCAL_BRANCH}`);
-    await deleteBranch(dbPath, 'tmp');
+    if (await hasBranch(`${dbPath}`, 'tmp')) {
+        await noms('sync', `${dbPath}::tmp`, `${dbPath}::${LOCAL_BRANCH}`);
+        await deleteBranch(dbPath, 'tmp');
+    }
+    return true;
+}
+
+async function sync(dbPath, logFile) {
+    await pull(dbPath, logFile) &&
+        await rebase(dbPath) &&
+        await push(dbPath, logFile);
 }
 
 async function runOp(dbName, branch, source, opName, args) {
@@ -128,9 +144,9 @@ async function runOp(dbName, branch, source, opName, args) {
 async function commit(db, branch, source, opName, args) {
     const val = db.root_ || await db.get();
     const f = await tmp.file();
-    await fs.writeFile(f.path, JSON.stringify(val));
+    await writeFile(f.path, JSON.stringify(val));
     const f2 = await tmp.file();
-    await fs.writeFile(f2.path, JSON.stringify(args));
+    await writeFile(f2.path, JSON.stringify(args));
     const jsonRef = await noms('json', 'in', db.path_, f.path);
     const argsRef = await noms('json', 'in', db.path_, f2.path);
     const metaRef = await noms('struct', 'new', db.path_, 'name', opName, 'args', `@${argsRef}`, 'source', source);
@@ -159,7 +175,7 @@ async function branchHistory(dbPath, branch) {
 }
 
 async function serverLog(logPath) {
-    return (await fs.readFile(logPath, {encoding: 'utf8', flag: 'r'}))
+    return (await readFile(logPath, {encoding: 'utf8', flag: 'r'}))
         .split('\n')
         .filter(v => v)
         .map(v => v.split(' '));
@@ -188,4 +204,4 @@ async function haveRef(dbPath, ref) {
     return await noms('show', `${dbPath}::#${ref}`);
 }
 
-module.exports = {Database, opCmd, push, pull, rebase};
+module.exports = {Database, opCmd, push, pull, rebase, sync};
