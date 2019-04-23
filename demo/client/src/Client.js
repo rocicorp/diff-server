@@ -17,7 +17,7 @@ class Client extends Component {
     return (
         <div>
             <h2>Client {this.props.index}</h2>
-            <select style={{width: '100%', marginBottom: '1em'}} 
+            <select style={{width: '100%', marginBottom: '0.5em'}} 
                 onChange={(e) => this.handleChange_(e)}
                 defaultValue={this.state.selectedValue}>
               {this.props.ops.map((op, i) => {
@@ -26,6 +26,11 @@ class Client extends Component {
                 <option key='new' value=''>New...</option>
             </select>
             {this.getFunctionBody()}
+            <div style={{display: 'flex', alignItems: 'center'}}>
+              <div>Params:</div>
+              <div style={{flex:1}}><input style={{width:'100%'}} type='text'/></div>
+              <div><button>Run!</button></div>
+            </div>
             <pre style={{width: '100%', height: '15em', marginBottom: '1em', background: '#f3f3f3', overflow: 'scroll', border: '1px solid grey'}}>
               {this.state.dbState}
             </pre>
@@ -51,9 +56,9 @@ class Client extends Component {
 
   getFunctionBody() {
     if (!this.state.selectedValue) {
-      return <textarea style={{display: 'block', width: '100%', height: '15em', fontFamily: 'monospace', whiteSpace: 'pre', margin: '1em 0'}}/>
+      return <textarea style={{display: 'block', width: '100%', height: '15em', fontFamily: 'monospace', whiteSpace: 'pre', margin: 0}}/>
     }
-    return <pre style={{width: '100%', height: '15em', marginBottom: '1em', border: '1px solid grey', overflow:'auto', margin: '1em 0'}}>
+    return <pre style={{width: '100%', height: '15em', margin: 0, border: '1px solid grey', overflow:'auto', margin: 0}}>
       {this.props.ops.find(op => op.hash == this.state.selectedValue).code}
     </pre>
   }
