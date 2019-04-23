@@ -41,9 +41,9 @@ class Client extends Component {
 
   getFunctionBody() {
     if (!this.state.selectedValue) {
-      return <textarea style={{width: '100%', height: '15em', fontFamily: 'monospace', whiteSpace: 'pre', marginBottom: '1em'}}/>
+      return <textarea style={{display: 'block', width: '100%', height: '15em', fontFamily: 'monospace', whiteSpace: 'pre', margin: '1em 0'}}/>
     }
-    return <pre style={{display:'inline-block', width: '100%', height: '15em', marginBottom: '1em', border: '1px solid grey', overflow:'auto'}}>
+    return <pre style={{width: '100%', height: '15em', marginBottom: '1em', border: '1px solid grey', overflow:'auto', margin: '1em 0'}}>
       {this.props.ops.find(op => op.hash == this.state.selectedValue).code}
     </pre>
   }
