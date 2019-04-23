@@ -6,10 +6,9 @@ const { exec, spawn } = require('child_process');
 const pexec = util.promisify(exec);
 const _ = require('underscore');
 const program = require('commander');
+const {getOp} = require('./reg.js');
 const [open, readFile, writeFile, write, close] = ['open', 'readFile', 'writeFile', 'write', 'close']
     .map(n => util.promisify(fs[n]));
-
-const ops = require('./ops');
 
 const LOCAL_BRANCH = 'local';
 const REMOTE_BRANCH = 'remote';
@@ -133,7 +132,7 @@ async function sync(dbPath, logFile) {
 async function runOp(dbName, branch, source, opName, args) {
     console.log('Running', opName, args, 'against', dbName, branch)
     const db = new Database(dbName, branch);
-    const op = ops.find(o => o.name == opName);
+    const op = await getOp(opName);
     if (!op) {
         throw new Error('Unknown op: ' + opName);
     }

@@ -2,9 +2,21 @@
 
 const program = require('commander');
 const {opCmd, push, pull, rebase, sync} = require('./db');
+const {opReg, list} = require('./reg.js');
 
 program
-    .option('-v,--verbose', 'Print verbosely to the console', false);
+    .option('-v,--verbose', 'Print verbosely to the console', false)
+    .option('-ops,--opsfile', 'File to store op definitions in', 'ops.json')
+
+program
+    .command('reg')
+    .description('Register a new op from the code in stdin')
+    .action(opReg);
+
+program
+    .command('list')
+    .description('Lists all registered ops')
+    .action(list);
 
 program
     .command('op <db> <name> [args...]')
