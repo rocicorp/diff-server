@@ -2,6 +2,7 @@ module.exports = [
     setColor,
     toggleColor,
     append,
+    insert,
     dog,
     stockWidgets,
     sellWidget,
@@ -26,10 +27,22 @@ async function append(db, text) {
     db.set(val);
 }
 
+async function insert(db, text) {
+    const val = await db.get();
+    val.sorted = val.sorted || [];
+    let idx = val.sorted.findIndex(v => v > text);
+    if (idx == -1) {
+        idx = val.sorted.length;
+    }
+    val.sorted.splice(idx, 0, text);
+    db.set(val);
+}
+
 async function dog(db) {
     const val = await db.get();
     const word = val.color == 'red' ? 'Stop' : 'Go';
-    await append(db, `${word} dog ${word.toLowerCase()}, the light is ${val.color} now!`);
+    val.command = `${word} dog ${word.toLowerCase()}, the light is ${val.color} now!`;
+    db.set(val);
 }
 
 async function stockWidgets(db, inc) {
