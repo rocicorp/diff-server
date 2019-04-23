@@ -4,6 +4,7 @@ class Client extends Component {
   constructor(props) {
     super(props);
     this.state = {
+      params: '',
       selectedValue: '',
       dbState: '',
     };
@@ -28,8 +29,8 @@ class Client extends Component {
             {this.getFunctionBody()}
             <div style={{display: 'flex', alignItems: 'center'}}>
               <div>Params:</div>
-              <div style={{flex:1}}><input style={{width:'100%'}} type='text'/></div>
-              <div><button>Run!</button></div>
+              <div style={{flex:1}}><input style={{width:'100%'}} type='text' onChange={(e) => this.handleParamsChange_(e)}/></div>
+              <div><button onClick={() => this.handleRun_()}>Run!</button></div>
             </div>
             <pre style={{width: '100%', height: '15em', marginBottom: '1em', background: '#f3f3f3', overflow: 'scroll', border: '1px solid grey'}}>
               {this.state.dbState}
@@ -43,9 +44,14 @@ class Client extends Component {
                     <button>Sync</button>
                 </div>
             </div>
-            <div></div>
         </div>
     );
+  }
+
+  handleParamsChange_(e) {
+    this.setState({
+      params: e.target.value,
+    });
   }
 
   handleChange_(e) {
@@ -54,13 +60,27 @@ class Client extends Component {
       });
   }
 
+  getFunctionCode() {
+    if (!this.state.selectedValue) {
+      return '';
+    }
+    return this.props.ops.find(op => op.hash == this.state.selectedValue).code;
+  }
+
   getFunctionBody() {
     if (!this.state.selectedValue) {
       return <textarea style={{display: 'block', width: '100%', height: '15em', fontFamily: 'monospace', whiteSpace: 'pre', margin: 0}}/>
     }
     return <pre style={{width: '100%', height: '15em', margin: 0, border: '1px solid grey', overflow:'auto', margin: 0}}>
-      {this.props.ops.find(op => op.hash == this.state.selectedValue).code}
+      {this.getFunctionCode()}
     </pre>
+  }
+
+  async handleRun_() {
+    const url = `http://localhost:8080/exec?cmd=${escape(`replicant op db${this.props.index} ${getFunctionName(this.getFunctionCode())} ${this.state.params}`)}`;
+    console.log(url);
+    await fetch(url);
+    this.refreshDBState();
   }
 
   async refreshDBState() {
