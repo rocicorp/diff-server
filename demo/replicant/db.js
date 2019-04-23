@@ -5,6 +5,7 @@ const touch = require('touch');
 const { exec, spawn } = require('child_process');
 const pexec = util.promisify(exec);
 const _ = require('underscore');
+const program = require('commander');
 
 const ops = require('./ops');
 
@@ -141,7 +142,9 @@ async function commit(db, branch, source, opName, args) {
 
 async function noms(...args) {
     const cmd = ['noms'].concat(args).join(' ');
-    console.log(cmd);
+    if (program.verbose) {
+        console.log(cmd);
+    }
     const { stdout: r } = await pexec(cmd);
     return r.trim();
 }

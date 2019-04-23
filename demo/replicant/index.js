@@ -4,6 +4,9 @@ const program = require('commander');
 const {opCmd, push, pull, rebase} = require('./db');
 
 program
+    .option('-v,--verbose', 'Print verbosely to the console', false);
+
+program
     .command('op <db> <name> [args...]')
     .description('Run an op against the current client state')
     .action(opCmd);
