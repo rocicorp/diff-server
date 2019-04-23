@@ -19,7 +19,7 @@ program
     .action(list);
 
 program
-    .command('op <db> <name> [args...]')
+    .command('op <db> <name-or-hash> [args...]')
     .description('Run an op against the current client state')
     .action(opCmd);
 

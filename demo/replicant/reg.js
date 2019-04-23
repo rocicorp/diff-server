@@ -52,9 +52,21 @@ async function list() {
     }
 }
 
-async function getOp(h) {
+async function getOp(nameOrHash) {
     const ops = await load();
-    return ops[h];
+    if (ops[nameOrHash]) {
+        return {hash: nameOrHash, op: ops[nameOrHash]};
+    }
+    let h = null;
+    for (k in ops) {
+        if (ops[k].name == nameOrHash) {
+            if (h) {
+                throw new Error('Multiple definitions for ' + nameOrHash);
+            }
+            h = k;
+        }
+    }
+    return h && {hash: h, op: ops[h]};
 }
 
 module.exports = {opReg, list, getOp};
