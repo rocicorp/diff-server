@@ -41,7 +41,7 @@ class Client extends Component {
                     <label><input type="checkbox" defaultChecked={true}/>Live</label>
                 </div>
                 <div style={{display: 'flex', flexDirection: 'column', flex: 1}}>
-                    <button>Sync</button>
+                    <button onClick={() => this.handleSync_()}>Sync</button>
                 </div>
             </div>
         </div>
@@ -74,6 +74,13 @@ class Client extends Component {
     return <pre style={{width: '100%', height: '15em', margin: 0, border: '1px solid grey', overflow:'auto', margin: 0}}>
       {this.getFunctionCode()}
     </pre>
+  }
+
+  async handleSync_() {
+    const url = `http://localhost:8080/exec?cmd=${escape(`replicant sync db${this.props.index} server.txt`)}`;
+    console.log(url);
+    await fetch(url);
+    this.refreshDBState();
   }
 
   async handleRun_() {
