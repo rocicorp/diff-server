@@ -9,6 +9,7 @@ class Client extends Component {
       selectedValue: '',
       dbState: '',
       log: '',
+      online: true,
     };
   }
 
@@ -33,17 +34,14 @@ class Client extends Component {
               <div style={{flex:1}}><input style={{width:'100%'}} type='text' onChange={(e) => this.handleParamsChange_(e)}/></div>
               <div><button onClick={() => this.handleRun_()}>Run!</button></div>
             </div>
-            <pre style={{width: '100%', flex: 1, marginBottom: '1em', background: '#f3f3f3', overflow: 'scroll', border: '1px solid grey'}}>
+            <pre style={{width: '100%', flex: 1, marginBottom: '0.5em', background: '#f3f3f3', overflow: 'scroll', border: '1px solid grey'}}>
               {this.state.dbState}
             </pre>
-            <div style={{display: 'flex'}}>
-                <div style={{display: 'flex', flexDirection: 'column', flex: 1}}>
-                    <label><input type="checkbox" disabled={true}/>Online</label>
-                    <label><input type="checkbox" disabled={true}/>Live</label>
-                </div>
-                <div style={{display: 'flex', flexDirection: 'column', flex: 1}}>
-                    <button onClick={() => this.handleSync_()}>Sync</button>
-                </div>
+            <button onClick={() => this.handleSync_()}>Sync Now</button>
+            <div style={{display: 'flex', marginTop: '0.25em'}}>
+              <label style={{flex: 1}}><input type="checkbox" defaultChecked={this.state.online}
+                  onChange={(e) => this.setState({online: e.target.checked})}/>Online</label>
+              <label style={{flex: 1}}><input type="checkbox" disabled={true}/>Continuous Sync</label>
             </div>
             <pre style={{width: '100%', flex: 1, overflow: 'scroll', border: '1px solid grey'}}
               ref={this.logRef}>{this.state.log}</pre>
@@ -80,12 +78,16 @@ class Client extends Component {
   }
 
   async handleSync_() {
-    await this.exec(`replicant sync db${this.props.index} server.txt`);
+    if ((await this.exec(`replicant sync db${this.props.index} server.txt`)) === null) {
+      return;
+    }
     this.refreshDBState();
   }
 
   async handleRun_() {
-    await this.exec(`replicant op db${this.props.index} ${getFunctionName(this.getFunctionCode())} ${this.state.params}`);
+    if ((await this.exec(`replicant op db${this.props.index} ${getFunctionName(this.getFunctionCode())} ${this.state.params}`)) === null) {
+      return;
+    }
     this.refreshDBState();
   }
 
@@ -96,20 +98,28 @@ class Client extends Component {
   }
 
   async exec(cmd) {
-    this.log('> ' + cmd);
+    await this.log('> ' + cmd);
+    if (!this.state.online) {
+      await this.log('ERROR: client is offline!');
+      return null;
+    }
     const url = `http://localhost:8080/exec?cmd=${escape(cmd)}`;
     const r = await fetch(url);
     const t = await r.text();
-    this.log(t);
+    await this.log(t);
     return t;
   }
 
-  log(msg) {
-    this.setState({
-      log: this.state.log + msg + '\n',
-    }, () => {
-      this.logRef.current.scrollTop = this.logRef.current.scrollHeight;
-    });
+  async log(msg) {
+    console.log('logging', msg)
+    await new Promise((res, rej) => {
+      this.setState({
+        log: this.state.log + msg + '\n',
+      }, () => {
+        this.logRef.current.scrollTop = this.logRef.current.scrollHeight;
+        res();
+      });
+    })
   }
 }
 
