@@ -26,7 +26,6 @@ class Client extends Component {
               {this.props.ops.map((op, i) => {
                   return <option key={op.hash} value={op.hash}>{getFunctionName(op.code)}</option>
               })}
-                <option key='new' value=''>New...</option>
             </select>
             {this.getFunctionBody()}
             <div style={{display: 'flex', alignItems: 'center'}}>
