@@ -17,6 +17,12 @@ class Client extends Component {
     this.syncTimer = undefined;
   }
 
+  static getDerivedStateFromProps(nextProps, prevState) {
+    if (!prevState.selectedValue && nextProps.ops.length) {
+      prevState.selectedValue = nextProps.ops[0].hash;
+    }
+  }
+
   componentDidMount() {
     this.refreshDBState();
   }
@@ -48,7 +54,7 @@ class Client extends Component {
               <label style={{flex: 1}}><input type="checkbox" defaultChecked={Boolean(this.state.continuous)}
                   onChange={(e) => this.setContinuousSync(e.target.value)}/>Continuous Sync</label>
             </div>
-            <pre style={{width: '100%', flex: 1, overflow: 'scroll', border: '1px solid grey'}}
+            <pre style={{width: '100%', flex: 1, overflow: 'scroll'}}
               ref={this.logRef}>{this.state.log}</pre>
         </div>
     );
