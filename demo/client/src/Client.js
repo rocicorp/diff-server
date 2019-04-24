@@ -1,5 +1,7 @@
 import React, { Component } from 'react';
 
+const SYNC_INTERVAL = 3000;
+
 class Client extends Component {
   constructor(props) {
     super(props);
@@ -10,7 +12,9 @@ class Client extends Component {
       dbState: '',
       log: '',
       online: true,
+      continuous: false,
     };
+    this.syncTimer = undefined;
   }
 
   componentDidMount() {
@@ -41,12 +45,21 @@ class Client extends Component {
             <div style={{display: 'flex', marginTop: '0.25em'}}>
               <label style={{flex: 1}}><input type="checkbox" defaultChecked={this.state.online}
                   onChange={(e) => this.setState({online: e.target.checked})}/>Online</label>
-              <label style={{flex: 1}}><input type="checkbox" disabled={true}/>Continuous Sync</label>
+              <label style={{flex: 1}}><input type="checkbox" defaultChecked={Boolean(this.state.continuous)}
+                  onChange={(e) => this.setContinuousSync(e.target.value)}/>Continuous Sync</label>
             </div>
             <pre style={{width: '100%', flex: 1, overflow: 'scroll', border: '1px solid grey'}}
               ref={this.logRef}>{this.state.log}</pre>
         </div>
     );
+  }
+
+  setContinuousSync(enabled) {
+    if (enabled) {
+      this.scheduleSync();
+    } else {
+      this.unscheduleSync();
+    }
   }
 
   handleParamsChange_(e) {
@@ -65,23 +78,35 @@ class Client extends Component {
     if (!this.state.selectedValue) {
       return '';
     }
-    return this.props.ops.find(op => op.hash == this.state.selectedValue).code;
+    return this.props.ops.find(op => op.hash === this.state.selectedValue).code;
   }
 
   getFunctionBody() {
     if (!this.state.selectedValue) {
       return <textarea style={{display: 'block', width: '100%', flex: 1, fontFamily: 'monospace', whiteSpace: 'pre', margin: 0}}/>
     }
-    return <pre style={{width: '100%', flex: 1, margin: 0, border: '1px solid grey', overflow:'auto', margin: 0}}>
+    return <pre style={{width: '100%', flex: 1, margin: 0, border: '1px solid grey', overflow:'auto'}}>
       {this.getFunctionCode()}
     </pre>
   }
 
   async handleSync_() {
+    this.unscheduleSync();
     if ((await this.exec(`replicant sync db${this.props.index} server.txt`)) === null) {
       return;
     }
-    this.refreshDBState();
+    await this.refreshDBState();
+    if (this.state.continuous) {
+      this.scheduleSync();
+    }
+  }
+
+  unscheduleSync() {
+    this.syncTimer = window.clearInterval(this.syncTimer);
+  }
+
+  scheduleSync() {
+    this.syncTimer = window.setTimeout(() => this.handleSync_(), SYNC_INTERVAL);
   }
 
   async handleRun_() {
