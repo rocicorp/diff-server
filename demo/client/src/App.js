@@ -23,11 +23,11 @@ class App extends Component {
   }
 
   render() {
-    const panelStyle = {width: '33%', maxWidth: '33%', margin: '1em'};
+    const panelStyle = {display: 'flex', flexDirection: 'column', width: '33%', maxWidth: '33%', margin: '1em'};
     return (
-      <div>
+      <div style={{width: '100%', height: '100%', display: 'flex', flexDirection: 'column'}}>
         <h1 style={{margin: '1em 1em 0 1em'}}>Replicant</h1>
-        <div style={{display: 'flex'}}>
+        <div style={{display: 'flex', flex: 1, overflow: 'hidden'}}>
           <div style={panelStyle}>
             <Client index={1} ops={this.state.ops}/>
           </div>

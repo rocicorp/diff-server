@@ -3,10 +3,12 @@ import React, { Component } from 'react';
 class Client extends Component {
   constructor(props) {
     super(props);
+    this.logRef = React.createRef();
     this.state = {
       params: '',
       selectedValue: '',
       dbState: '',
+      log: '',
     };
   }
 
@@ -16,7 +18,7 @@ class Client extends Component {
 
   render() {
     return (
-        <div>
+        <div style={{display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden'}}>
             <h2>Client {this.props.index}</h2>
             <select style={{width: '100%', marginBottom: '0.5em'}} 
                 onChange={(e) => this.handleChange_(e)}
@@ -32,18 +34,20 @@ class Client extends Component {
               <div style={{flex:1}}><input style={{width:'100%'}} type='text' onChange={(e) => this.handleParamsChange_(e)}/></div>
               <div><button onClick={() => this.handleRun_()}>Run!</button></div>
             </div>
-            <pre style={{width: '100%', height: '15em', marginBottom: '1em', background: '#f3f3f3', overflow: 'scroll', border: '1px solid grey'}}>
+            <pre style={{width: '100%', flex: 1, marginBottom: '1em', background: '#f3f3f3', overflow: 'scroll', border: '1px solid grey'}}>
               {this.state.dbState}
             </pre>
             <div style={{display: 'flex'}}>
                 <div style={{display: 'flex', flexDirection: 'column', flex: 1}}>
-                    <label><input type="checkbox" defaultChecked={true}/>Online</label>
-                    <label><input type="checkbox" defaultChecked={true}/>Live</label>
+                    <label><input type="checkbox" disabled={true}/>Online</label>
+                    <label><input type="checkbox" disabled={true}/>Live</label>
                 </div>
                 <div style={{display: 'flex', flexDirection: 'column', flex: 1}}>
                     <button onClick={() => this.handleSync_()}>Sync</button>
                 </div>
             </div>
+            <pre style={{width: '100%', flex: 1, overflow: 'scroll', border: '1px solid grey'}}
+              ref={this.logRef}>{this.state.log}</pre>
         </div>
     );
   }
@@ -69,34 +73,44 @@ class Client extends Component {
 
   getFunctionBody() {
     if (!this.state.selectedValue) {
-      return <textarea style={{display: 'block', width: '100%', height: '15em', fontFamily: 'monospace', whiteSpace: 'pre', margin: 0}}/>
+      return <textarea style={{display: 'block', width: '100%', flex: 1, fontFamily: 'monospace', whiteSpace: 'pre', margin: 0}}/>
     }
-    return <pre style={{width: '100%', height: '15em', margin: 0, border: '1px solid grey', overflow:'auto', margin: 0}}>
+    return <pre style={{width: '100%', flex: 1, margin: 0, border: '1px solid grey', overflow:'auto', margin: 0}}>
       {this.getFunctionCode()}
     </pre>
   }
 
   async handleSync_() {
-    const url = `http://localhost:8080/exec?cmd=${escape(`replicant sync db${this.props.index} server.txt`)}`;
-    console.log(url);
-    await fetch(url);
+    await this.exec(`replicant sync db${this.props.index} server.txt`);
     this.refreshDBState();
   }
 
   async handleRun_() {
-    const url = `http://localhost:8080/exec?cmd=${escape(`replicant op db${this.props.index} ${getFunctionName(this.getFunctionCode())} ${this.state.params}`)}`;
-    console.log(url);
-    await fetch(url);
+    await this.exec(`replicant op db${this.props.index} ${getFunctionName(this.getFunctionCode())} ${this.state.params}`);
     this.refreshDBState();
   }
 
   async refreshDBState() {
-    const url = `http://localhost:8080/exec?cmd=${escape(`noms show db${this.props.index}::local.value`)}`;
-    fetch(url).then(r => r.text()).then(t => {
-      this.setState({
-        dbState: t,
-      })
-    })
+    this.setState({
+      dbState: await this.exec(`noms show db${this.props.index}::local.value`),
+    });
+  }
+
+  async exec(cmd) {
+    this.log('> ' + cmd);
+    const url = `http://localhost:8080/exec?cmd=${escape(cmd)}`;
+    const r = await fetch(url);
+    const t = await r.text();
+    this.log(t);
+    return t;
+  }
+
+  log(msg) {
+    this.setState({
+      log: this.state.log + msg + '\n',
+    }, () => {
+      this.logRef.current.scrollTop = this.logRef.current.scrollHeight;
+    });
   }
 }
 
