@@ -1,12 +1,3 @@
-module.exports = [
-    setColor,
-    toggleColor,
-    append,
-    dog,
-    stockWidgets,
-    sellWidget,
-];
-
 async function setColor(db, name) {
     const val = await db.get();
     val.color = name;
