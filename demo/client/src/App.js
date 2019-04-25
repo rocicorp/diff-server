@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import Client from './Client.js';
+import Server from './Server.js';
 import './App.css';
 
 class App extends Component {
@@ -36,6 +37,7 @@ class App extends Component {
           </div>
           <div style={panelStyle}>
             <h2>Server</h2>
+            <Server/>
           </div>
         </div>
       </div>
