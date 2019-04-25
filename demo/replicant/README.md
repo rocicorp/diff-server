@@ -9,7 +9,7 @@ here.
 ## Setup
 
 1. [Install Noms](https://github.com/attic-labs/noms#install). You will need a pretty recent version.
-2. Install this app using `yarn install`.
+2. Install this app using `npm install -g`.
 
 ## Usage
 
