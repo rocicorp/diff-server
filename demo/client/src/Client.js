@@ -52,7 +52,7 @@ class Client extends Component {
               <label style={{flex: 1}}><input type="checkbox" defaultChecked={this.state.online}
                   onChange={(e) => this.setState({online: e.target.checked})}/>Online</label>
               <label style={{flex: 1}}><input type="checkbox" defaultChecked={Boolean(this.state.continuous)}
-                  onChange={(e) => this.setContinuousSync(e.target.value)}/>Continuous Sync</label>
+                  onChange={(e) => this.setContinuousSync(e.target.checked)}/>Continuous Sync</label>
             </div>
             <pre style={{width: '100%', flex: 1, overflow: 'scroll'}}
               ref={this.logRef}>{this.state.log}</pre>
@@ -61,11 +61,15 @@ class Client extends Component {
   }
 
   setContinuousSync(enabled) {
-    if (enabled) {
-      this.scheduleSync();
-    } else {
-      this.unscheduleSync();
-    }
+    this.setState({
+      continuous: enabled,
+    }, () => {
+      if (enabled) {
+        this.handleSync_();
+      } else {
+        this.unscheduleSync();
+      }
+    });
   }
 
   handleParamsChange_(e) {
@@ -108,7 +112,9 @@ class Client extends Component {
   }
 
   unscheduleSync() {
-    this.syncTimer = window.clearInterval(this.syncTimer);
+    if (this.syncTimer) {
+      this.syncTimer = window.clearInterval(this.syncTimer);
+    }
   }
 
   scheduleSync() {
