@@ -5,7 +5,8 @@ This is a user interface that makes it a bit easier to do the same things that a
 ## Setup
 
 1. Do all the setup for the [CLI demo](../replicant)
-2. (You're not going to like this bit): `go install github.com/aboodman/ivan`
+2. `yarn install`
+3. (You're not going to like this bit): `go get github.com/aboodman/ivan && go install github.com/aboodman/ivan`
 
 ## Run
 
