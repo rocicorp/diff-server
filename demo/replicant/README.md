@@ -56,11 +56,14 @@ replicant sync db2 server.txt
 replicant sync db1 server.txt
 
 # The two databases now match and the merges have all been handled naturally
-noms show db1::local.value
-noms show db2::local.value
-
 # In particular:
 # - Both databases have the color green, and the dependent write also reflects "green".
 # - The list of sorted names is merged and sorted correctly
 # - The number of widgets is zero, not -1
+noms show db1::local.value
+noms show db2::local.value
+
+# They aren't just similar, they are exactly the same (per hashes):
+noms log --oneline db1::local
+noms log --oneline db2::local
 ```
