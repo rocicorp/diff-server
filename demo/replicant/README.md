@@ -2,8 +2,7 @@
 
 This is a super sketchy fast ugly duct-tape, glue, and chewing gum prototype of Replicant. This is not beautiful code.
 
-Specifically, what we have here is a CLI program that you should think of as a prototype of the library that a program
-in an application would be coded against. So in real life, Replicant is not going to take the form of a CLI (or at least
+Specifically, what we have here is a CLI program that you should think of as a prototype of the eventual Replicant API. So in real life, Replicant is not going to take the form of a CLI (or at least
 not *only* a CLI). It will have in-process bindings for various languages. But it was expedient to prototype it that way
 here.
 
