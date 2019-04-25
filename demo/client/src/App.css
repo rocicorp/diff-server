@@ -1,0 +1,15 @@
+h1, h2 {
+  font-size: 1em;
+}
+
+h1 {
+  color: #888;
+}
+
+h2 {
+  font-weight: 500;
+}
+
+* {
+  box-sizing: border-box;
+}

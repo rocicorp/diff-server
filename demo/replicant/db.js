@@ -6,10 +6,9 @@ const { exec, spawn } = require('child_process');
 const pexec = util.promisify(exec);
 const _ = require('underscore');
 const program = require('commander');
+const {getOp} = require('./reg.js');
 const [open, readFile, writeFile, write, close] = ['open', 'readFile', 'writeFile', 'write', 'close']
     .map(n => util.promisify(fs[n]));
-
-const ops = require('./ops');
 
 const LOCAL_BRANCH = 'local';
 const REMOTE_BRANCH = 'remote';
@@ -33,8 +32,8 @@ class Database {
     }
 }
 
-async function opCmd(dbName, opName, args) {
-    await runOp(dbName, LOCAL_BRANCH, dbName, opName, args);
+async function opCmd(dbName, opHash, args) {
+    await runOp(dbName, LOCAL_BRANCH, dbName, opHash, args);
 }
 
 async function push(dbPath, logPath) {
@@ -54,8 +53,8 @@ async function push(dbPath, logPath) {
 
     const fd = await open(logPath, 'a');
     for (let i = forkPoint, l; l = local[i]; i++) {
-        const [source, name, args] = await getOpFromCommit(dbPath, l);
-        await write(fd, [l, source, name, JSON.stringify(args)].join(' ') + '\n');
+        const [source, hash, name, args] = await getOpFromCommit(dbPath, l);
+        await write(fd, [l, source, hash, name, JSON.stringify(args)].join(' ') + '\n');
     }
     await close(fd);
     return true;
@@ -81,11 +80,11 @@ async function pull(dbPath, logPath) {
     // For each remaining commit in the log, we may already have it locally (eg if we ourselves pushed it).
     // Otherwise, we have to build it by replaying.
     for (let i = forkPoint, l; l = log[i]; i++) {
-        const [commitRef, source, opName, ...opArgs] = l;
+        const [commitRef, source, opHash, opName, ...opArgs] = l;
         if (await haveRef(dbPath, commitRef)) {
             await noms('sync', `${dbPath}::#${commitRef}`, `${dbPath}::${REMOTE_BRANCH}`)
         } else {
-            await runOp(dbPath, REMOTE_BRANCH, source, opName, JSON.parse(opArgs.join(' ')));
+            await runOp(dbPath, REMOTE_BRANCH, source, opHash, JSON.parse(opArgs.join(' ')));
         }
     }
 
@@ -114,8 +113,8 @@ async function rebase(dbPath) {
     }
     let ref;
     for (let l; l = local[i]; i++) {
-        const [source, name, args] = await getOpFromCommit(dbPath, l);
-        await runOp(dbPath, "tmp", source, name, args);
+        const [source, hash, name, args] = await getOpFromCommit(dbPath, l);
+        await runOp(dbPath, "tmp", source, hash, args);
     }
     if (await hasBranch(`${dbPath}`, 'tmp')) {
         await noms('sync', `${dbPath}::tmp`, `${dbPath}::${LOCAL_BRANCH}`);
@@ -130,18 +129,19 @@ async function sync(dbPath, logFile) {
         await push(dbPath, logFile);
 }
 
-async function runOp(dbName, branch, source, opName, args) {
-    console.log('Running', opName, args, 'against', dbName, branch)
-    const db = new Database(dbName, branch);
-    const op = ops.find(o => o.name == opName);
+async function runOp(dbName, branch, source, nameOrHash, args) {
+    const {hash: opHash, op} = await getOp(nameOrHash);
     if (!op) {
-        throw new Error('Unknown op: ' + opName);
+        console.error('Unknown op: ' + opHash);
+        return;
     }
+    console.log('Running', opHash, '(' + op.name + ')', args, 'against', dbName, branch)
+    const db = new Database(dbName, branch);
     await op(db, ...args);
-    return await commit(db, branch, source, opName, args);
+    return await commit(db, branch, source, opHash, op.name, args);
 }
 
-async function commit(db, branch, source, opName, args) {
+async function commit(db, branch, source, opHash, opName, args) {
     const val = db.root_ || await db.get();
     const f = await tmp.file();
     await writeFile(f.path, JSON.stringify(val));
@@ -149,7 +149,7 @@ async function commit(db, branch, source, opName, args) {
     await writeFile(f2.path, JSON.stringify(args));
     const jsonRef = await noms('json', 'in', db.path_, f.path);
     const argsRef = await noms('json', 'in', db.path_, f2.path);
-    const metaRef = await noms('struct', 'new', db.path_, 'name', opName, 'args', `@${argsRef}`, 'source', source);
+    const metaRef = await noms('struct', 'new', db.path_, 'hash', opHash, 'name', opName, 'args', `@${argsRef}`, 'source', source);
     await noms('commit', '--allow-dupe=1', '--meta-p', `op=${metaRef}`, `'${jsonRef}'`, `${db.path_}::${branch}`);
     const [noDate] = (await noms('struct', 'del', `${db.path_}::${branch}.meta`, 'date')).split('.');
     await noms('sync', `${db.path_}::${noDate}`, `${db.path_}::${branch}`);
@@ -195,6 +195,7 @@ async function hasBranch(dbPath, branch) {
 async function getOpFromCommit(dbPath, ref) {
     return (await Promise.all([
         noms('show', `${dbPath}::#${ref}.meta.op.source`),
+        noms('show', `${dbPath}::#${ref}.meta.op.hash`),
         noms('show', `${dbPath}::#${ref}.meta.op.name`),
         noms('json', 'out', '--indent=""', `${dbPath}::#${ref}.meta.op.args`, '@'),
     ])).map(s => JSON.parse(s));
