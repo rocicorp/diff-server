@@ -69,27 +69,7 @@ are gracefully handled in this model without any extra work from the application
 
 # Details
 
-## Life of a Transaction
-
-1. Application code in Node N1 registers transactions T1 and T2 with Replicant
-  - Transactions can be written in any language, with the restriction that they are pure and deterministic
-  - Transactions are identified in Replicant by a hash of their code
-  - All transactions get passed at least one parameter, which is the database
-  - Transactions are typically written such that they have various preconditions and invariants that they enforce,
-    e.g., valid numeric ranges, global uniqueness constraints, foreign key constraints, etc.
-2. Application code in Node N1 executes T1 and T2. Both transactions succeed.
-3. Replicant instance R1 inside N1 appends to its local log the invocation of T1 and T2.
-4. Application code in Node N2 registers the same transactions T1 and T2.
-5. Application code in Node N2 executes T1 and T2.
-6. Application code in N1 issues a sync request with the server
-  - The request includes the transaction which was the latest transaction in the log the last time N1 synced with the server
-  - The request includes all novel transactions that N1 has executed since it last synced with the server
-7. The server receives the sync request and appends any novel invocations to its log
-  - Note that this means that causal consistency is maintained since transactions will always follow transactions they depended on.
-
-... todo ...
-
-## Database
+## Database Choice
 
 The design of Replicant requires a handful of key features from whatever underlying database it uses:
 
@@ -97,7 +77,7 @@ The design of Replicant requires a handful of key features from whatever underly
 * Forking, not just one linear history, because during sync, we want to integrate changes from the server on a branch so that local history can continue to progress during sync
 * Determinism, if two nodes start at the same state and run the same sequence of transactions, they must arrive at the same state
 
-Although many databases could theoretically be used or made to work, [Noms](https://github.com/attic-labs/noms) is perfectly suited for this application without any changes.
+Although many databases could theoretically be used or made to work, [Noms](https://github.com/attic-labs/noms) is perfectly suited to the task. It has built-in efficient snapshots and forks, and was designed to be deterministic.
 
 Additionally, Noms has a few other really useful features for us:
 
@@ -105,7 +85,44 @@ Additionally, Noms has a few other really useful features for us:
 * It has efficient one-way replication - you don't need to replay transactions for one way replication, you can just sync the data directly, which is much faster, especially when adding a new node to a group
 * It is written in Go, which can be compiled to native code for use on either iOS or Android
 * It's quite fast, with peformance comparable to top key/value stores for many workloads
-* It has built-in support for indexes to support queries
+* It has built-in support for sorted indexes, to support queries
+
+## Runtime Structure
+
+A deployed system of replicant nodes consists of a single logical "server" (which will typically itself actually be a distributed system) and one or more "clients", which are typically mobile apps running in iOS or Android.
+
+The clients embed Replicant and use it as their local datastore. In the background Replicant continuously synchronizes with the server.
+
+The server's only required responsibility is to provide a reliable log service that clients can access with the following operations (provided here in Go-like pseudo-code):
+
+```go
+type Op struct {
+  // Unique ID of the transaction
+  // Generated at the client-side and immutable, even across reordering
+  // Once a transaction is submitted on a node, it will be in the final shared log
+  ID string
+
+  // Unique ID of the function that was invoked. Typically this is the hash of the
+  // code of the function, or some other identifier to find the exact code to invoke.
+  FuncID string
+  
+  // The arguments that the operation was invoked with
+  Args []interface{}
+}
+
+// Ensures that one or more operations are in the log. If the entries already exist
+// in the log (as identified by their ID) then they are not duplicated.
+Put(ops []Op)
+
+// Gets the log starting from fromID
+Get(fromID string) []Op
+```
+
+TODO: Is the requirement to not duplicate entries a major complexity for the server? Duplicates could be allowed, it just moves additional complexity to the clients.
+
+## Client Schema / State
+
+TODO
 
 ## Transactions
 
@@ -146,7 +163,13 @@ The data model will be:
 
 # Future Work
 
+## Out-of-Protocol Writes
+
+## Privacy: Server-Proofing the Log Service
+
 ## Optimizations
+- local (parallelism via deterministic locks, ala calvin)
+- remote (hinting of affected keys)
 
 ## P2P Finalization
 
