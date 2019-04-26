@@ -1,36 +1,38 @@
 # Delightfully Easy Offline-First Applications
 
-"Offline-First" describes a mobile application architecture where data is read and written from a local
-database on the device, and synchronized lazily with the server when there is connectivity.
+"[Offline-First](https://www.google.com/search?q=offline+first)" describes an application architecture where
+data is read and written from a local database on user devices, then synchronized lazily with servers whenever
+there is connectivity.
 
-These applications are highly desired by product teams and users because they are so much more responsive,
-reliable, and resilient to variable network conditions.
+These applications are highly desired by product teams and users because they are much more responsive and
+reliable than applications that are directly dependent upon servers.
 
 Unfortunately, mobile-first applications have historically been very challenging to build. Bidirectional
-sync is a famously difficult problem in computer science, and one which has elluded satisfying general
+sync is a famously difficult problem, and one which has elluded satisfying general
 solutions. Existing products (Apple CloudKit, Android Sync, Google FireStore, Realm, PouchDB) all have at
 least one or more serious problems, incuding:
 
-* Requiring developers write code to handle merge conflicts. This is a variant of concurrent programming
-and is quite difficult for developers to do correctly, and a large increase in application complexity.
+* Requiring that developers write code to handle merge conflicts. This is a variant of concurrent programming
+and is quite difficult for developers to do correctly, and a large burden on app teams.
 * The lack of ACID transactions. A replicated database that offers automatic merging, but not transactions
-isn't really that helpful. Because it still forces the developer to think about what happens when multistep
-operations interleave.
-* A restrictive or non-standard data model.
+isn't really that helpful because developers still have to think carefully about what happens when sequences
+of operations are interleaved.
+* A restrictive or non-standard data model, for example offering only CRDTs.
 * Requiring the use of a specific, often proprietary database on the server-side.
 
 For these reasons, these products are often not practical options for application developers, leaving them
 forced to develop their own sync protocol at the application layer if they want an offline-first app, an
-incredibly expensive and technically risky endeavor.
+expensive and technically risky endeavor.
 
 # Introducing Replicant
 
-Replicant makes it dramatically easier to build high-quality "offline-first" mobile applications.
+Replicant makes it dramatically easier to build these "offline-first" mobile applications. So much easier,
+we believe, that there is little reason for any mobile developer not to do so.
 
-The key features that make Replicant so easy to use are:
+The key features that contribute to this leap in usability are:
 
-* **Transactional**: Replicant supports complex multikey read/write transactions. Transactions are run
-serially and completely isolated from each other. Transactions either succeed or fail atomically.
+* **Transactional**: Replicant supports complex multikey read/write transactions. Transactions are arbitrary
+functions in a standard programming language, and run serially and completely isolated from each other.
 * **Conflict-free**: Virtually all conflicts are handled naturally by the protocol. All nodes are guaranteed
 to resolve to the same state once all transactions have been synced ("strong eventual consistency"). Developers,
 in almost all cases, do not need to think about the fact that nodes are disconnected. They simply use the database as if
