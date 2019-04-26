@@ -63,15 +63,23 @@ This will commonly result in a node learning about transactions that occurred "i
 of view (because they happened on disconnected node). In that case, the node rewinds back to the most recent
 shared state and replays the transactions in the correct order.
 
-Thus, once all nodes have the same log, they will execute the same sequene of transactions and arrive at the
+Thus, once all nodes have the same log, they will execute the same sequence of transactions and arrive at the
 same database state. What's more, as we will see, most types of what are commonly termed "merge conflicts"
 are naturally handled in this model without any extra work from the application developer.
 
 # Details
 
+## Database
+
 ## Transactions
 
-## Database
+Interaction with the Replicant database is via _transactions_ which are arbitrary pure functions in a standard
+programming language.
+
+The language is still under investigation. The key desiredata:
+
+* *Determinism*: Every invocation with the same database state and parameters must result in the same output
+and effect on the database. 
 
 ## Data Model
 
