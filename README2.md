@@ -38,8 +38,8 @@ to resolve to the same state once all transactions have been synced ("strong eve
 in almost all cases, do not need to think about the fact that nodes are disconnected. They simply use the database as if
 it was a local database and synchronization happens behind the scenes.
 * **Standard Data Model**: The replicant data model is a simple document database. From an API perspective, it's
-very similar to FireStore, Mongo, Couchbase, etc. You can build arbitrarily complex datamodels that maintain their
-correctness guarantees. You don't need a special `Counter` datatype to model a counter. You just use plain arithmetic.
+very similar to FireStore, Mongo, Couchbase, Fauna, etc. You don't need to learn anything new, and can build
+arbitrarily complex data structures on this primitive that are still conflict-free. You don't need a special `Counter` datatype to model a counter. You just use arithmetic.
 * **Open**: Replicant has extremely minimal requirements on the server-side. It can work with any existing
 server-side stack.
 
@@ -56,14 +56,14 @@ transactions locally.
 
 In Replicant we turn the knob further: nodes do not coordinate synchronously to establish order, or for any
 other reason. Instead nodes execute transactions completely locally, responding immediately to the
-application. A log is maintained at each node of the order transactions occurred in. Asynchronously, nodes
-coordinate with an external service (typically the application's own servers) to establish a total order
-for all transactions across all nodes. This log is then replicated to each node. This will commonly result
-in a node learning about transactions that occurred "in the past" from its point of view (because they
-happened on disconnected node). In that case, the node rewinds back to the most recent shared state and
-replays the transactions in the correct order.
+application. A log is maintained at each node of the order transactions occurred in. Asynchronously, when
+connectivity allows, nodes coordinate with an external service (typically the application's own servers)
+to establish a total order for all transactions across all nodes. This log is then replicated to each node.
+This will commonly result in a node learning about transactions that occurred "in the past" from its point
+of view (because they happened on disconnected node). In that case, the node rewinds back to the most recent
+shared state and replays the transactions in the correct order.
 
-Thus, once all nodes have the same log, they will execute the same set of transactions and arrive at the
+Thus, once all nodes have the same log, they will execute the same sequene of transactions and arrive at the
 same database state. What's more, as we will see, most types of what are commonly termed "merge conflicts"
 are naturally handled in this model without any extra work from the application developer.
 
@@ -71,8 +71,8 @@ are naturally handled in this model without any extra work from the application 
 
 ## Transactions
 
-## Data Model
+## Database
 
-## Deterministic Database
+## Data Model
 
 ## Conflicts
