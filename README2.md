@@ -1,7 +1,5 @@
 # Delightfully Easy Offline-First Applications
 
-## Problem
-
 "Offline-First" describes a mobile application architecture where data is read and written from a local
 database on the device, and synchronized lazily with the server when there is connectivity.
 
