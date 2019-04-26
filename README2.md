@@ -60,12 +60,12 @@ application. A log is maintained at each node of the order transactions occurred
 connectivity allows, nodes coordinate with an external service (typically the application's own servers)
 to establish a total order for all transactions across all nodes. This log is then replicated to each node.
 This will commonly result in a node learning about transactions that occurred "in the past" from its point
-of view (because they happened on disconnected node). In that case, the node rewinds back to the most recent
-shared state and replays the transactions in the correct order.
+of view (because they happened on disconnected node). In that case, the node rewinds its database back to
+the most recent shared state and replays the transactions in the correct order.
 
 Thus, once all nodes have the same log, they will execute the same sequence of transactions and arrive at the
 same database state. What's more, as we will see, most types of what are commonly termed "merge conflicts"
-are naturally handled in this model without any extra work from the application developer.
+are gracefully handled in this model without any extra work from the application developer.
 
 # Details
 
