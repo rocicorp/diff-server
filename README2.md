@@ -1,19 +1,49 @@
-# Replicant
+# Delightfully Easy Offline-First Applications
 
-Delightfully Easy Offline-First Applications
+## Problem
 
-## What's this then?
+"Offline-First" describes a mobile application architecture where data is read and written from a local
+database on the device, and synchronized lazily with the server when there is connectivity.
 
-Replicant makes it **insanely easy** to build high-quality "offline-first" mobile applications.
+These applications are highly desired by product teams and users because they are so much more responsive,
+reliable, and resilient to variable network conditions.
 
-For the first time ever, it is possible to create offline-first mobile apps:
+Unfortunately, mobile-first applications have historically been very challenging to build. Bidirectional
+sync is a famously difficult problem in computer science, and one which has elluded satisfying general
+solutions. Existing products (Apple CloudKit, Android Sync, Google FireStore, Realm, PouchDB) all have at
+least one or more serious problems, incuding:
 
-* Without writing conflict resolution code
-* With a simple, standard data model (Replicant is a "Document Database" where entries are key/value pairs and the values are JSON objects)
-* With real ACID-compliant transactions
-* Without depending on a custom, proprietary backend
+* Requiring developers write code to handle merge conflicts. This is a variant of concurrent programming
+and is quite difficult for developers to do correctly, and a large increase in application complexity.
+* The lack of ACID transactions. A replicated database that offers automatic merging, but not transactions
+isn't really that helpful. Because it still forces the developer to think about what happens when multistep
+operations interleave.
+* A restrictive or non-standard data model.
+* Requiring the use of a specific, often proprietary database on the server-side.
 
-## Intuition
+For these reasons, these products are often not practical options for application developers, leaving them
+forced to develop their own sync protocol at the application layer if they want an offline-first app, an
+incredibly expensive and technically risky endeavor.
+
+# Introducing Replicant
+
+Replicant makes it dramatically easier to build high-quality "offline-first" mobile applications.
+
+The key features that make Replicant so easy to use are:
+
+* **Transactional**: Replicant supports complex multikey read/write transactions. Transactions are run
+serially and completely isolated from each other. Transactions either succeed or fail atomically.
+* **Conflict-free**: Virtually all conflicts are handled naturally by the protocol. All nodes are guaranteed
+to resolve to the same state once all transactions have been synced ("strong eventual consistency"). Developers,
+in almost all cases, do not need to think about the fact that nodes are disconnected. They simply use the database as if
+it was a local database and synchronization happens behind the scenes.
+* **Standard Data Model**: The replicant data model is a simple document database. From an API perspective, it's
+very similar to FireStore, Mongo, Couchbase, etc. You can build arbitrarily complex datamodels that maintain their
+correctness guarantees. You don't need a special `Counter` datatype to model a counter. You just use plain arithmetic.
+* **Open**: Replicant has extremely minimal requirements on the server-side. It can work with any existing
+server-side stack.
+
+# Intuition
 
 Replicant is heavily inspired by [Calvin](http://cs.yale.edu/homes/thomson/publications/calvin-sigmod12.pdf).
 The key insight in Calvin is that the problem of ordering transactions can be separated from the problem of
@@ -25,28 +55,24 @@ for physical clocks. Calvin nodes coordinate synchronously only to establish tra
 transactions locally.
 
 In Replicant we turn the knob further: nodes do not coordinate synchronously to establish order, or for any
-other reason. Instead nodes rely on an external service (typically the application's own server) to establish
-a total order for all transactions. Transactions are executed locally on each node. During synchronization,
-nodes post their novel log entries to the server, creating a total order that is compatible with the partial
-ordering that actually happened. The merged log is then copied back to the node. Transactions that happened
-on other nodes will typically be received out of order. When this happens, the state of the database is
-rewound to the most recent shared state, and the transactions are then replayed in the correct order.
+other reason. Instead nodes execute transactions completely locally, responding immediately to the
+application. A log is maintained at each node of the order transactions occurred in. Asynchronously, nodes
+coordinate with an external service (typically the application's own servers) to establish a total order
+for all transactions across all nodes. This log is then replicated to each node. This will commonly result
+in a node learning about transactions that occurred "in the past" from its point of view (because they
+happened on disconnected node). In that case, the node rewinds back to the most recent shared state and
+replays the transactions in the correct order.
 
-As a result, all nodes are guaranteed to arrive at the same state. And since transactions are serialized,
-merging the result of parallel operations becomes integrated into the transaction itself and becomes
-essentially automatic for almost all cases.
+Thus, once all nodes have the same log, they will execute the same set of transactions and arrive at the
+same database state. What's more, as we will see, most types of what are commonly termed "merge conflicts"
+are naturally handled in this model without any extra work from the application developer.
 
-## Details
+# Details
 
-Developers interact with a Replicant database via *transactions*. A transaction in Replicant is a pure function,
-written in some standard programming language (let's assume Go but could be anything). The environment
-transactions are run in is controlled to ensure that there are no non-deterministic inputs.
+## Transactions
 
-Each transaction receives a number of parameters along with the database. All a transaction can do is return
-data to the caller or write to the database. The state of the database at the end of the transaction is
-completely determined by the state of the database prior to the transaction, and the parameters passed in.
+## Data Model
 
-Therefore, the state of a Replicant database at any point in completely determined by the history of transactions
-that have been executed against it. Two devices that start with a Replicant database in a shared state and
-execute the same sequence of transactions are guaranteed to end at the same state.
-    
+## Deterministic Database
+
+## Conflicts
