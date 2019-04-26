@@ -69,18 +69,85 @@ are naturally handled in this model without any extra work from the application 
 
 # Details
 
+## Life of a Transaction
+
+1. Application code in Node N1 registers transactions T1 and T2 with Replicant
+  - Transactions can be written in any language, with the restriction that they are pure and deterministic
+  - Transactions are identified in Replicant by a hash of their code
+  - All transactions get passed at least one parameter, which is the database
+  - Transactions are typically written such that they have various preconditions and invariants that they enforce,
+    e.g., valid numeric ranges, global uniqueness constraints, foreign key constraints, etc.
+2. Application code in Node N1 executes T1 and T2. Both transactions succeed.
+3. Replicant instance R1 inside N1 appends to its local log the invocation of T1 and T2.
+4. Application code in Node N2 registers the same transactions T1 and T2.
+5. Application code in Node N2 executes T1 and T2.
+6. Application code in N1 issues a sync request with the server
+  - The request includes the transaction which was the latest transaction in the log the last time N1 synced with the server
+  - The request includes all novel transactions that N1 has executed since it last synced with the server
+7. The server receives the sync request and appends any novel invocations to its log
+  - Note that this means that causal consistency is maintained since transactions will always follow transactions they depended on.
+
+... todo ...
+
 ## Database
+
+The design of Replicant requires a handful of key features from whatever underlying database it uses:
+
+* Efficient snapshots, because we need to rewind to shared states commonly
+* Forking, not just one linear history, because during sync, we want to integrate changes from the server on a branch so that local history can continue to progress during sync
+* Determinism, if two nodes start at the same state and run the same sequence of transactions, they must arrive at the same state
+
+Although many databases could theoretically be used or made to work, [Noms](https://github.com/attic-labs/noms) is perfectly suited for this application without any changes.
+
+Additionally, Noms has a few other really useful features for us:
+
+* It is hash-based, so determinism can be trivially verified at all times
+* It has efficient one-way replication - you don't need to replay transactions for one way replication, you can just sync the data directly, which is much faster, especially when adding a new node to a group
+* It is written in Go, which can be compiled to native code for use on either iOS or Android
+* It's quite fast, with peformance comparable to top key/value stores for many workloads
+* It has built-in support for indexes to support queries
 
 ## Transactions
 
-Interaction with the Replicant database is via _transactions_ which are arbitrary pure functions in a standard
+Interaction with the Replicant database is via _transactions_ which are arbitrary pure functions in some standard
 programming language.
 
-The language is still under investigation. The key desiredata:
+The language choice is still under investigation. The key desiredata:
 
 * *Determinism*: Every invocation with the same database state and parameters must result in the same output
-and effect on the database. 
+and effect on the database, which means the code must follow the same execution. This is a surprisingly uncommon
+feature in languages.
+* *Popularity*: Replicant cannot be easy to use if it requires you to learn a new programming language. Also
+popularity on each target platform needs to be consider. For example, Matlab is popular, but it's not popular
+with Android or iOS developers.
+
+I am currently thinking that the initial transaction language should be JavaScript. Determinism would be enforce
+either using an apporach like [deterministic.js](https://deterministic.js.org/) or by running a JavaScript
+interpreter inside [wasmi](https://github.com/paritytech/wasmi). Research should be done into the performance of
+both though.
+
+A second, later language choice could be Rust (on top of wasmi). This is a popular choice in the blockchain space,
+where they also require this property of determinism.
 
 ## Data Model
 
+The data model will be:
+
+* key/value pairs
+  - keys are byte arrays
+  - values are JSON-like trees, except:
+    - special _class field supported to give json objects a "type", which type that they can later be queried by
+    - special _id field for unqiue id
+    - blobs supported
+  - you can query into a subtree of a value using a path syntax
+  - you can optionally declare indexes on any path
+
 ## Conflicts
+
+# Future Work
+
+## Optimizations
+
+## P2P Finalization
+
+## Edge Database
