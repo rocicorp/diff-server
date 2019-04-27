@@ -230,7 +230,9 @@ Synchronization is a two-step process that should feel reminiscent to anyone who
 
 ## Conflicts
 
+There are a lot of different things that people mean when they say "conflicts". Let's go through some of them:
 
+### A single read-write register
 
 ## Versioning Transactions
 
