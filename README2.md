@@ -216,15 +216,15 @@ The transaction is run against the current Noms database resulting in a new data
 Synchronization is a two-step process that should feel reminiscent to anyone who has used git:
 
 1. Push:
-  a. Replicant sends a list of all ops that are new since the last known server op
-  b. The result of Push() is a sequence of ops that need to be applied to the last known server op. This might just be the same ops replicant just sent, or it might include ops from other clients.
-  c. In the case where the list of ops is unchanged, the push is a *fast-forward*. In that case, just set the last-known server op to the last op that was sent to the server and exit.
-  d. Otherwise:
-    i. Set a new in-memory pointer `rebaseHead` to the last-known head of the remote log
-    ii. For each op in the returned list from `Push`:
+  - Replicant sends a list of all ops that are new since the last known server op
+  - The result of Push() is a sequence of ops that need to be applied to the last known server op. This might just be the same ops replicant just sent, or it might include ops from other clients.
+  - In the case where the list of ops is unchanged, the push is a *fast-forward*. In that case, just set the last-known server op to the last op that was sent to the server and exit.
+  - Otherwise:
+    - Set a new in-memory pointer `rebaseHead` to the last-known head of the remote log
+    - For each op in the returned list from `Push`:
       - Re-run that op atop the `rebaseHead`
       - Set `rebaseHead` to the resulting state
-    iii. Set the last known server head to `rebaseHead`
+    - Set the last known server head to `rebaseHead`
  2. Rebase:
    - Rebase any new ops from the local log that aren't present in the server log (e.g., ops that occurred since Push() was invoked) in the same way as above
 
