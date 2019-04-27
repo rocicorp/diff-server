@@ -31,10 +31,10 @@ we believe, that there is little reason for any mobile developer not to do so.
 
 The key features that contribute to this leap in usability are:
 
-* **Transactional**: Replicant supports complex multikey read/write transactions. Transactions are arbitrary
+* **Transactions**: Replicant supports complex multikey read/write transactions. Transactions are arbitrary
 functions in a standard programming language, and run serially and completely isolated from each other.
 * **Conflict-free**: Virtually all conflicts are handled naturally by the protocol. All nodes are guaranteed
-to resolve to the same state once all transactions have been synced ("strong eventual consistency"). Developers,
+to resolve to the same state once all transactions have been synced (aka "[strong eventual consistency](https://en.wikipedia.org/wiki/Eventual_consistency#Strong_eventual_consistency)"). Developers,
 in almost all cases, do not need to think about the fact that nodes are disconnected. They simply use the database as if
 it was a local database and synchronization happens behind the scenes.
 * **Standard Data Model**: The replicant data model is a simple document database. From an API perspective, it's
@@ -69,29 +69,13 @@ are gracefully handled in this model without any extra work from the application
 
 # Details
 
-## Database Choice
-
-The design of Replicant requires a handful of key features from whatever underlying database it uses:
-
-* Efficient snapshots, because we need to rewind to shared states commonly
-* Forking, not just one linear history, because during sync, we want to integrate changes from the server on a branch so that local history can continue to progress during sync
-* Determinism, if two nodes start at the same state and run the same sequence of transactions, they must arrive at the same state
-
-Although many databases could theoretically be used or made to work, [Noms](https://github.com/attic-labs/noms) is perfectly suited to the task. It has built-in efficient snapshots and forks, and was designed to be deterministic.
-
-Additionally, Noms has a few other really useful features for us:
-
-* It is hash-based, so determinism can be trivially verified at all times
-* It has efficient one-way replication - you don't need to replay transactions for one way replication, you can just sync the data directly, which is much faster, especially when adding a new node to a group
-* It is written in Go, which can be compiled to native code for use on either iOS or Android
-* It's quite fast, with peformance comparable to top key/value stores for many workloads
-* It has built-in support for sorted indexes, to support queries
-
-## Runtime Structure
+## System Architecture
 
 A deployed system of replicant nodes consists of a single logical "server" (which will typically itself actually be a distributed system) and one or more "clients", which are typically mobile apps running in iOS or Android.
 
 The clients embed Replicant and use it as their local datastore. In the background Replicant continuously synchronizes with the server.
+
+## Server Responsibilities
 
 The server's only required responsibility is to provide a reliable log service that clients can access with the following operations (provided here in Go-like pseudo-code):
 
@@ -110,56 +94,145 @@ type Op struct {
   Args []interface{}
 }
 
-// Ensures that one or more operations are in the log. If the entries already exist
-// in the log (as identified by their ID) then they are not duplicated.
-Put(ops []Op)
-
-// Gets the log starting from fromID
-Get(fromID string) []Op
+// Ensures that zero or more operations are in the log. If the entries already exist
+// in the log (as identified by their ID), nothing happens. Otherwise the entires are
+// appended to the log.
+// The return value is the slice of the log from the entry after lastKnownHeadID to
+// the new head. This will include `ops`, but also any entries from other clients
+// since the last time the caller synced.
+// Note: if the requirement to de-dupe is overly burdensome, it can be removed at
+// the expense of some additional work client-side.
+// Note: the implementation doesn't need to be atomic.
+Sync(lastKnownHeadID string, newOps []Op) []Op
 ```
 
-TODO: Is the requirement to not duplicate entries a major complexity for the server? Duplicates could be allowed, it just moves additional complexity to the clients.
+***TODO:** Is the requirement to not duplicate entries a major complexity for the server? Duplicates could be allowed, it just moves additional complexity to the clients.*
 
-## Client Schema / State
+## Client State
 
-TODO
+A replicant instance maintains the following persistent state:
+
+* Some versioned, forkable database that stores the actual application state
+* An ordered log of transactions that determine the current state of the local database
+* For each entry in the log, a pointer to the database state at that moment in time
+* A pointer to the last known head of the remote database
+
+For the actual embedded database, we use [Noms](https://github.com/attic-labs/noms), a versioned, forkable, transactionable database with efficient one-way replication. But any database could be used as long as it supports atomic transactions, efficient snapshots, and a way to fork from a historical snapshot.
+
+## Data Model
+
+The data model exposed to user code is a fairly standard document database approach.
+
+- keys are byte arrays
+- values are JSON-like trees, except:
+  - special _class field supported to give json objects a "type", which type that they can later be queried by
+  - special _id field for unqiue id
+  - blobs supported
+- you can query into a subtree of a value using a path syntax
+- you can optionally declare indexes on any path
+
+This probably needs more work. I haven't thought a lot about it because it's not relevant to the core problem Replicant is solving, only the developer ergonomics (which is also important! but can be done a bit later).
 
 ## Transactions
 
-Interaction with the Replicant database is via _transactions_ which are arbitrary pure functions in some standard
-programming language.
+Interaction with the Replicant database is via _transactions_ which are arbitrary pure functions in some standard programming language.
 
 The language choice is still under investigation. The key desiredata:
 
 * *Determinism*: Every invocation with the same database state and parameters must result in the same output
-and effect on the database, which means the code must follow the same execution. This is a surprisingly uncommon
-feature in languages.
+and effect on the database, on all platforms Replicant runs on.
 * *Popularity*: Replicant cannot be easy to use if it requires you to learn a new programming language. Also
 popularity on each target platform needs to be consider. For example, Matlab is popular, but it's not popular
 with Android or iOS developers.
 
-I am currently thinking that the initial transaction language should be JavaScript. Determinism would be enforce
+I am currently thinking that the initial transaction language should be JavaScript. Determinism would be enforced
 either using an apporach like [deterministic.js](https://deterministic.js.org/) or by running a JavaScript
-interpreter inside [wasmi](https://github.com/paritytech/wasmi). Research should be done into the performance of
-both though.
+interpreter inside [wasmi](https://github.com/paritytech/wasmi) or maybe a forked [Otto](https://github.com/robertkrimen/otto) that enforced determinism. Research should be done into the performance of various approaches.
 
 A second, later language choice could be Rust (on top of wasmi). This is a popular choice in the blockchain space,
 where they also require this property of determinism.
 
-## Data Model
+## Registering Transactions
 
-The data model will be:
+Client code *registers* transaction types by some unique identifier (typically a hash) with Replicant. The registrations are stored in-memory.
 
-* key/value pairs
-  - keys are byte arrays
-  - values are JSON-like trees, except:
-    - special _class field supported to give json objects a "type", which type that they can later be queried by
-    - special _id field for unqiue id
-    - blobs supported
-  - you can query into a subtree of a value using a path syntax
-  - you can optionally declare indexes on any path
+It might look something like this (from Java):
+
+```java
+replicant.RegisterTransactions("transactions.js")
+```
+
+And `transactions.js` would be some embedded resource in the Android application containing the various available transactions:
+
+```js
+createUser(name, email) {
+  if (db.find({
+    _class: 'User',
+    email,
+  }) {
+    throw new Error(`User with email %s already exists`, email);
+  }
+
+  return db.put({
+    name,
+    email,
+    _class: 'User',
+  });
+}
+
+createGame(userIDs) {
+  const game = db.put({
+    userIDs,
+    _class: 'Game',
+  });
+
+  for (uid of userIDs) {
+    const user = db.get(uid);
+    user.currentGame = game._id;
+  }
+  
+  return game;
+}
+
+updateHighScore(userId, score) {
+  const user = db.get(userId);
+  user.highScore = Math.max(user.highScore, score);
+  db.set(user);
+}
+```
+
+## Executing Transactions
+
+Client code invokes transactions by hash, or more likely by name for convenience:
+
+```
+replicant.exec("updateHighScore", user.ID, newScore);
+```
+
+The transaction is run against the current Noms database resulting in a new database state. The log is atomically updated appending the new transaction and parameters.
+
+## Synchronization
+
+Synchronization is a two-step process that should feel reminiscent to anyone who has used git:
+
+1. Push:
+  a. Replicant sends a list of all ops that are new since the last known server op
+  b. The result of Push() is a sequence of ops that need to be applied to the last known server op. This might just be the same ops replicant just sent, or it might include ops from other clients.
+  c. In the case where the list of ops is unchanged, the push is a *fast-forward*. In that case, just set the last-known server op to the last op that was sent to the server and exit.
+  d. Otherwise:
+    i. Set a new in-memory pointer `rebaseHead` to the last-known head of the remote log
+    ii. For each op in the returned list from `Push`:
+      - Re-run that op atop the `rebaseHead`
+      - Set `rebaseHead` to the resulting state
+    iii. Set the last known server head to `rebaseHead`
+ 2. Rebase:
+   - Rebase any new ops from the local log that aren't present in the server log (e.g., ops that occurred since Push() was invoked) in the same way as above
 
 ## Conflicts
+
+
+
+## Versioning Transactions
 
 # Future Work
 
@@ -170,6 +243,7 @@ The data model will be:
 ## Optimizations
 - local (parallelism via deterministic locks, ala calvin)
 - remote (hinting of affected keys)
+- running Noms on the server
 
 ## P2P Finalization
 
