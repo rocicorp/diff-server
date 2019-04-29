@@ -1,4 +1,4 @@
-# Delightfully Easy Offline-First Applications
+# Surprisingly Easy Offline-First Applications
 
 "[Offline-First](https://www.google.com/search?q=offline+first)" describes an application architecture where
 data is read and written from a local database on user devices, then synchronized lazily with servers whenever
