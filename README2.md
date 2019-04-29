@@ -54,14 +54,19 @@ This insight is used by Calvin to create a high-throughput, strictly serialized 
 for physical clocks. Calvin nodes coordinate synchronously only to establish transaction order, then run their
 transactions locally.
 
-In Replicant we turn the knob further: nodes do not coordinate synchronously to establish order, or for any
-other reason. Instead nodes execute transactions completely locally, responding immediately to the
-application. A log is maintained at each node of the order transactions occurred in. Asynchronously, when
-connectivity allows, nodes coordinate with an external service (typically the application's own servers)
-to establish a total order for all transactions across all nodes. This log is then replicated to each node.
-This will commonly result in a node learning about transactions that occurred "in the past" from its point
-of view (because they happened on disconnected node). In that case, the node rewinds its database back to
-the most recent shared state and replays the transactions in the correct order.
+In Replicant, we turn the knob further. Like in Calvin, Replicant transactions are pure functions in a
+fully-featured programming language.
+
+Unlike Calvin, nodes do not coordinate synchronously to establish order,
+or for any other reason. Instead nodes execute transactions completely locally, responding immediately to the calling
+application. A log is maintained at each node of the local order transactions occurred in. Asynchronously, when
+connectivity allows, nodes synchronize these logs to establish a total order for all transactions. This order
+is decided authoratively by one logical node, called the "Replicant Server". This log is then replicated to each
+other node (called "Client Node" or "clients").
+
+This will commonly result in a client node learning about transactions that occurred "in the past" from its
+point of view (because they happened on disconnected node). In that case, the client rewinds its database back to
+the point of divergence and replays the transactions in the correct order.
 
 Thus, once all nodes have the same log, they will execute the same sequence of transactions and arrive at the
 same database state. What's more, as we will see, most types of what are commonly termed "merge conflicts"
@@ -71,7 +76,13 @@ are gracefully handled in this model without any extra work from the application
 
 ## System Architecture
 
-A deployed system of replicant nodes consists of a single logical "server" (which will typically itself actually be a distributed system) and one or more "clients", which are typically mobile apps running in iOS or Android.
+A deployed system of replicant nodes consists of a single logical "Replicant Server" and one or more "Replicant Clients", which are typically mobile apps running in iOS or Android. Traditional desktop apps and web apps could also be supported.
+
+<diagram, argh>
+
+One or more Replicant Servers are run by the Replicant Service. Typically each "Replicant Server" corresponds to a single user or device.
+
+The basic promise of Replicant is that Replicant Clients are *always* kept in sync with their Server. Once all synchronization is complete, the clients and their server are guaranteed to be in the exact same state. There is no way for application code that is using Replicant (at either the client or server layer) to do something that would prevent the databases from eventually converging.
 
 The clients embed Replicant and use it as their local datastore. In the background Replicant continuously synchronizes with the server.
 
