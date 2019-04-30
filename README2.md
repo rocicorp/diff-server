@@ -18,7 +18,8 @@ and is quite difficult for developers to do correctly, and a large burden on app
 isn't really that helpful because developers still have to think carefully about what happens when sequences
 of operations are interleaved.
 * A restrictive or non-standard data model, for example offering only CRDTs.
-* Requiring the use of a specific, often proprietary database on the server-side.
+* Reliance on a hosted service for the server-side
+* Difficult or non-existent incremental integration path with complex services
 
 For these reasons, these products are often not practical options for application developers, leaving them
 forced to develop their own sync protocol at the application layer if they want an offline-first app, an
