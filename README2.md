@@ -41,7 +41,7 @@ it was a local database and synchronization happens behind the scenes.
 * **Standard Data Model**: The replicant data model is a simple document database. From an API perspective, it's
 very similar to FireStore, Mongo, Couchbase, Fauna, etc. You don't need to learn anything new, and can build
 arbitrarily complex data structures on this primitive that are still conflict-free. You don't need a special `Counter` datatype to model a counter. You just use arithmetic.
-* **Open**: Replicant has extremely minimal requirements on the server-side. It can integrate with just about any existing server-side stack, and can be done so incrementally.
+* **Open**: Replicant is designed to integrate incrementally into large existing systems, not insist that you rewrite everything to use it.
 
 # Intuition
 
@@ -50,23 +50,22 @@ The key insight in Calvin is that the problem of ordering transactions can be se
 executing transactions. As long as transactions are pure functions, and all nodes agree to an ordering, and
 the database is a deterministic, then execution can be performed coordination-free by each node independently.
 
-This insight is used by Calvin to create a high-throughput, strictly serialized CP database without the need
+This insight is used by Calvin to create a high-throughput, strictly serialized distributed database without the need
 for physical clocks. Calvin nodes coordinate synchronously only to establish transaction order, then run their
 transactions locally.
 
-In Replicant, we turn the knob further. Like in Calvin, Replicant transactions are pure functions in a
+In Replicant, we turn the knob further. As in Calvin, Replicant transactions are pure functions in a
 fully-featured programming language.
 
 Unlike Calvin, nodes do not coordinate synchronously to establish order,
 or for any other reason. Instead nodes execute transactions completely locally, responding immediately to the calling
 application. A log is maintained at each node of the local order transactions occurred in. Asynchronously, when
-connectivity allows, nodes synchronize these logs to establish a total order for all transactions. This order
-is decided authoratively by one logical node, called the "Replicant Server". This log is then replicated to each
-other node (called "Client Node" or "clients").
+connectivity allows, "client nodes" (those running the user interface) synchronize their logs with a special (logical)
+node called the "Replicant Server", which decides authoratively what the total order is. The resulting totally ordered log is then replicated back to each client node.
 
 This will commonly result in a client node learning about transactions that occurred "in the past" from its
-point of view (because they happened on disconnected node). In that case, the client rewinds its database back to
-the point of divergence and replays the transactions in the correct order.
+point of view (because they happened on disconnected node) after synchronizing with the server. In that case,
+the client rewinds its database back to the point of divergence and replays the transactions in the correct order.
 
 Thus, once all nodes have the same log, they will execute the same sequence of transactions and arrive at the
 same database state. What's more, as we will see, most types of what are commonly termed "merge conflicts"
@@ -74,15 +73,17 @@ are gracefully handled in this model without any extra work from the application
 
 # System Architecture
 
-A deployed system of replicant nodes is called a *Replicant Group* and consists of a single logical *Replicant Server* and one or more *Replicant Clients*. Replicant Clients are typically mobile apps running in iOS or Android, but traditional desktop apps and web apps could also be clients.
+A deployed system of replicant nodes is called a *Replicant Group* and consists of a single logical *Replicant Server* and one or more *Replicant Clients*. Replicant Clients are typically mobile apps running in iOS or Android, but traditional desktop apps and web apps could also be clients, or really any software that embeds the Replicant Client library.
 
 <diagram, argh>
 
-Typically each Replicant Group models data for a single user of a service across all devices. But a Replicant Group could be more fine-grained, if for example, it's desirable to replicate a different subset of data to different device types, or more fine-grained, if there are groups of users collaborating on the exact same dataset.
+Typically each Replicant Group models data for a single user of a service across all the user's devices. But a Replicant Group could be more fine-grained (if, for example, it's desirable to replicate a different subset of data to different device types) or more coarse-grained (if there are groups of users collaborating on the same dataset).
 
-One or more Replicant Servers are run by the Replicant Service. The Replicant Service is run alongside the existing server stack and database of record. Plumbing is added to route relevant updates from the database of record to Replicant Servers and the reverse.
+One or more Replicant Servers are run by the Replicant Service. The Replicant Service is run alongside the application's existing server stack and database of record. Plumbing is added to route relevant updates from the database of record to Replicant Servers and the reverse (see integration).
 
-The key promise of Replicant is that Replicant Clients are *always* kept in sync with their Server. Once all nodes have all transactions, all nodes in the group are guaranteed to be in the exact same state. There is no way for application code that is using Replicant (at either the client or server layer) to do something that would prevent that from occurring.
+The key promise of Replicant is that Replicant Clients are *always* kept in sync with their Server. Once all nodes in a group have exchanged all transactions, they are guaranteed to be in the exact same state. There is no way for application code at either the client or server layer to do something that would prevent that from occurring.
+
+This is a powerful promise that makes reasoning about synchronization much simpler.
 
 # Replicant Client
 
@@ -98,7 +99,7 @@ Theoretically, Replicant could be built atop any single-node database that has t
 * snapshots - previous versions can be kept efficiently
 * forking - you can fork the database from any previous snapshot efficiently
 
-However [Noms](https://github.com/attic-labs/noms) - a prior project of ours - is especially well-suited because it has all these features, plus others that we be used by later sections of this document.
+However [Noms](https://github.com/attic-labs/noms) - a prior project of ours - is especially well-suited because it has all these features, plus others that will be used by later sections of this document.
 
 You do not need to understand all the details of Noms to understand this document. What you need to understand is that Noms is a versioned, transactional, forkable database. Think SQLite+Git.
 
@@ -114,31 +115,36 @@ Each dataset's latest commit has the following Noms type:
 ```
 Struct Commit {
   meta: Struct Meta {
+    date: Struct Date {
+      NanosSinceEpoch: Number,
+    },
     tx: Struct {
       args: List<Value>,
       code: Ref<Blob>,
+      name: String,
       origin: String,
-      type: String,
     },
   },
   parents: Set<Ref<Cycle<Commit>>>,
   value: Struct {
-    txTypes: Ref<Blob>,
+    txCode: Ref<Set<Blob>>,
     data: Map<String, Value>,
   },
 }
 ```
 
-Each commit represents a transaction in Replicant. The `meta.tx` field describes the transaction that was run that resulted in this commit. Specifically:
+Each Noms `Commit` represents a transaction in Replicant. The `meta.tx` field describes the transaction that was run that resulted in the commit. Specifically:
 
-* `origin`: The node the transaction was first run on (useful for debug purposes)
-* `code`: The code that contains the transaction type that was invoked (see "registering transactions")
-* `type`: The name of the specific transaction type, in `code` that was invoked
-* `args`: The arguments that were passed to the transaction type
+* `origin`: The node the transaction was originally run on (useful for debug purposes)
+* `code`: The code that contains the transaction function that was invoked (see "registering transactions")
+* `name`: The name of the transaction function from `code` that was run
+* `args`: The arguments that were passed to the transaction function
 
-The data each transaction writes has two parts:
+The standard `meta.date` field is also used for the current datetime inside the transaction. 
 
-* `txTypes`: A blob containing the current 
+The value of the transaction has two parts:
+
+* `txCode`: All registered transactions (see 'registering transactions')
 * `data`: A map of all currently stored user data, by ID (see data model, below)
 
 ***TODO:** Indexes need to go here somewhere. They aren't synchronized, but they need to be updated atomically with commits.*
@@ -169,14 +175,11 @@ with Android or iOS developers.
 
 I am currently thinking that the initial transaction language should be JavaScript. Determinism *could* be **enforced** a variety of ways:
 
-* Using an approach like [deterministic.js](https://deterministic.js.org/)
-* Running a JavaScript interpreter inside [wasmi](https://github.com/paritytech/wasmi)
-* Running inside a forked [Otto](https://github.com/robertkrimen/otto) that enforced determinism
+* Using an approach like [deterministic.js](https://deterministic.js.org/) - this is a blacklist approach, and so it's guaranteed to miss things
+* Running a JavaScript interpreter inside [wasmi](https://github.com/paritytech/wasmi) - this is a whitelist approach that was built from the ground-up for determinism, but it's slow
+* Running inside a forked [Otto](https://github.com/robertkrimen/otto) that enforced determinism - also slow
 
-However, all of those except the first would badly impact performance. I think that we do not need to enforce determinism because we will detect non-deterministic transactions automatically during sync. All we need to do is make non-deterministic transactions hard to trigger by accident, and the deterministic.js approach is sufficient for that.
-
-A second, later language choice could be Rust (on top of wasmi). This is a popular choice in the blockchain space,
-where they also require this property of determinism.
+I think that we do not need determinism to be rock-solid because we will detect non-deterministic transactions automatically during sync. All we need to do is make non-deterministic transactions hard to trigger by accident, and the deterministic.js approach is sufficient for that.
 
 ## Invoking Transactions
 
@@ -192,7 +195,7 @@ Transactions txs = replicant.LoadTransactions("transactions.js.bundle");
 ReplicantResult result = txs.exec("createUser", newUserName, newUserEmailAddress);
 ```
 
-However, we expect that in the typical case, applications will want to pre-register transaction code on the server-side for efficiency. See "registering transactions".
+However, we expect that in the typical case, applications will want to pre-register transaction code on the server-side for efficiency. See "registering transactions" for more.
 
 # Replicant Server
 
@@ -204,37 +207,45 @@ Unlike clients, Replicant Servers do not ever rewind. The server is Truth, and t
 
 This does not mean, however, that servers have to accept whatever clients write. Servers have full discretion over whether to accept any given transaction, and they validate all work clients do. See "synchronization" for details.
 
+## Noms Schema
+
+The same as the client, except there's only a single dataset, `master`, since the server doesn't need to allow a separate branch to evolve while sync is in progress the way the client does.
+
 ## Consistency Requirements
 
 Each Replicant Server acts as a single strictly serialized logical database, even though they are typically a distributed system internally. In the event of a partition internal to the replicant server, it ceases to be available rather than give inconsistent results. Note that this is fine, however, since the clients are designed to be frequently disconnected from their server.
 
 ## API
 
-For each Replicant Server, the Replicant Service exposes an API that is the same as the Noms Remote Server API, except that the implementation of Commit is different. See Synchronization for details.
+For each Replicant Server, the Replicant Service exposes an API that is the same as the [Noms Remote Server API](https://github.com/attic-labs/noms/blob/master/go/datas/database_server.go#L64), except that `PostRoot()` is non-public and a new `Commit(newHead hash.Hash)` endpoint is added. See Synchronization for details.
 
 ## Registering Transactions
 
-We expect that users will typically want to *register* transaction functions at the server-side for a few reasons:
+We expect that users will typically want to *register* transaction functions at the server-side, rather than let clients execute whatever transactions they want, for a few reasons:
 
 1. Without this, clients would have to include the code in their packages, and then write it into their databases, which would double the amount of storage the clients would consume.
-2. We expect that developers will usually want to whitelist transaction functions that can run, based on known hashes of code bundles. Otherwise, malicious clients could sync non-sensical transactions to good clients.
+2. We expect that developers will usually want to whitelist transaction functions that can run, based on known hashes of code bundles. Otherwise, malicious clients could attack good clients by way or the sync protocol.
 3. For many transaction types originating on clients, there will be server-side actions that need to happen -- either to actually execute the transaction in reality, or to validate the transaction. It's natural to integrate these handlers at the point of registration.
+
+This is implemented as a special pair of transaction functions baked into all Replicant nodes: `registerTransaction` and `unregisterTransaction` that update the `value.txCode` field of the server's `master` dataset. Since these transaction functions could never be themselves registered, they will always fail validation during sync and thus will not be allowed to be called by clients (see Synchronization).
 
 ## Replicant Service
 
-The Replicant Service is a stateless, scalable application server written in Go that runs one or more Replicant servers. The backing store for the contained servers is typically S3 or a similar blockstore (see [Noms-on-NBS](https://github.com/attic-labs/noms/blob/master/go/nbs/NBS-on-AWS.md)). As a result, chunk data will typically be relatively well-shared between servers.
+The Replicant Service is a stateless, horizontally scalable application server server written in Go that runs one or more Replicant servers. Because Replicant Servers store a small amount of data, there is no need to split the data of a single Replicant Server across multiple servers. However, it may be the case that for a variety of reasons there are multiple instances of the same Replicant Server running at once.
+
+An easy way to meet these requirements is to store all the state in Noms, configured to use S3/Dynamo as its backend (see [NBS-on-AWS](https://github.com/attic-labs/noms/blob/master/go/nbs/NBS-on-AWS.md)). However, one side-effect of doing that naively would be that there would be no data deduplication between Replicant Servers.
 
 # Synchronization
 
-Synchronization is a three-part process that should feel very similar to anyone who has looked under the covers at Git. It takes advantage of Noms' built-in fast one-way replication to accelerate fast-forward syncs (where there is no fork).
+Synchronization is a three-part process that should feel very similar to anyone who has looked under the covers at Git. It takes advantage of Noms' built-in fast one-way replication to accelerate "fast-forward" syncs.
 
 ## Step 1: Client pushes to server
 
-The client uses (effectively) `noms::Sync()` to push all missing chunks from the client's `local` dataset to the server. At the end of the push, the client calls `noms::Commit()` on the Noms server endpoint with the head of the client's `local` dataset at the time the push was started (it maybe have moved forward in the meantime).
+The client uses (effectively) [`noms sync`](https://github.com/attic-labs/noms/blob/master/doc/cli-tour.md#noms-sync) to push all missing chunks from the client's `local` dataset to the server's `master` dataset. At the end of the push, the client calls `Commit(newHead hash.Hash)`.
 
 ## Step 2: Commit on the server
 
-On the server-side, Noms' `Commit` is overridden in replicant to do much more:
+On the server-side, `Commit(newHead)` looks like:
 
 1. The call is queued behind any other commit to the same Replicant Server. Since Replicant Groups are usually small numbers of nodes, this will typically be a very short wait.
 2. When the call continues:
@@ -243,10 +254,10 @@ On the server-side, Noms' `Commit` is overridden in replicant to do much more:
     - Respond with the new head, there's nothing more to do
   - Else:
     - Validate each new commit (each commit after the fork point on the client side):
-      - Check that the specified transaction codebase is registered and the function is known
+      - Check that the specified transaction codebase is registered (exists in .value.txCode) and the function is known
       - Execute the transaction
       - If the resulting hash doesn't match the one the client specified, the client is badly behaved, return 40x (see badly-behaved clients)
-      - If the transaction has server-side validation, run that validation
+      - If the transaction has server-side validation registered, run that validation (see integration)
         - If the validation fails, replace the transaction with a CommitFailure transaction (see server-side validation)
       - Commit the new head
       - If the client commit is a fast-forward of the validated transaction chain:
@@ -256,7 +267,7 @@ On the server-side, Noms' `Commit` is overridden in replicant to do much more:
 
 ## Step 3: Client-Side Pull
 
-Back on the client-side, the `Commit()` call has just returned with a new head that should become the head of the `remote` dataset. This is trival. We trust the server and this makes no changes to our local state, so we just `Sync()` the server's dataset to our remote dataset, which pulls all the relevant chunks and we're done.
+Back on the client-side, the `Commit()` call has just returned with a new head that should become the head of the `remote` dataset. This is trival. We trust the server and this makes no changes to our local state, so we just `noms sync` the server's `master` dataset to our `remote` dataset, which pulls all the relevant chunks and we're done.
 
 ## Step 4: Client-Side Rebase
 
@@ -279,19 +290,43 @@ As a result, after step 3 finishes, we may have some new commits in the `local` 
 
 There are a lot of different things that people mean when they say "conflicts". Let's go through some of them:
 
-## A single read-write register
+## A single read-write register based on paramters
+
+Example:
+
+```js
+setCellValue(spreadsheetID, row, column, value) {
+  db.set(_id: spreadsheetID, `.rows[${row}].cells[${column}]`, value);
+}
+```
+
+In this example, a transaction takes data from the user and sets a value in the database. If this runs concurrently at two sites, there is no way to merge them. One must win, or we must ask the user.
+
+However, remember that this case isn't just a part of offline applications - it happens in normal client/server apps too. It is perfectly possible for a user to set a cell in their spreadsheet, and then another client overwrites it an instant later. This is not really different.
+
+## Multiple register writes
+
+## Arithmetic
+
+## Accumulation
+
+## Data structure maintenance
+
+## Dependent write
+
+All the above are handled naturally. Then there is:
+
+## Sequence manipulation
+
+Unclear how badly this is needed, but if it is, we can add a Noms type that is a sequence CRDT. Since we know the ancestery of all parallel writes, we can use a CRDT and it will automatically make the correct sequence edits.
 
 # Future Work
-
-## Out-of-Protocol Writes
-
-## Privacy: Server-Proofing the Log Service
 
 ## Optimizations
 - local (parallelism via deterministic locks, ala calvin)
 - remote (hinting of affected keys)
 - running Noms on the server
 
-## P2P Finalization
+## P2P Database
 
 ## Edge Database
