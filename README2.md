@@ -166,9 +166,13 @@ and effect on the database, on all platforms Replicant runs on.
 popularity on each target platform needs to be considered. For example, Matlab is popular, but it's not popular
 with Android or iOS developers.
 
-I am currently thinking that the initial transaction language should be JavaScript. Determinism would be enforced
-either using an approach like [deterministic.js](https://deterministic.js.org/) or by running a JavaScript
-interpreter inside [wasmi](https://github.com/paritytech/wasmi) or maybe a forked [Otto](https://github.com/robertkrimen/otto) that enforced determinism. Research should be done into the performance of various approaches.
+I am currently thinking that the initial transaction language should be JavaScript. Determinism *could* be **enforced** a variety of ways:
+
+* Using an approach like [deterministic.js](https://deterministic.js.org/)
+* Running a JavaScript interpreter inside [wasmi](https://github.com/paritytech/wasmi)
+* Running inside a forked [Otto](https://github.com/robertkrimen/otto) that enforced determinism
+
+However, all of those except the first would badly impact performance. I think that we do not need to enforce determinism because we will detect non-deterministic transactions automatically during sync. All we need to do is make non-deterministic transactions hard to trigger by accident, and the deterministic.js approach is sufficient for that.
 
 A second, later language choice could be Rust (on top of wasmi). This is a popular choice in the blockchain space,
 where they also require this property of determinism.
@@ -188,118 +192,93 @@ ReplicantResult result = txs.exec("createUser", newUserName, newUserEmailAddress
 ```
 
 However, we expect that in the typical case, applications will want to pre-register transaction code on the server-side for efficiency. See "registering transactions".
-### Replicant Server
 
-A Replicant Server maintains the authorative history of transactions that have occurred for a particular Replicant Group.
+# Replicant Server
 
-Unlike clients, Replicant Servers do not rewind. Once a transaction is written it is forever
+Structurally, a Replicant Server is very similar to a client. It contains a Noms database and executes transactions in the same way.
 
-The server's only required responsibility is to provide a reliable log service that clients can access with the following operations (provided here in Go-like pseudo-code):
+However, its role in the system is different: a Replicant Server's main responsibility is to maintain the authorative history of transactions that have occurred for a particular Replicant Group and their results.
 
-```go
-type Op struct {
-  // Unique ID of the transaction
-  // Generated at the client-side and immutable, even across reordering
-  // Once a transaction is submitted on a node, it will be in the final shared log
-  ID string
+Unlike clients, Replicant Servers do not ever rewind. The server is Truth, and the clients dance to its tune. Once a transaction is accepted by a server and written to its history, by either clients or the server itself, it is final, and clients will rewind and replay as necessary to match.
 
-  // Unique ID of the function that was invoked. Typically this is the hash of the
-  // code of the function, or some other identifier to find the exact code to invoke.
-  FuncID string
-  
-  // The arguments that the operation was invoked with
-  Args []interface{}
-}
+This does not mean, however, that servers have to accept whatever clients write. Servers have full discretion over whether to accept any given transaction, and they validate all work clients do. See "synchronization" for details.
 
-// Ensures that zero or more operations are in the log. If the entries already exist
-// in the log (as identified by their ID), nothing happens. Otherwise the entires are
-// appended to the log.
-// The return value is the slice of the log from the entry after lastKnownHeadID to
-// the new head. This will include `ops`, but also any entries from other clients
-// since the last time the caller synced.
-// Note: if the requirement to de-dupe is overly burdensome, it can be removed at
-// the expense of some additional work client-side.
-// Note: the implementation doesn't need to be atomic.
-Sync(lastKnownHeadID string, newOps []Op) []Op
-```
+## Consistency Requirements
 
-***TODO:** Is the requirement to not duplicate entries a major complexity for the server? Duplicates could be allowed, it just moves additional complexity to the clients.*
+Each Replicant Server acts as a single strictly serialized logical database, even though they are typically a distributed system internally. In the event of a partition internal to the replicant server, it ceases to be available rather than give inconsistent results. Note that this is fine, however, since the clients are designed to be frequently disconnected from their server.
 
-## Synchronization
+## API
 
-Synchronization is a two-step process that should feel reminiscent to anyone who has used git:
-
-1. Push:
-  - Replicant sends a list of all ops that are new since the last known server op
-  - The result of Push() is a sequence of ops that need to be applied to the last known server op. This might just be the same ops replicant just sent, or it might include ops from other clients.
-  - In the case where the list of ops is unchanged, the push is a *fast-forward*. In that case, just set the last-known server op to the last op that was sent to the server and exit.
-  - Otherwise:
-    - Set a new in-memory pointer `rebaseHead` to the last-known head of the remote log
-    - For each op in the returned list from `Push`:
-      - Re-run that op atop the `rebaseHead`
-      - Set `rebaseHead` to the resulting state
-    - Set the last known server head to `rebaseHead`
- 2. Rebase:
-   - Rebase any new ops from the local log that aren't present in the server log (e.g., ops that occurred since Push() was invoked) in the same way as above
+For each Replicant Server, the Replicant Service exposes an API that is the same as the Noms Remote Server API, except that the implementation of Commit is different. See Synchronization for details.
 
 ## Registering Transactions
 
-Application code at either the client or server *registers* transaction types by invoking a special built-in transaction type.
+We expect that users will typically want to *register* transaction functions at the server-side for a few reasons:
 
-It might look something like this (from Java):
+1. Without this, clients would have to include the code in their packages, and then write it into their databases, which would double the amount of storage the clients would consume.
+2. We expect that developers will usually want to whitelist transaction functions that can run, based on known hashes of code bundles. Otherwise, malicious clients could sync non-sensical transactions to good clients.
+3. For many transaction types originating on clients, there will be server-side actions that need to happen -- either to actually execute the transaction in reality, or to validate the transaction. It's natural to integrate these handlers at the point of registration.
 
-And `transactions.js` would be some embedded resource in the Android application containing the various available transactions:
+## Replicant Service
 
-```js
-createUser(name, email) {
-  if (db.find({
-    _class: 'User',
-    email,
-  }) {
-    throw new Error(`User with email %s already exists`, email);
-  }
+The Replicant Service is a stateless, scalable application server written in Go that runs one or more Replicant servers. The backing store for the contained servers is typically S3 or a similar blockstore (see [Noms-on-NBS](https://github.com/attic-labs/noms/blob/master/go/nbs/NBS-on-AWS.md)). As a result, chunk data will typically be relatively well-shared between servers.
 
-  return db.put({
-    name,
-    email,
-    _class: 'User',
-  });
-}
+# Synchronization
 
-createGame(userIDs) {
-  const game = db.put({
-    userIDs,
-    _class: 'Game',
-  });
+Synchronization is a three-part process that should feel very similar to anyone who has looked under the covers at Git. It takes advantage of Noms' built-in fast one-way replication to accelerate fast-forward syncs (where there is no fork).
 
-  for (uid of userIDs) {
-    const user = db.get(uid);
-    user.currentGame = game._id;
-  }
-  
-  return game;
-}
+## Step 1: Client pushes to server
 
-updateHighScore(userId, score) {
-  const user = db.get(userId);
-  user.highScore = Math.max(user.highScore, score);
-  db.set(user);
-}
-```
+The client uses (effectively) `noms::Sync()` to push all missing chunks from the client's `local` dataset to the server. At the end of the push, the client calls `noms::Commit()` on the Noms server endpoint with the head of the client's `local` dataset at the time the push was started (it maybe have moved forward in the meantime).
 
-The individual transaction functions 
+## Step 2: Commit on the server
 
-Transaction type code is stored in the actual database and synchronized to all nodes, just like any other data. This means that client will commonly execute transactions that modify the data in such a way that the cli
+On the server-side, Noms' `Commit` is overridden in replicant to do much more:
 
+1. The call is queued behind any other commit to the same Replicant Server. Since Replicant Groups are usually small numbers of nodes, this will typically be a very short wait.
+2. When the call continues:
+  - Find the fork point between the client's commit and the server's latest commit
+  - If the server commit is a fast-forward from client:
+    - Respond with the new head, there's nothing more to do
+  - Else:
+    - Validate each new commit (each commit after the fork point on the client side):
+      - Check that the specified transaction codebase is registered and the function is known
+      - Execute the transaction
+      - If the resulting hash doesn't match the one the client specified, the client is badly behaved, return 40x (see badly-behaved clients)
+      - If the transaction has server-side validation, run that validation
+        - If the validation fails, replace the transaction with a CommitFailure transaction (see server-side validation)
+      - Commit the new head
+      - If the client commit is a fast-forward of the validated transaction chain:
+        - Return the new head
+      - Else:
+        - Add a merge commit referencing the two branches and indicating which one goes first (see merge commits)
 
+## Step 3: Client-Side Pull
 
-## Conflicts
+Back on the client-side, the `Commit()` call has just returned with a new head that should become the head of the `remote` dataset. This is trival. We trust the server and this makes no changes to our local state, so we just `Sync()` the server's dataset to our remote dataset, which pulls all the relevant chunks and we're done.
+
+## Step 4: Client-Side Rebase
+
+We want to enable clients to make local progress between Step 1 and Step 3. Otherwise apps will be stalled waiting for syncs that may take awhile, or even stall in the face of flaky networks.
+
+Therefore we allow the `local` dataset to evolve as normal while the sync is in progress.
+
+As a result, after step 3 finishes, we may have some new commits in the `local` dataset since when step 1 started. We must rebase these commits:
+
+- Find fork point between `remote` and `local` heads
+- If local is ff of remote (no other client submitted work in meantime)
+  - nothing to do
+- If remote dataset is ff of local (no local work happened in meantime):
+  - Set local to remote
+- Else:
+  - Rebase each new commit from local fork onto `remote` head
+  - Commit result to `local`
+
+# Conflicts
 
 There are a lot of different things that people mean when they say "conflicts". Let's go through some of them:
 
-### A single read-write register
-
-## Versioning Transactions
+## A single read-write register
 
 # Future Work
 
