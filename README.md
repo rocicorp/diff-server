@@ -17,7 +17,7 @@ Replicant is a consensus layer that can be added on top of any existing single-n
 distributed, replicated, transactional database, without requiring the developer to manually merge concurrent changes
 or handle conflicts.
 
-Formally, the resulting distributed database is [sticky available](https://jepsen.io/consistency) and [casual+ consistent](https://jepsen.io/consistency/models/causal), which is the [highest consistency level possible](http://www.cs.cornell.edu/lorenzo/papers/cac-tr.pdf) for an available database.
+Formally, the resulting distributed database is [sticky available](https://jepsen.io/consistency) and [causal+ consistent](https://jepsen.io/consistency/models/causal), which is the [highest consistency level possible](http://www.cs.cornell.edu/lorenzo/papers/cac-tr.pdf) for an available database.
 
 The tradeoff is that some transactions that one peer runs and
 sees succeed locally may later be rolled back if conflicting concurrent transactions occurred. However, note that the
@@ -42,9 +42,9 @@ Transactions are gossiped between nodes asynchronously, whenever they are able t
 out of order. When this happens, the state of the database is rewound as necessary, and the transactions are replayed in the correct order.
 
 Consensus is achieved when all (or at least a majority) of known nodes have acknowledged up to a particular point in a
-history of transactions. The set of known node is managed using the same consensus rules.
+history of transactions. The set of known nodes is managed using the same consensus rules.
 
-The result is a disconnected DB with casual+ consistency that allows full multikey/multistatement transactions, and no
+The result is a disconnected DB with causal+ consistency that allows full multikey/multistatement transactions, and no
 manual conflict resolution required of developers.
 
 # Requirements
@@ -108,7 +108,7 @@ Replicant supports such interactions by tracking when a transaction is finalized
 
 Besides being used as a client-side database, Replicant could conceivably be used as a traditional distributed database.
 In this configuration, each "node" would likely be a set of nodes in one datacenter, each responsible for a subset of the
-data. The result would be a highly available, low-latency, distributed database offering casual+ consistency, not strict
+data. The result would be a highly available, low-latency, distributed database offering causal+ consistency, not strict
 serializability. Such a database would be far more performant than strict serializable databases, and not much harder to
 use.
 
