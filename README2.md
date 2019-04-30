@@ -73,23 +73,23 @@ are gracefully handled in this model without any extra work from the application
 
 # System Architecture
 
-A deployed system of replicant nodes is called a *Replicant Group* and consists of a single logical *Replicant Server* (which itself could be a distributed system) and one or more *Replicant Clients*. Replicant Clients are typically mobile apps running in iOS or Android, but traditional desktop apps and web apps could also be clients.
+A deployed system of replicant nodes is called a *Replicant Group* and consists of a single logical *Replicant Server* and one or more *Replicant Clients*. Replicant Clients are typically mobile apps running in iOS or Android, but traditional desktop apps and web apps could also be clients.
 
 <diagram, argh>
 
 Typically each Replicant Group models data for a single user of a service across all devices. But a Replicant Group could be more fine-grained, if for example, it's desirable to replicate a different subset of data to different device types, or more fine-grained, if there are groups of users collaborating on the exact same dataset.
 
-One or more Replicant Servers are run by the Replicant Service. Typically each Replicant Server corresponds to a single user or device.
+One or more Replicant Servers are run by the Replicant Service. The Replicant Service is run alongside the existing server stack and database of record. Plumbing is added to route relevant updates from the database of record to Replicant Servers and the reverse.
 
-The Replicant Service is run alongside the existing server stack and database of record. Plumbing is added to route relevant updates from the database of record to Replicant Servers and the reverse.
-
-The basic promise of Replicant is that Replicant Clients are *always* kept in sync with their Server. Once all synchronization is complete, the clients are guaranteed to be in the exact same state as their server. There is no way for application code that is using Replicant (at either the client or server layer) to do something that would prevent the databases from synchronizing.
+The key promise of Replicant is that Replicant Clients are *always* kept in sync with their Server. Once all nodes have all transactions, all nodes in the group are guaranteed to be in the exact same state. There is no way for application code that is using Replicant (at either the client or server layer) to do something that would prevent that from occurring.
 
 # Replicant Client
 
+TODO: <diagram>
+
 A Replicant Client is embedded within a client-side application, typically a mobile app in iOS or Android, but also potentially a desktop or web app. The application, or _host_, uses the client as its local datastore.
 
-The client is modified by executing _transactions_, which are invocations of pure functions called _transaction types_. The application hosting Replicant _registers_ transaction types either at the client, the server, or both. Only _registered_ transaction types can be invoked.
+The client is updated by executing _transactions_, which are invocations of pure functions called _transaction types_. The application hosting Replicant _registers_ transaction types either at the client, the server, or both. Only _registered_ transaction types can be invoked.
 
 Theoretically, Replicant could be built atop any single-node database that has the following features:
 
@@ -97,18 +97,18 @@ Theoretically, Replicant could be built atop any single-node database that has t
 * snapshots - previous versions can be kept efficiently
 * forking - you can fork the database from any previous snapshot efficiently
 
-However [Noms](https://github.com/attic-labs/noms) - a prior project of ours - is especially well-suited because it has all these features, plus others that we be used in later sections of this document.
+However [Noms](https://github.com/attic-labs/noms) - a prior project of ours - is especially well-suited because it has all these features, plus others that we be used by later sections of this document.
 
-You do not need to understand all the details of Noms to understand this document. What you need to understand is that it is a versioned, transactional, forkable database. Think SQLite+Git.
+You do not need to understand all the details of Noms to understand this document. What you need to understand is that Noms is a versioned, transactional, forkable database. Think SQLite+Git.
 
 ## Client State
 
-Replicant maintains two Noms datasets (analagous to Git branches):
+Replicant maintains two Noms _datasets_ (analagous to Git branches):
 
 * _remote_ - the last-known state of the Replicant Server
 * _local_ - the current state exposed to the host application
 
-Each dataset has the following Noms type:
+Each dataset's latest commit has the following Noms type:
 
 ```
 Struct Commit {
@@ -127,7 +127,7 @@ Struct Commit {
 }
 ```
 
-Each Replicant transaction, is represented by a standard Noms `Commit` struct. The `meta` field of the commit has an _tx_ field which describes the transaction that was run and resulted in this commit. Specifically:
+Each commit represents a transaction in Replicant. The `meta.tx` field describes the transaction that was run and resulted in this commit. Specifically:
 
 * `source`: The node the transaction was first run on (useful for debug purposes)
 * `type`: The transaction type (the actual function) that was run
@@ -138,11 +138,11 @@ The data each transaction writes has two parts:
 * `txTypes`: The currently registered set of transaction types
 * `data`: A map of all currently stored user data, by ID (see data model, below)
 
-***TODO:** There will be additional fields that maintain indexes*
+***TODO:** Indexes need to go here somewhere. They aren't synchronized, but they need to be updated atomically with commits.*
 
 ## Data Model
 
-The data model exposed to user code is a fairly standard document database approach.
+The data model exposed to user code is a fairly standard document database approach, like Google Firestore, Couchbase, RethinkDB, etc:
 
 - keys are byte arrays
 - values are JSON-like trees, except:
@@ -152,22 +152,20 @@ The data model exposed to user code is a fairly standard document database appro
 - you can query into a subtree of a value using a path syntax
 - you can optionally declare indexes on any path
 
-This probably needs more work. I haven't thought a lot about it because it's not relevant to the core problem Replicant is solving, only the developer ergonomics (which is also important! but can be done a bit later).
+*** TODO:** This needs a lot more work. I haven't thought a lot about it because it's not relevant to the core problem Replicant is solving, only the developer ergonomics (which is also important! but can be done a bit later).*
 
-## Transactions
+## Transaction Language
 
-Interaction with the Replicant database is via _transactions_ which are arbitrary pure functions in some standard programming language.
-
-The language choice is still under investigation. The key desiredata:
+The key desired features for the transaction language are:
 
 * *Determinism*: Every invocation with the same database state and parameters must result in the same output
 and effect on the database, on all platforms Replicant runs on.
 * *Popularity*: Replicant cannot be easy to use if it requires you to learn a new programming language. Also
-popularity on each target platform needs to be consider. For example, Matlab is popular, but it's not popular
+popularity on each target platform needs to be considered. For example, Matlab is popular, but it's not popular
 with Android or iOS developers.
 
 I am currently thinking that the initial transaction language should be JavaScript. Determinism would be enforced
-either using an apporach like [deterministic.js](https://deterministic.js.org/) or by running a JavaScript
+either using an approach like [deterministic.js](https://deterministic.js.org/) or by running a JavaScript
 interpreter inside [wasmi](https://github.com/paritytech/wasmi) or maybe a forked [Otto](https://github.com/robertkrimen/otto) that enforced determinism. Research should be done into the performance of various approaches.
 
 A second, later language choice could be Rust (on top of wasmi). This is a popular choice in the blockchain space,
@@ -175,7 +173,7 @@ where they also require this property of determinism.
 
 ## Registering Transactions
 
-Client code *registers* transaction types by some unique identifier (typically a hash) with Replicant. The registrations are stored in-memory.
+Application code at either the client or server *registers* transaction types by invoking a special built-in transaction type.
 
 It might look something like this (from Java):
 
@@ -221,6 +219,10 @@ updateHighScore(userId, score) {
   db.set(user);
 }
 ```
+
+The individual transaction functions 
+
+Transaction type code is stored in the actual database and synchronized to all nodes, just like any other data. This means that client will commonly execute transactions that modify the data in such a way that the cli
 
 ## Executing Transactions
 
