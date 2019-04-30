@@ -85,7 +85,7 @@ The key promise of Replicant is that Replicant Clients are *always* kept in sync
 
 # Replicant Client
 
-TODO: <diagram>
+TODO: [diagram]
 
 A Replicant Client is embedded within a client-side application, typically a mobile app in iOS or Android, but also potentially a desktop or web app. The application, or _host_, uses the client as its local datastore.
 
