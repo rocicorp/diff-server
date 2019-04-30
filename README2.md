@@ -89,7 +89,7 @@ TODO: <diagram>
 
 A Replicant Client is embedded within a client-side application, typically a mobile app in iOS or Android, but also potentially a desktop or web app. The application, or _host_, uses the client as its local datastore.
 
-The client is updated by executing _transactions_, which are invocations of pure functions called _transaction types_. The application hosting Replicant _registers_ transaction types either at the client, the server, or both. Only _registered_ transaction types can be invoked.
+The client is updated by executing _transactions_, which are invocations of pure functions called _transaction functions_. Each _transaction function_ takes one or more parameters, plus a snapshot of the current state of the database, and returns as a result a new state of the database.
 
 Theoretically, Replicant could be built atop any single-node database that has the following features:
 
@@ -115,27 +115,29 @@ Struct Commit {
   meta: Struct Meta {
     tx: Struct {
       args: List<Value>,
-      source: String,
-      type: Ref<Blob>,
+      code: Ref<Blob>,
+      origin: String,
+      type: String,
     },
   },
   parents: Set<Ref<Cycle<Commit>>>,
   value: Struct {
-    txTypes: Set<Ref<Blob>>,
+    txTypes: Ref<Blob>,
     data: Map<String, Value>,
   },
 }
 ```
 
-Each commit represents a transaction in Replicant. The `meta.tx` field describes the transaction that was run and resulted in this commit. Specifically:
+Each commit represents a transaction in Replicant. The `meta.tx` field describes the transaction that was run that resulted in this commit. Specifically:
 
-* `source`: The node the transaction was first run on (useful for debug purposes)
-* `type`: The transaction type (the actual function) that was run
-* `args`: The arguments that were passed to the function
+* `origin`: The node the transaction was first run on (useful for debug purposes)
+* `code`: The code that contains the transaction type that was invoked (see "registering transactions")
+* `type`: The name of the specific transaction type, in `code` that was invoked
+* `args`: The arguments that were passed to the transaction type
 
 The data each transaction writes has two parts:
 
-* `txTypes`: The currently registered set of transaction types
+* `txTypes`: A blob containing the current 
 * `data`: A map of all currently stored user data, by ID (see data model, below)
 
 ***TODO:** Indexes need to go here somewhere. They aren't synchronized, but they need to be updated atomically with commits.*
@@ -171,71 +173,21 @@ interpreter inside [wasmi](https://github.com/paritytech/wasmi) or maybe a forke
 A second, later language choice could be Rust (on top of wasmi). This is a popular choice in the blockchain space,
 where they also require this property of determinism.
 
-## Registering Transactions
+## Invoking Transactions
 
-Application code at either the client or server *registers* transaction types by invoking a special built-in transaction type.
+Since transaction code is stored in the database and synchronized with other data, invoking transactions is simply running the relevant function and writing an appropriate commit to Noms referencing the code.
 
-It might look something like this (from Java):
+It might look something like this (in Java):
 
 ```java
-replicant.RegisterTransactions("transactions.js")
+// Writes the code from "transactions.js.bundle" included in the app to the DB if not present
+Transactions txs = replicant.LoadTransactions("transactions.js.bundle");
+
+// Execute "createUser" from the bundle and write the transaction to the database
+ReplicantResult result = txs.exec("createUser", newUserName, newUserEmailAddress);
 ```
 
-And `transactions.js` would be some embedded resource in the Android application containing the various available transactions:
-
-```js
-createUser(name, email) {
-  if (db.find({
-    _class: 'User',
-    email,
-  }) {
-    throw new Error(`User with email %s already exists`, email);
-  }
-
-  return db.put({
-    name,
-    email,
-    _class: 'User',
-  });
-}
-
-createGame(userIDs) {
-  const game = db.put({
-    userIDs,
-    _class: 'Game',
-  });
-
-  for (uid of userIDs) {
-    const user = db.get(uid);
-    user.currentGame = game._id;
-  }
-  
-  return game;
-}
-
-updateHighScore(userId, score) {
-  const user = db.get(userId);
-  user.highScore = Math.max(user.highScore, score);
-  db.set(user);
-}
-```
-
-The individual transaction functions 
-
-Transaction type code is stored in the actual database and synchronized to all nodes, just like any other data. This means that client will commonly execute transactions that modify the data in such a way that the cli
-
-## Executing Transactions
-
-Client code invokes transactions by hash, or more likely by name for convenience:
-
-```
-replicant.exec("updateHighScore", user.ID, newScore);
-```
-
-The transaction is run against the current Noms database resulting in a new database state. The log is atomically updated appending the new transaction and parameters.
-
-
-
+However, we expect that in the typical case, applications will want to pre-register transaction code on the server-side for efficiency. See "registering transactions".
 ### Replicant Server
 
 A Replicant Server maintains the authorative history of transactions that have occurred for a particular Replicant Group.
@@ -289,6 +241,57 @@ Synchronization is a two-step process that should feel reminiscent to anyone who
     - Set the last known server head to `rebaseHead`
  2. Rebase:
    - Rebase any new ops from the local log that aren't present in the server log (e.g., ops that occurred since Push() was invoked) in the same way as above
+
+## Registering Transactions
+
+Application code at either the client or server *registers* transaction types by invoking a special built-in transaction type.
+
+It might look something like this (from Java):
+
+And `transactions.js` would be some embedded resource in the Android application containing the various available transactions:
+
+```js
+createUser(name, email) {
+  if (db.find({
+    _class: 'User',
+    email,
+  }) {
+    throw new Error(`User with email %s already exists`, email);
+  }
+
+  return db.put({
+    name,
+    email,
+    _class: 'User',
+  });
+}
+
+createGame(userIDs) {
+  const game = db.put({
+    userIDs,
+    _class: 'Game',
+  });
+
+  for (uid of userIDs) {
+    const user = db.get(uid);
+    user.currentGame = game._id;
+  }
+  
+  return game;
+}
+
+updateHighScore(userId, score) {
+  const user = db.get(userId);
+  user.highScore = Math.max(user.highScore, score);
+  db.set(user);
+}
+```
+
+The individual transaction functions 
+
+Transaction type code is stored in the actual database and synchronized to all nodes, just like any other data. This means that client will commonly execute transactions that modify the data in such a way that the cli
+
+
 
 ## Conflicts
 
