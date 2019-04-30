@@ -40,8 +40,7 @@ it was a local database and synchronization happens behind the scenes.
 * **Standard Data Model**: The replicant data model is a simple document database. From an API perspective, it's
 very similar to FireStore, Mongo, Couchbase, Fauna, etc. You don't need to learn anything new, and can build
 arbitrarily complex data structures on this primitive that are still conflict-free. You don't need a special `Counter` datatype to model a counter. You just use arithmetic.
-* **Open**: Replicant has extremely minimal requirements on the server-side. It can work with any existing
-server-side stack.
+* **Open**: Replicant has extremely minimal requirements on the server-side. It can integrate with just about any existing server-side stack, and can be done so incrementally.
 
 # Intuition
 
@@ -72,63 +71,74 @@ Thus, once all nodes have the same log, they will execute the same sequence of t
 same database state. What's more, as we will see, most types of what are commonly termed "merge conflicts"
 are gracefully handled in this model without any extra work from the application developer.
 
-# Details
+# System Architecture
 
-## System Architecture
-
-A deployed system of replicant nodes consists of a single logical "Replicant Server" and one or more "Replicant Clients", which are typically mobile apps running in iOS or Android. Traditional desktop apps and web apps could also be supported.
+A deployed system of replicant nodes is called a *Replicant Group* and consists of a single logical *Replicant Server* (which itself could be a distributed system) and one or more *Replicant Clients*. Replicant Clients are typically mobile apps running in iOS or Android, but traditional desktop apps and web apps could also be clients.
 
 <diagram, argh>
 
-One or more Replicant Servers are run by the Replicant Service. Typically each "Replicant Server" corresponds to a single user or device.
+Typically each Replicant Group models data for a single user of a service across all devices. But a Replicant Group could be more fine-grained, if for example, it's desirable to replicate a different subset of data to different device types, or more fine-grained, if there are groups of users collaborating on the exact same dataset.
 
-The basic promise of Replicant is that Replicant Clients are *always* kept in sync with their Server. Once all synchronization is complete, the clients and their server are guaranteed to be in the exact same state. There is no way for application code that is using Replicant (at either the client or server layer) to do something that would prevent the databases from eventually converging.
+One or more Replicant Servers are run by the Replicant Service. Typically each Replicant Server corresponds to a single user or device.
 
-The clients embed Replicant and use it as their local datastore. In the background Replicant continuously synchronizes with the server.
+The Replicant Service is run alongside the existing server stack and database of record. Plumbing is added to route relevant updates from the database of record to Replicant Servers and the reverse.
 
-## Server Responsibilities
+The basic promise of Replicant is that Replicant Clients are *always* kept in sync with their Server. Once all synchronization is complete, the clients are guaranteed to be in the exact same state as their server. There is no way for application code that is using Replicant (at either the client or server layer) to do something that would prevent the databases from synchronizing.
 
-The server's only required responsibility is to provide a reliable log service that clients can access with the following operations (provided here in Go-like pseudo-code):
+# Replicant Client
 
-```go
-type Op struct {
-  // Unique ID of the transaction
-  // Generated at the client-side and immutable, even across reordering
-  // Once a transaction is submitted on a node, it will be in the final shared log
-  ID string
+A Replicant Client is embedded within a client-side application, typically a mobile app in iOS or Android, but also potentially a desktop or web app. The application, or _host_, uses the client as its local datastore.
 
-  // Unique ID of the function that was invoked. Typically this is the hash of the
-  // code of the function, or some other identifier to find the exact code to invoke.
-  FuncID string
-  
-  // The arguments that the operation was invoked with
-  Args []interface{}
-}
+The client is modified by executing _transactions_, which are invocations of pure functions called _transaction types_. The application hosting Replicant _registers_ transaction types either at the client, the server, or both. Only _registered_ transaction types can be invoked.
 
-// Ensures that zero or more operations are in the log. If the entries already exist
-// in the log (as identified by their ID), nothing happens. Otherwise the entires are
-// appended to the log.
-// The return value is the slice of the log from the entry after lastKnownHeadID to
-// the new head. This will include `ops`, but also any entries from other clients
-// since the last time the caller synced.
-// Note: if the requirement to de-dupe is overly burdensome, it can be removed at
-// the expense of some additional work client-side.
-// Note: the implementation doesn't need to be atomic.
-Sync(lastKnownHeadID string, newOps []Op) []Op
-```
+Theoretically, Replicant could be built atop any single-node database that has the following features:
 
-***TODO:** Is the requirement to not duplicate entries a major complexity for the server? Duplicates could be allowed, it just moves additional complexity to the clients.*
+* transactions - ACID-compliant transactions
+* snapshots - previous versions can be kept efficiently
+* forking - you can fork the database from any previous snapshot efficiently
+
+However [Noms](https://github.com/attic-labs/noms) - a prior project of ours - is especially well-suited because it has all these features, plus others that we be used in later sections of this document.
+
+You do not need to understand all the details of Noms to understand this document. What you need to understand is that it is a versioned, transactional, forkable database. Think SQLite+Git.
 
 ## Client State
 
-A replicant instance maintains the following persistent state:
+Replicant maintains two Noms datasets (analagous to Git branches):
 
-* Some versioned, forkable database that stores the actual application state
-* An ordered log of transactions that determine the current state of the local database
-* For each entry in the log, a pointer to the database state at that moment in time
-* A pointer to the last known head of the remote database
+* _remote_ - the last-known state of the Replicant Server
+* _local_ - the current state exposed to the host application
 
-For the actual embedded database, we use [Noms](https://github.com/attic-labs/noms), a versioned, forkable, transactionable database with efficient one-way replication. But any database could be used as long as it supports atomic transactions, efficient snapshots, and a way to fork from a historical snapshot.
+Each dataset has the following Noms type:
+
+```
+Struct Commit {
+  meta: Struct Meta {
+    tx: Struct {
+      args: List<Value>,
+      source: String,
+      type: Ref<Blob>,
+    },
+  },
+  parents: Set<Ref<Cycle<Commit>>>,
+  value: Struct {
+    txTypes: Set<Ref<Blob>>,
+    data: Map<String, Value>,
+  },
+}
+```
+
+Each Replicant transaction, is represented by a standard Noms `Commit` struct. The `meta` field of the commit has an _tx_ field which describes the transaction that was run and resulted in this commit. Specifically:
+
+* `source`: The node the transaction was first run on (useful for debug purposes)
+* `type`: The transaction type (the actual function) that was run
+* `args`: The arguments that were passed to the function
+
+The data each transaction writes has two parts:
+
+* `txTypes`: The currently registered set of transaction types
+* `data`: A map of all currently stored user data, by ID (see data model, below)
+
+***TODO:** There will be additional fields that maintain indexes*
 
 ## Data Model
 
@@ -221,6 +231,45 @@ replicant.exec("updateHighScore", user.ID, newScore);
 ```
 
 The transaction is run against the current Noms database resulting in a new database state. The log is atomically updated appending the new transaction and parameters.
+
+
+
+### Replicant Server
+
+A Replicant Server maintains the authorative history of transactions that have occurred for a particular Replicant Group.
+
+Unlike clients, Replicant Servers do not rewind. Once a transaction is written it is forever
+
+The server's only required responsibility is to provide a reliable log service that clients can access with the following operations (provided here in Go-like pseudo-code):
+
+```go
+type Op struct {
+  // Unique ID of the transaction
+  // Generated at the client-side and immutable, even across reordering
+  // Once a transaction is submitted on a node, it will be in the final shared log
+  ID string
+
+  // Unique ID of the function that was invoked. Typically this is the hash of the
+  // code of the function, or some other identifier to find the exact code to invoke.
+  FuncID string
+  
+  // The arguments that the operation was invoked with
+  Args []interface{}
+}
+
+// Ensures that zero or more operations are in the log. If the entries already exist
+// in the log (as identified by their ID), nothing happens. Otherwise the entires are
+// appended to the log.
+// The return value is the slice of the log from the entry after lastKnownHeadID to
+// the new head. This will include `ops`, but also any entries from other clients
+// since the last time the caller synced.
+// Note: if the requirement to de-dupe is overly burdensome, it can be removed at
+// the expense of some additional work client-side.
+// Note: the implementation doesn't need to be atomic.
+Sync(lastKnownHeadID string, newOps []Op) []Op
+```
+
+***TODO:** Is the requirement to not duplicate entries a major complexity for the server? Duplicates could be allowed, it just moves additional complexity to the clients.*
 
 ## Synchronization
 
