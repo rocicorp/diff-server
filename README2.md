@@ -1,4 +1,4 @@
-# Surprisingly Tractable Offline-First Applications
+# Replicant: Surprisingly Tractable Offline-First Applications
 
 "[Offline-First](https://www.google.com/search?q=offline+first)" describes an application architecture where
 data is read and written from a local database on user devices, then synchronized lazily with servers whenever
@@ -23,15 +23,13 @@ expensive and technically risky endeavor.
 
 # Introducing Replicant
 
-Replicant makes it dramatically easier to build these "offline-first" mobile applications. So much easier,
-we believe, that there is little reason for any mobile developer not to do so.
+Replicant dramatically reduces the difficulty to build these "offline-first" mobile applications.
 
 The key features that contribute to this leap in usability are:
 
 * **Transactions**: Replicant supports complex multikey read/write transactions. Transactions are arbitrary
 functions in a standard programming language, and run serially and completely isolated from each other.
-* **Conflict-free**: Virtually all conflicts are handled naturally by the protocol. All nodes are guaranteed
-to resolve to the same state once all transactions have been synced (aka "[strong eventual consistency](https://en.wikipedia.org/wiki/Eventual_consistency#Strong_eventual_consistency)"). Developers,
+* **Conflict-free**: All nodes are guaranteed to resolve to the same state once all transactions have been synced (aka "[strong eventual consistency](https://en.wikipedia.org/wiki/Eventual_consistency#Strong_eventual_consistency)"). Developers,
 in almost all cases, do not need to think about the fact that nodes are disconnected. They simply use the database as if
 it was a local database and synchronization happens behind the scenes.
 * **Standard Data Model**: The replicant data model is a simple document database. From an API perspective, it's
@@ -63,9 +61,15 @@ This will commonly result in a client node learning about transactions that occu
 point of view (because they happened on disconnected node) after synchronizing with the server. In that case,
 the client rewinds its database back to the point of divergence and replays the transactions in the correct order.
 
-Thus, once all nodes have the same log, they will execute the same sequence of transactions and arrive at the
+Thus, once all nodes have the same log, they will execute the same sequence of transactions and are guaranteed to arrive at the
 same database state. What's more, as we will see, most types of what are commonly termed "merge conflicts"
 are gracefully handled in this model without any extra work from the application developer.
+
+# Data Model
+
+The Replicant data model in inspired by Git and similar systems.
+
+Each change to the system is represented by a `Commit` that points to the complete state of the database as of the commit. The prior change is 
 
 # System Architecture
 
