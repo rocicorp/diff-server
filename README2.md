@@ -1,45 +1,46 @@
-# Replicant: Surprisingly Simple Offline-First Applications
+# Replicant: Spinner-Free Mobile Applications
 
 "[Offline-First](https://www.google.com/search?q=offline+first)" describes an application architecture where
 data is read and written from a local database on user devices, then synchronized lazily with servers whenever
 there is connectivity.
 
 These applications are highly desired by product teams and users because they are much more responsive and
-reliable than applications that are directly dependent upon servers.
+reliable than applications that are directly dependent upon servers. By using a local database as a buffer, these
+applications are instantaneously responsive in any network conditions.
 
 Unfortunately, offline-first applications have historically been very challenging to build. Bidirectional
 sync is a famously difficult problem, and one which has elluded satisfying general
 solutions. Existing attempts to build such general solutions (Apple CloudKit, Android Sync, Google FireStore, Realm, PouchDB) all have one or more of the following serious problems:
 
 * **Requiring that developers manually merge conflicting writes.** Consult the [Android Sync](http://www.androiddocs.com/training/cloudsave/conflict-res.html) or [PouchDB](https://pouchdb.com/guides/conflicts.html) docs for a taste of how difficult this is for even simple cases. Then remember that every single pair of operations that can possibly conflict needs to be considered this way, and the resulting conflict resolution code needs to be kept up to date as the application code changes. Developers are also responsible for ensuring the resulting merge is equivalent on all devices, otherwise they end up in a [split-brain](https://en.wikipedia.org/wiki/Split-brain_(computing)) scenario where nodes have different states but don't know that they do.
-* **Lack of atomic transactions.** Some solutions claim to automatically resolve conflicts, but lack atomic transactions. Without transactions, developers are put in the position of reasoning about concurrent execution of any possible sequence of database operations in their application. This is analogous to multithreaded programming without locks or any other kind of concurrency control.
-* **A restrictive or non-standard data model.** Some solutions achieve automatic conflict resolution with restrictive data models, for example, only allowing CRDTs. However CRDTs are only known for a few relatively simple datatypes. This forces developers to twist their data model to fit into one of the provided CRDTs. For example, Realm has a special [counter](https://realm.io/docs/java/latest/#field-types) type that merges concurrent changes by summing them. But if you want to implement something very similar - a high score in a game - there is no way easy way to do that in Realm because there is no special `MaxNum` type built into Realm.
-* **Reliance on a hosted service for the server-side.** Requiring the use of a third-party hosted service is not an option for many security or privacy conscious organizations.
-* **Difficult or non-existent incremental integration path with existing services.** Some solutions effectively require a wholesale migration to a new backend database and architecture.
+* **Lack of atomic transactions.** No existing offline-first solution supports atomic transactions. Without them, developers are put in the position of reasoning about concurrent execution of any possible sequence of database operations in their application. This is analogous to multithreaded programming without locks or any other kind of concurrency control.
+* **A restrictive or non-standard data model.** Some solutions achieve automatic conflict resolution with restrictive data models, for example, by only providing acccess to [CRDT](https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type)s. However CRDTs are only known for a few relatively simple datatypes. This forces developers to twist their data model to fit into one of the provided CRDTs. For example, Realm has a special [Counter](https://realm.io/docs/java/latest/#field-types) type that merges concurrent changes by summing them. But if you want to implement something very similar - a high score in a game - there is no way easy way to do that in Realm because there is no special `MaxNum` type built into Realm.
+* **Difficult or non-existent incremental integration.** Some solutions effectively require a committment to a non-standard or proprietary backend database or system design, which is not tractable for existing systems, and risky even for new systems.
 
 For these reasons, these products are often not practical options for application developers, leaving them
-forced to develop their own sync protocol at the application layer if they want an offline-first app, an
+forced to develop their own sync protocol at the application layer if they want an offline-first app. This is an
 expensive and technically risky endeavor.
 
 # Introducing Replicant
 
 Replicant dramatically reduces the difficulty to build these "offline-first" mobile applications.
 
-The key features that contribute to this leap in usability are:
+The key features that contribute to Replicant's leap in usability are:
 
 * **Transactions**: Replicant supports complex multikey read/write transactions. Transactions are arbitrary
-functions in a standard programming language, and run serially and completely isolated from each other.
+functions in a standard programming language, which are run serially and completely isolated from each other.
 * **Conflict-free**: All nodes are guaranteed to resolve to the same state once all transactions have been synced (aka "[strong eventual consistency](https://en.wikipedia.org/wiki/Eventual_consistency#Strong_eventual_consistency)"). Developers,
 in almost all cases, do not need to think about the fact that nodes are disconnected. They simply use the database as if
 it was a local database and synchronization happens behind the scenes.
-* **Standard Data Model**: The replicant data model is a simple document database. From an API perspective, it's
+* **Standard Data Model**: The replicant data model is a standard document database. From an API perspective, it's
 very similar to FireStore, Mongo, Couchbase, Fauna, etc. You don't need to learn anything new, and can build
 arbitrarily complex data structures on this primitive that are still conflict-free. You don't need a special `Counter` datatype to model a counter. You just use arithmetic.
-* **Open**: Replicant is designed to integrate incrementally into large existing systems, not insist that you rewrite everything to use it.
+* **Easy to Adopt**: Replicant is designed to integrate incrementally into existing systems, not take them over.
 
 # Intuition
 
 Replicant is heavily inspired by [Calvin](http://cs.yale.edu/homes/thomson/publications/calvin-sigmod12.pdf).
+
 The key insight in Calvin is that the problem of ordering transactions can be separated from the problem of
 executing transactions. As long as transactions are pure functions, and all nodes agree to an ordering, and
 the database is a deterministic, then execution can be performed coordination-free by each node independently.
@@ -48,28 +49,103 @@ This insight is used by Calvin to create a high-throughput, strictly serialized 
 for physical clocks. Calvin nodes coordinate synchronously only to establish transaction order, then run their
 transactions locally.
 
-In Replicant, we turn the knob further. As in Calvin, Replicant transactions are pure functions in a
-fully-featured programming language.
-
-Unlike Calvin, nodes do not coordinate synchronously to establish order,
+In Replicant, we turn the knob further: As in Calvin, Replicant transactions are pure functions in a
+fully-featured programming language. But unlike Calvin, nodes do not coordinate synchronously to establish order,
 or for any other reason. Instead nodes execute transactions completely locally, responding immediately to the calling
 application. A log is maintained at each node of the local order transactions occurred in. Asynchronously, when
 connectivity allows, "client nodes" (those running the user interface) synchronize their logs with a special (logical)
-node called the "Replicant Server", which decides authoratively what the total order is. The resulting totally ordered log is then replicated back to each client node.
+node called the "Replicant Server", which decides authoratively what the total order is. The resulting totally ordered 
+transaction log is then replicated back to each client node.
 
 This will commonly result in a client node learning about transactions that occurred "in the past" from its
-point of view (because they happened on disconnected node) after synchronizing with the server. In that case,
+point of view (because they happened concurrently on other nodes) after synchronizing with the server. In that case,
 the client rewinds its database back to the point of divergence and replays the transactions in the correct order.
 
-Thus, once all nodes have the same log, they will execute the same sequence of transactions and are guaranteed to arrive at the
-same database state. What's more, as we will see, most types of what are commonly termed "merge conflicts"
-are gracefully handled in this model without any extra work from the application developer.
+Thus, once all nodes have the same log, they will execute the same sequence of transactions and are guaranteed to arrive at 
+the same database state.
+
+The key promise that Replicant makes is that once synchronization is complete, all nodes will have the same transaction 
+history and the exact same state. There is no transaction that any node can perform that will stop this from happening. This 
+is a powerful invariant to build on that makes reasoning about a disconnected system much easier. As we will see it also
+means that most types of what are commonly called "merge conflicts" just go away, and those that remain are much easier
+to handle.
 
 # Data Model
 
-The Replicant data model in inspired by Git and similar systems.
+Replicant builds on [Noms](https://github.com/attic-labs/noms), a versioned, transactional, forkable database.
 
-Each change to the system is represented by a `Commit` that points to the complete state of the database as of the commit. The prior change is 
+Noms has a data model that is very similar to Git and related systems: Each change to the system is represented by a _commit_ that represents an immutable snapshot of the system as of that change. The previous change (or changes, in the case where two forks merged) is referenced by a set of _parents_. As with Git, Noms makes use of content-addressing and persistent data structures to reduce duplication. The main difference between Noms and Git is that Git stores mainly text and is intended to
+be used by humans, while Noms stores mainly data structures, and is intended to be used by software. But you could actually build Replicant with Git instead of Noms -- it would just be a lot slower and harder.
+
+Replicant builds on the Noms data model by annotating each commit with the transaction function and parameters that created it. Since transactions are pure functions, this means that any node, starting with a commit's parent and executing that commit's transaction annotation, will arrive at that exact same commit.
+
+Thus, a Replicant _client_ (a mobile app embedding the Replicant client library) moves forward by executing transactions
+that modify its local state and append to its local commit log.
+
+Periodically, the client will _synchronize_ with its server, sending its novel commits to the server, and getting the latest 
+updates to the totally ordered transaction set in return.
+
+When this happens, the client will frequently see that there were transactions that happened in parallel on other nodes. In this case, the client rewinds to the point of divergence and replays the transactions in the correct order according to the log.
+
+## Noms Schemas
+
+### Normal Commit
+
+```
+struct Commit {
+  meta struct {
+    date struct Date {
+      MsSinceEpoch uint64
+    }
+    tx struct {
+      Origin String
+      Code Ref<Blob>
+      Name String
+      Args List<Value>
+    }
+  }
+  parents Set<Ref<Cycle<Commit>>>
+  value struct {
+    TxReg Ref<Set<Ref<Blob>>>
+    Data Map<String, Value>
+  }
+}
+```
+
+### Merge Commit
+
+```
+struct Commit {
+  meta struct {
+    order Ref<Cycle<Commit>>
+  }
+  parents Set<Ref<Cycle<Commit>>>
+  value struct {
+    TxReg Ref<Set<Ref<Blob>>>
+    Data Map<String, Value>
+  }
+}
+```
+
+### Failed Commit
+
+```
+struct Commit {
+  meta struct {
+    failed Ref<Cycle<Commit>>
+  }
+  parents Set<Ref<Cycle<Commit>>>
+  value struct {
+    TxReg Ref<Set<Ref<Blob>>>
+    Data Map<String, Value>
+  }
+}
+```
+
+## Example Histories
+
+TODO
+
 
 # System Architecture
 
@@ -151,7 +227,7 @@ The value of the transaction has two parts:
 
 ***TODO:** Indexes need to go here somewhere. They aren't synchronized, but they need to be updated atomically with commits.*
 
-## Data Model
+## User Data Model
 
 The data model exposed to user code is a fairly standard document database approach, like Google Firestore, Couchbase, RethinkDB, etc:
 
