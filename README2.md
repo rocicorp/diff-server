@@ -1,4 +1,4 @@
-# Surprisingly Easy Offline-First Applications
+# Surprisingly Tractable Offline-First Applications
 
 "[Offline-First](https://www.google.com/search?q=offline+first)" describes an application architecture where
 data is read and written from a local database on user devices, then synchronized lazily with servers whenever
@@ -7,19 +7,15 @@ there is connectivity.
 These applications are highly desired by product teams and users because they are much more responsive and
 reliable than applications that are directly dependent upon servers.
 
-Unfortunately, mobile-first applications have historically been very challenging to build. Bidirectional
+Unfortunately, offline-first applications have historically been very challenging to build. Bidirectional
 sync is a famously difficult problem, and one which has elluded satisfying general
-solutions. Existing products (Apple CloudKit, Android Sync, Google FireStore, Realm, PouchDB) all have at
-least one or more serious problems, incuding:
+solutions. Existing attempts to build such general solutions (Apple CloudKit, Android Sync, Google FireStore, Realm, PouchDB) all have one or more of the following serious problems:
 
-* Requiring that developers write code to handle merge conflicts. This is a variant of concurrent programming
-and is quite difficult for developers to do correctly, and a large burden on app teams.
-* The lack of ACID transactions. A replicated database that offers automatic merging, but not transactions
-isn't really that helpful because developers still have to think carefully about what happens when sequences
-of operations are interleaved.
-* A restrictive or non-standard data model, for example offering only CRDTs.
-* Reliance on a hosted service for the server-side
-* Difficult or non-existent incremental integration path with complex services
+* **Requiring that developers manually merge conflicting writes.** Consult the [Android Sync](http://www.androiddocs.com/training/cloudsave/conflict-res.html) or [PouchDB](https://pouchdb.com/guides/conflicts.html) docs for a taste of how difficult this is for even simple cases. Then remember that every single pair of operations that can possibly conflict needs to be considered this way, and the resulting conflict resolution code needs to be kept up to date as the application code changes. Developers are also responsible for ensuring the resulting merge is equivalent on all devices, otherwise they end up in a [split-brain](https://en.wikipedia.org/wiki/Split-brain_(computing)) scenario where nodes have different states but don't know that they do.
+* **Lack of atomic transactions.** Some solutions claim to automatically resolve conflicts, but lack atomic transactions. Without transactions, developers are put in the position of reasoning about concurrent execution of any possible sequence of database operations in their application. This is analogous to multithreaded programming without locks or any other kind of concurrency control.
+* **A restrictive or non-standard data model.** Some solutions achieve automatic conflict resolution with restrictive data models, for example, only allowing CRDTs. However CRDTs are only known for a few relatively simple datatypes. This forces developers to twist their data model to fit into one of the provided CRDTs. For example, Realm has a special [counter](https://realm.io/docs/java/latest/#field-types) type that merges concurrent changes by summing them. But if you want to implement something very similar - a high score in a game - there is no way easy way to do that in Realm because there is no special `MaxNum` type built into Realm.
+* **Reliance on a hosted service for the server-side.** Requiring the use of a third-party hosted service is not an option for many security or privacy conscious organizations.
+* **Difficult or non-existent incremental integration path with existing services.** Some solutions effectively require a wholesale migration to a new backend database and architecture.
 
 For these reasons, these products are often not practical options for application developers, leaving them
 forced to develop their own sync protocol at the application layer if they want an offline-first app, an
