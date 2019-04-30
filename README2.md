@@ -89,7 +89,7 @@ This is a powerful promise that makes reasoning about synchronization much simpl
 
 # Replicant Client
 
-TODO: [diagram]
+<img src="./replicant-client.svg" alt="System Architecture Diagram" align="right">
 
 A Replicant Client is embedded within a client-side application, typically a mobile app in iOS or Android, but also potentially a desktop or web app. The application, or _host_, uses the client as its local datastore.
 
