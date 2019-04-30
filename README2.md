@@ -75,7 +75,9 @@ are gracefully handled in this model without any extra work from the application
 
 A deployed system of replicant nodes is called a *Replicant Group* and consists of a single logical *Replicant Server* and one or more *Replicant Clients*. Replicant Clients are typically mobile apps running in iOS or Android, but traditional desktop apps and web apps could also be clients, or really any software that embeds the Replicant Client library.
 
-<diagram, argh>
+<p align="center">
+  <img src="./replicant.svg" alt="System Architecture Diagram">
+</p>
 
 Typically each Replicant Group models data for a single user of a service across all the user's devices. But a Replicant Group could be more fine-grained (if, for example, it's desirable to replicate a different subset of data to different device types) or more coarse-grained (if there are groups of users collaborating on the same dataset).
 
