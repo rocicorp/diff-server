@@ -39,7 +39,7 @@ and can build arbitrarily complex data structures on this primitive that are sti
 
 # Intuition
 
-<img src="./replicant-data-model.svg" alt="Evolution of a Forked Unsigned Integer" align="right" width="52%">
+<img src="./replicant-data-model.svg" alt="Evolution of a Forked Unsigned Integer" align="right" width="51%">
 
 Replicant is heavily inspired by [Calvin](http://cs.yale.edu/homes/thomson/publications/calvin-sigmod12.pdf), a high-throughput strictly serialized distributed database.
 
