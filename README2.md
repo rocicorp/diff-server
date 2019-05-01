@@ -1,38 +1,36 @@
-# Replicant: Spinner-Free Mobile Applications
+# Replicant: Instantaneous Mobile Applications
 
 "[Offline-First](https://www.google.com/search?q=offline+first)" describes an application architecture where
 data is read and written from a local database on user devices, then synchronized lazily with servers whenever
 there is connectivity.
 
-These applications are highly desired by product teams and users because they are much more responsive and
+These applications are highly desired by product teams and users because they are so much more responsive and
 reliable than applications that are directly dependent upon servers. By using a local database as a buffer, offline-first
 applications are instantaneously responsive and reliable in any network conditions.
 
-Unfortunately, offline-first applications are really hard to build. Bidirectional
+Unfortunately, offline-first applications are also really hard to build. Bidirectional
 sync is a famously difficult problem, and one which has elluded satisfying general
 solutions. Existing attempts to build general solutions (Apple CloudKit, Android Sync, Google FireStore, Realm, PouchDB) all have one or more of the following serious problems:
 
-* **Requiring that developers manually merge conflicting writes.** Consult the [Android Sync](http://www.androiddocs.com/training/cloudsave/conflict-res.html) or [PouchDB](https://pouchdb.com/guides/conflicts.html) docs for a taste of how difficult this is for even simple cases. Every single pair of operations that can possibly conflict needs to be considered for conflicts, and the resulting conflict resolution code needs to be kept up to date as the application evolves. Developers are also responsible for ensuring the resulting merge is equivalent on all devices, otherwise the application ends up [split-brained](https://en.wikipedia.org/wiki/Split-brain_(computing)).
-* **Lack of atomic transactions.** Some solutions claim to support automatic merge, but lack atomic transactions. Without transactions, automatic merge means that any two sequences of writes might interleave. This is analogous to multithreaded programming without locks.
-* **A restrictive or non-standard data model.** Some solutions achieve automatic conflict resolution with restrictive data models, for example, by only providing acccess to [CRDTs](https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type). However only a relatively small number of CRDTs are known. Developers must twist their data model to fit into those types. For example, Realm has a special [Counter](https://realm.io/docs/java/latest/#field-types) type that merges concurrent changes by summing them. But if you want to implement something very similar - a high score in a game - there is no way easy way to do that in Realm because there is no special `MaxNum` type built into Realm.
+* **Manual Conflict Resolution.** Consult the [Android Sync](http://www.androiddocs.com/training/cloudsave/conflict-res.html) or [PouchDB](https://pouchdb.com/guides/conflicts.html) docs for a taste of how difficult this is for even simple cases. Every single pair of operations in the application must be considered for conflicts, and the resulting conflict resolution code needs to be kept up to date as the application evolves. Developers are also responsible for ensuring the resulting merge is equivalent on all devices, otherwise the application ends up [split-brained](https://en.wikipedia.org/wiki/Split-brain_(computing)).
+* **Lack of Atomic Transactions.** Some solutions claim automatic conflict resolution, but lack atomic transactions. Without transactions, automatic merge means that any two sequences of writes might interleave. This is analogous to multithreaded programming without locks.
+* **Restrictive Data Models.** Some solutions achieve automatic conflict resolution with restrictive data models, for example, by only providing acccess to [CRDTs](https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type). However only a relatively small number of CRDTs are known. Developers must twist their data model to fit those types. For example, Realm has a special [Counter](https://realm.io/docs/java/latest/#field-types) type that merges concurrent changes by summing them. But if you want to implement something very similar - a high score in a game, or an inventory count that can't go below zero - there is no way easy way to do that in Realm because there is no special `MaxNum` or `PositiveOnlyCounter` type built into Realm.
 * **Difficult or non-existent incremental integration.** Some solutions effectively require a full committment to a non-standard or proprietary backend database or system design, which is not tractable for existing systems, and risky even for new systems.
 
-For these reasons, these products are often not practical options for application developers, leaving them
-forced to develop their own sync protocol at the application layer if they want an offline-first app. This is an
-expensive and technically risky endeavor.
+For these reasons, existing products are often not practical options for application developers, leaving them
+forced to develop their own sync protocol at the application layer if they want an offline-first app. Given how expensive and risky this is, most applications delay offline-first until the business is very large and successful.
 
 # Introducing Replicant
 
-Replicant dramatically reduces the difficulty to build offline-first mobile applications.
+Replicant dramatically reduces the difficulty of building offline-first mobile applications.
 
 The key features that contribute to Replicant's leap in usability are:
 
 * **Transactions**: Replicant supports full [ACID](https://en.wikipedia.org/wiki/ACID_(computer_science)) multikey read/write 
 transactions. Transactions in Replicant are expressed as arbitrary functions, which are executed serially and isolated from 
 each other.
-* **Conflict-free**: All nodes are guaranteed to arrive at the same state once all transactions have been synced. That is, 
-Replicant has "[Strong Eventual Consistency](https://en.wikipedia.org/wiki/Eventual_consistency#Strong_eventual_consistency)"). This feature, combined with transactions
-means that in almost all cases, developers do not need to think about the fact that nodes are disconnected. They simply use 
+* **Conflict-free**: Replicant is "[Strongly Eventually Consistent](https://en.wikipedia.org/wiki/Eventual_consistency#Strong_eventual_consistency)"): all nodes are guaranteed to arrive at the same state once all transactions have been synced. This feature, combined with atomic transactions,
+means that developers typically do not need to think about the fact that nodes are disconnected. They simply use 
 the database as if it was a local database and synchronization happens behind the scenes.
 * **Standard Data Model**: The Replicant data model is a standard document database. From an API perspective, it's
 very similar to Google Cloud Firestore, MongoDB, Couchbase, FaunaDB, and many others. You don't need to learn anything new, 
