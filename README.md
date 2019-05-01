@@ -43,8 +43,8 @@ and can build arbitrarily complex data structures on this primitive that are sti
 
 Replicant is heavily inspired by [Calvin](http://cs.yale.edu/homes/thomson/publications/calvin-sigmod12.pdf), a high-throughput strictly serialized distributed database.
 
-The key insight in Calvin is that the problem of ordering transactions can be separated from the problem of
-executing transactions. As long as transactions are pure functions, and all nodes agree to an ordering, and
+The key insight in Calvin is that the problem of *ordering* transactions can be separated from the problem of
+*executing* transactions. As long as transactions are pure functions, and all nodes agree to an ordering, and
 the database is a deterministic, then execution can be performed coordination-free by each node independently.
 
 In Replicant, we turn the knob further: As in Calvin, Replicant transactions are pure functions in a
@@ -66,7 +66,7 @@ This is a powerful invariant to build on that makes reasoning about disconnected
 means that most types of what are commonly called "merge conflicts" just go away, and those that remain are much easier
 to handle correctly.
 
-# Processing Model
+# Data Model
 
 Replicant builds on [Noms](https://github.com/attic-labs/noms), a versioned, transactional, forkable database.
 
@@ -76,18 +76,18 @@ The main difference between Noms and Git is that Git stores mainly text and is i
 be used by humans, while Noms stores mainly data structures, and is intended to be used by software. But you could actually implement Replicant with Git instead of Noms — it would just be a lot slower and harder to build.
 
 Replicant builds on the Noms data model by annotating each commit with the transaction function and parameters that created 
-it. Since transactions are pure functions, this means that any node can execute a commit's transaction against its parent 
+it (see "Noms Schema" for details on how transactions are recorded). Since transactions are pure functions, this means that any node can execute a commit's transaction against its parent 
 commit and arrive at the exact same commit.
 
 A replicant _client_ (a mobile app embedding the Replicant client library) progresses by executing a transaction against its latest local commit. The transaction that was executed, including its parameters, are recorded in the new commit, and it becomes the new latest.
 
 Periodically, the client _synchronizes_ with its server, sending its latest local commits, receiving the rest of the merged history in exchange, and integrating it into its local state. See "Synchronization" for details.
 
-# Noms Schema
+## Schema
 
 These types describe the Noms data that is used to track history on both the client and server. They are written in [NomDL](https://github.com/attic-labs/noms/blob/master/go/nomdl/parser.go#L82), the type definition language for Noms. But you don't need to know Noms or NomDL in detail to be able to follow along.
 
-## Normal Commit
+### Normal Commit
 
 This is the basic commit in Replicant that records a transaction having been run. To replay this transaction, execute the
 transaction specified by `.meta.tx` against the single parent commit, if any.
@@ -146,7 +146,7 @@ struct Commit {
 }
 ```
 
-## Failed Commit
+### Failed Commit
 
 This commit records a transaction that failed server-side validation (see "integration"). `.parents` has either
 zero or one entries, which is the commit that the failed commit would have been ordered after, had it succeeded.
@@ -195,9 +195,9 @@ Replicant maintains two Noms _datasets_ (analagous to Git branches):
 * _remote_ - the last-known state of the Replicant Server
 * _local_ - the current state exposed to the host application
 
-Each dataset is either empty or has one of the Replicant `Commit` types (see "Processing Model").
+Each dataset is either empty or has one of the Replicant `Commit` types (see "Schema").
 
-## Data Model
+## User Data Model
 
 The data model exposed to user code is a fairly standard document database approach, like Google Firestore, Couchbase, RethinkDB, etc:
 
@@ -229,27 +229,24 @@ I am currently thinking that the initial transaction language should be JavaScri
 
 I think that we do not need determinism to be rock-solid because we will detect non-deterministic transactions automatically during sync. All we need to do is make non-deterministic transactions hard to trigger by accident, and the deterministic.js approach is sufficient for that while allowing us to use a modern JIT'd VM for performance.
 
-## Invoking Transactions
+## API
 
-Since transaction code is stored in the database and synchronized with other data, invoking transactions is simply running the relevant function and writing an appropriate commit to Noms referencing the code.
+A Replicant client can be interacted with either via language-specific bindings or via an IPC protocol (similar to the 
+existing Noms CLI). The API contains:
 
-It might look something like this (in Java):
-
-```java
-// Writes the code from "transactions.js.bundle" included in the app to the DB if not present
-Transactions txs = replicant.LoadTransactions("transactions.js.bundle");
-
-// Execute "createUser" from the bundle and write the transaction to the database
-ReplicantResult result = txs.exec("createUser", newUserName, newUserEmailAddress);
-```
-
-However, we expect that in the typical case, applications will want to pre-register transaction code on the server-side for efficiency. See "registering transactions" for more.
+* The entire Noms API
+  * Note: things like `commit` can be used in a way that break Replicant, but can be useful for debugging
+* A way to manage the currently registered set of transactions (see Registering Transactions)
+  * Note: servers will frequently whitelist allowed transactions though
+* A way to execute transactions and get their results
+* A way to listen for transactions or specific sets of transactions
+  * A way to listen for transactions synchronously, such that the listener can abort the transaction from committing. This is mostly used by the server (see "Integration"), but could be useful on the client to and has no downside.
 
 # Replicant Server
 
 Structurally, a Replicant Server is very similar to a client. It contains a Noms database and executes transactions in the same way.
 
-However, its role in the system is different: a Replicant Server's main responsibility is to maintain the authorative history of transactions that have occurred for a particular Replicant Group and their results.
+However, its role in the system is very different: a Replicant Server's main responsibility is to maintain the authorative history of transactions that have occurred for a particular Replicant Group and their results.
 
 Unlike clients, Replicant Servers do not ever rewind. The server is Truth, and the clients dance to its tune. Once a transaction is accepted by a server and written to its history, by either clients or the server itself, it is final, and clients will rewind and replay as necessary to match.
 
@@ -265,7 +262,7 @@ We expect that users will typically want to *register* transaction functions at 
 
 1. Without this, clients would have to include the code in their packages, and then write it into their databases, which would double the amount of storage the clients would consume.
 2. We expect that developers will usually want to whitelist transaction functions that can run, based on known hashes of code bundles. Otherwise, malicious clients could attack good clients by way or the sync protocol.
-3. For many transaction types originating on clients, there will be server-side actions that need to happen -- either to actually execute the transaction in reality, or to validate the transaction. It's natural to integrate these handlers at the point of registration.
+3. For many transaction types originating on clients, there will be server-side actions that need to happen -- either to actually execute the transaction in reality, or to validate the transaction.
 
 This is implemented as a special pair of transaction functions baked into all Replicant nodes: `registerTransaction` and `unregisterTransaction` that update the `value.txCode` field of the server's `local` dataset. Since these transaction functions could never be themselves registered, they will always fail validation during sync and thus will not be allowed to be called by clients (see Synchronization).
 
@@ -284,6 +281,14 @@ up duplicating a lot of data server-side in separate Replicant Servers. To comba
 share a single NBS instance across all users. The downside (in the current code) is that all commits to NBS serialized. This
 would probably still be fine up to lots of users, but at some point would need to be fixed.
 
+## API
+
+For each Replicant Server it hosts, the Replicant Service exposes an HTTP/REST API that exposes:
+
+* The entire Replicant client API (including the underlying Noms API)
+* A special `Sync()` method used during synchronization (see "Synchronization" for details)
+* A special form of the notification API from the client that allows cancelation (see "Integration" for details)
+
 ## Integration
 
 Most Replicant Groups will not be self-contained. Creating and synchronizing data amongst themselves it not enough: they must
@@ -291,35 +296,9 @@ interact with the outside world -- either with other existing parts of the servi
 
 Connecting a Replicant Group with the outside world is called _Integration_.
 
-The Replicant Service exposes the following conceptual API (represnted here as Go pseudo-code, but in reality available as
-either REST or via a Golang API) to update a Replicant Group:
-
-```Go
-type ReplicantService interface {
-  // Executes a replicant transaction
-  Execute(origin string, code hash.Hash, funcName string, args []types.Value)
-
-  // Specifies a service to handle the specified transaction functions. "Handling" means that for each transaction with
-  // one of the specified names, the service will be invoked 
-  SetHandler(funcNames []string, handler *url.URL)
-}
-
-type ReplicantHandler interface {
-  // Invoked synchronously for each transaction matching the previous call to SetHandler().
-  // If returns false, then Replicant will replace the specified transaction with a FailureCommit in the history.
-  // Handle() will keep getting called until it returns either true or false (replicant tracks whether it has received an 
-  // answer for each transaction and doesn't proceed until it does). So this should do minimum validation to get to the point
-  // where it can definitely proceed, then return to Replicant.
-  Handle(replicantServer *url.URL, commit hash.Hash) bool
-```
-
-## API
-
-For each Replicant Server, the Replicant Service exposes:
-* The Transaction Registration API
-* The Integration API above
-* The [Noms Remote Server API](https://github.com/attic-labs/noms/blob/master/go/datas/database_server.go#L64) (except that `PostRoot()` is non-public)
-* The `Commit(newHead hash.Hash)` method - see "Synchronization" for details
+Integration is done mostly via the Replicant Service API. To push data into a Replicant Group, register a transaction that
+implements the change, and invoke that transaction. To pull data out of a Replicant Group, use the database API as normal.
+To be notified of new transactions, register for notifications. To validate, and potentially reject a transaction, use the synchronous notification API.
 
 # Synchronization
 
