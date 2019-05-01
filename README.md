@@ -329,7 +329,7 @@ On the server-side, `Sync(newHead)` looks like:
 1. The call is queued behind any other commit to the same Replicant Server. Since Replicant Groups are usually small numbers of nodes, this will typically be a very short wait.
 2. When the call continues:
   - Find the fork point between the client's commit and the server's latest commit
-  - If the server commit is a fast-forward from client:
+  - If the server commit is a fast-forward from client (the server already included these commits):
     - Respond with the new head, there's nothing more to do
   - Else:
     - Validate each new commit (each commit after the fork point on the client side):
@@ -337,12 +337,14 @@ On the server-side, `Sync(newHead)` looks like:
       - Execute the transaction
       - If the resulting hash doesn't match the one the client specified, the client is badly behaved, return 40x (see badly-behaved clients)
       - If the transaction has server-side validation registered, run that validation (see integration)
-        - If the validation fails, replace the transaction with a CommitFailure transaction (see server-side validation)
-      - Commit the new head
-      - If the client commit is a fast-forward of the validated transaction chain:
-        - Return the new head
+        - If the validation fails, replace the transaction with a CommitFailure transaction
+      - Let _newHead_ equal the head of the validated chain
+      - Let _oldHead_ equal the current head of the `local` dataset
+      - Commit `newHead` to the `local` dataset
+      - If `oldHead` is identical to `newHead`
+        - Return `newHead`
       - Else:
-        - Add a merge commit referencing the two branches and indicating which one goes first (see merge commits)
+        - Add a merge commit whose parents are `oldHead` and `newHead`, and with `first` set to `oldHead`
 
 ## Step 3: Client-Side Pull
 
@@ -373,7 +375,7 @@ Let's talk about conflicts.
 
 There are a lot of different things that people mean when they say "conflicts". Let's go through some of them:
 
-## Case that work nicely
+## Cases that work nicely
 
 ### A single read-write register based on user data
 
