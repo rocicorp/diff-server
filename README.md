@@ -72,9 +72,9 @@ is a powerful invariant to build on that makes reasoning about a disconnected sy
 means that most types of what are commonly called "merge conflicts" just go away, and those that remain are much easier
 to handle.
 
-# Data Model
+# Processing Model
 
-<img src="./replicant-data-model.svg" alt="Evolution of a Forked Unsigned Integer" align="right">
+<img src="./replicant-data-model.svg" alt="Evolution of a Forked Unsigned Integer" align="right" width="50%">
 
 Replicant builds on [Noms](https://github.com/attic-labs/noms), a versioned, transactional, forkable database.
 
@@ -203,9 +203,9 @@ Replicant maintains two Noms _datasets_ (analagous to Git branches):
 * _remote_ - the last-known state of the Replicant Server
 * _local_ - the current state exposed to the host application
 
-Each dataset is either empty or has one of the Replicant `Commit` types (see "Data Model").
+Each dataset is either empty or has one of the Replicant `Commit` types (see "Processing Model").
 
-## User Data Model
+## Data Model
 
 The data model exposed to user code is a fairly standard document database approach, like Google Firestore, Couchbase, RethinkDB, etc:
 
@@ -217,7 +217,7 @@ The data model exposed to user code is a fairly standard document database appro
 - you can query into a subtree of a value using a path syntax
 - you can optionally declare indexes on any path
 
-*** TODO:*** *This needs a lot more work. I haven't thought a lot about it because it's not relevant to the core problem Replicant is solving, only the developer ergonomics (which is also important! but can be done a bit later).*
+** TODO:** *This needs a lot more work. I haven't thought a lot about it because it's not relevant to the core problem Replicant is solving, only the developer ergonomics (which is also important! but can be done a bit later).*
 
 ## Transaction Language
 
