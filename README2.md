@@ -5,17 +5,17 @@ data is read and written from a local database on user devices, then synchronize
 there is connectivity.
 
 These applications are highly desired by product teams and users because they are much more responsive and
-reliable than applications that are directly dependent upon servers. By using a local database as a buffer, these
-applications are instantaneously responsive in any network conditions.
+reliable than applications that are directly dependent upon servers. By using a local database as a buffer, offline-first
+applications are instantaneously responsive and reliable in any network conditions.
 
 Unfortunately, offline-first applications have historically been very challenging to build. Bidirectional
 sync is a famously difficult problem, and one which has elluded satisfying general
 solutions. Existing attempts to build such general solutions (Apple CloudKit, Android Sync, Google FireStore, Realm, PouchDB) all have one or more of the following serious problems:
 
-* **Requiring that developers manually merge conflicting writes.** Consult the [Android Sync](http://www.androiddocs.com/training/cloudsave/conflict-res.html) or [PouchDB](https://pouchdb.com/guides/conflicts.html) docs for a taste of how difficult this is for even simple cases. Remember that every single pair of operations that can possibly conflict needs to be considered this way, and the resulting conflict resolution code needs to be kept up to date as the application code changes. Developers are also responsible for ensuring the resulting merge is equivalent on all devices, otherwise they end up in a [split-brain](https://en.wikipedia.org/wiki/Split-brain_(computing)) scenario.
-* **Lack of atomic transactions.** Some solutions claim to support automatic merge, but lack atomic transactions. Without transactions, any two sequences of writes might interleave arbitrarily during merge. This is analogous to multithreaded programming without locks.
-* **A restrictive or non-standard data model.** Some solutions achieve automatic conflict resolution with restrictive data models, for example, by only providing acccess to [CRDT](https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type)s. However CRDTs are only known for a few datatypes. This forces developers to twist their data model to fit into one of the provided CRDTs. For example, Realm has a special [Counter](https://realm.io/docs/java/latest/#field-types) type that merges concurrent changes by summing them. But if you want to implement something very similar - a high score in a game - there is no way easy way to do that in Realm because there is no special `MaxNum` type built into Realm.
-* **Difficult or non-existent incremental integration.** Some solutions effectively require a committment to a non-standard or proprietary backend database or system design, which is not tractable for existing systems, and risky even for new systems.
+* **Requiring that developers manually merge conflicting writes.** Consult the [Android Sync](http://www.androiddocs.com/training/cloudsave/conflict-res.html) or [PouchDB](https://pouchdb.com/guides/conflicts.html) docs for a taste of how difficult this is for even simple cases. Every single pair of operations that can possibly conflict needs to be considered for conflicts, and the resulting conflict resolution code needs to be kept up to date as the application evolves. Developers are also responsible for ensuring the resulting merge is equivalent on all devices, otherwise the application ends up [split-brained](https://en.wikipedia.org/wiki/Split-brain_(computing)).
+* **Lack of atomic transactions.** Some solutions claim to support automatic merge, but lack atomic transactions. Without transactions, automatic merge means that any two sequences of writes might interleave. This is analogous to multithreaded programming without locks.
+* **A restrictive or non-standard data model.** Some solutions achieve automatic conflict resolution with restrictive data models, for example, by only providing acccess to [CRDTs](https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type). However only a relatively small number of CRDTs are known. Developers must twist their data model to fit into those types. For example, Realm has a special [Counter](https://realm.io/docs/java/latest/#field-types) type that merges concurrent changes by summing them. But if you want to implement something very similar - a high score in a game - there is no way easy way to do that in Realm because there is no special `MaxNum` type built into Realm.
+* **Difficult or non-existent incremental integration.** Some solutions effectively require a full committment to a non-standard or proprietary backend database or system design, which is not tractable for existing systems, and risky even for new systems.
 
 For these reasons, these products are often not practical options for application developers, leaving them
 forced to develop their own sync protocol at the application layer if they want an offline-first app. This is an
@@ -38,6 +38,8 @@ arbitrarily complex data structures on this primitive that are still conflict-fr
 * **Easy to Adopt**: Replicant is designed to integrate incrementally into existing systems, not take them over.
 
 # Intuition
+
+*TODO: Maybe remove this section*
 
 Replicant is heavily inspired by [Calvin](http://cs.yale.edu/homes/thomson/publications/calvin-sigmod12.pdf).
 
@@ -72,9 +74,11 @@ to handle.
 
 # Data Model
 
+TODO: diagram showing evolution of a fork
+
 Replicant builds on [Noms](https://github.com/attic-labs/noms), a versioned, transactional, forkable database.
 
-Noms has a data model that is very similar to Git and related systems: Each change to the system is represented by a _commit_ that represents an immutable snapshot of the system as of that change. The previous change (or changes, in the case where two forks merged) is referenced by a set of _parents_. As with Git, Noms makes use of content-addressing and persistent data structures to reduce duplication. The main difference between Noms and Git is that Git stores mainly text and is intended to
+Noms has a data model that is very similar to Git and related systems: Each change to the system is represented by a _commit_ that represents an immutable snapshot of the system as of that change. The previous change (or changes, in the case where a fork is merged) is referenced by a set of _parents_. As with Git, Noms makes use of content-addressing and persistent data structures to reduce duplication. The main difference between Noms and Git is that Git stores mainly text and is intended to
 be used by humans, while Noms stores mainly data structures, and is intended to be used by software. But you could actually build Replicant with Git instead of Noms -- it would just be a lot slower and harder.
 
 Replicant builds on the Noms data model by annotating each commit with the transaction function and parameters that created it. Since transactions are pure functions, this means that any node, starting with a commit's parent and executing that commit's transaction annotation, will arrive at that exact same commit.
@@ -91,33 +95,56 @@ When this happens, the client will frequently see that there were transactions t
 
 ### Normal Commit
 
+This is the basic commit in Replicant that records a transaction having been run. To replay this transaction, execute the
+transaction specified by `.meta.tx` against the single parent commit, if any.
+
 ```
 struct Commit {
   meta struct {
+    // The date that the commit was started on the origin.
+    // This is the date that is returned for any call to the current time in the transaction on any node.
+    // Random sources are also seeded from this.
     date struct Date {
       MsSinceEpoch uint64
     }
+    // The details of the transaction that was executed and led to this commit
     tx struct {
+      // Identifies the node the transaction was originally run on - useful for debugging
       Origin String
+      // The bundle of code that contains the transaction function that was run
       Code Ref<Blob>
+      // The name of the transaction function within `Code` that was run
       Name String
+      // The arguments that were passed to the transaction function
       Args List<Value>
     }
   }
+  // The previous commit. For Replicant "normal" commits, this will always be empty or size=1
   parents Set<Ref<Cycle<Commit>>>
+  // The current state of the database
   value struct {
+    // The currently registered transactions - see "registering transactions"
     TxReg Ref<Set<Ref<Blob>>>
+    // All user data, maped by unique ID
     Data Map<String, Value>
   }
 }
 ```
 
+TODO: Also need indexes somewhere. It's a bit tricky because they will *not* be synchronized, and might even be
+device specific, but ideally they move atomically with commits. Seems like they really need to be in another
+dataset and something else ensures they happen atomically with commit :-/.
+
 ### Merge Commit
+
+This commit records a fork in history being merged back together. `.parents` will always have two commits, and
+one of them will also be in `.meta.first`. To replay this transaction, first replay the commit at `.meta.first`,
+then replay the other commit in `parents`.
 
 ```
 struct Commit {
   meta struct {
-    order Ref<Cycle<Commit>>
+    first Ref<Cycle<Commit>>
   }
   parents Set<Ref<Cycle<Commit>>>
   value struct {
@@ -128,6 +155,13 @@ struct Commit {
 ```
 
 ### Failed Commit
+
+This commit records a transaction that failed server-side validation (see "integration"). `.parents` has either
+zero or one entries, which is the commit that the failed commit would have been ordered after, had it succeeded.
+The `.meta.failed` field contains the commit that failed validation.
+
+To replay this transaction, do nothing. The data in `.value` should be identical to the data in the parent commit,
+if any.
 
 ```
 struct Commit {
@@ -142,11 +176,6 @@ struct Commit {
 }
 ```
 
-## Example Histories
-
-TODO
-
-
 # System Architecture
 
 A deployed system of replicant nodes is called a *Replicant Group* and consists of a single logical *Replicant Server* and one or more *Replicant Clients*. Replicant Clients are typically mobile apps running in iOS or Android, but traditional desktop apps and web apps could also be clients, or really any software that embeds the Replicant Client library.
@@ -157,11 +186,7 @@ A deployed system of replicant nodes is called a *Replicant Group* and consists 
 
 Typically each Replicant Group models data for a single user of a service across all the user's devices. But a Replicant Group could be more fine-grained (if, for example, it's desirable to replicate a different subset of data to different device types) or more coarse-grained (if there are groups of users collaborating on the same dataset).
 
-One or more Replicant Servers are run by the Replicant Service. The Replicant Service is run alongside the application's existing server stack and database of record. Plumbing is added to route relevant updates from the database of record to Replicant Servers and the reverse (see integration).
-
-The key promise of Replicant is that Replicant Clients are *always* kept in sync with their Server. Once all nodes in a group have exchanged all transactions, they are guaranteed to be in the exact same state. There is no way for application code at either the client or server layer to do something that would prevent that from occurring.
-
-This is a powerful promise that makes reasoning about synchronization much simpler.
+One or more Replicant Servers are run by the Replicant Service. The Replicant Service is run alongside the application's existing server stack and database of record. Plumbing is added to route relevant updates from the database of record to Replicant Servers and the reverse (see integration). The Replicant Service can also be relied on as an external service, at http://replicant.io.
 
 # Replicant Client
 
@@ -171,16 +196,6 @@ A Replicant Client is embedded within a client-side application, typically a mob
 
 The client is updated by executing _transactions_, which are invocations of pure functions called _transaction functions_. Each _transaction function_ takes one or more parameters, plus a snapshot of the current state of the database, and returns as a result a new state of the database.
 
-Theoretically, Replicant could be built atop any single-node database that has the following features:
-
-* transactions - ACID-compliant transactions
-* snapshots - previous versions can be kept efficiently
-* forking - you can fork the database from any previous snapshot efficiently
-
-However [Noms](https://github.com/attic-labs/noms) - a prior project of ours - is especially well-suited because it has all these features, plus others that will be used by later sections of this document.
-
-You do not need to understand all the details of Noms to understand this document. What you need to understand is that Noms is a versioned, transactional, forkable database. Think SQLite+Git.
-
 ## Client State
 
 Replicant maintains two Noms _datasets_ (analagous to Git branches):
@@ -188,44 +203,7 @@ Replicant maintains two Noms _datasets_ (analagous to Git branches):
 * _remote_ - the last-known state of the Replicant Server
 * _local_ - the current state exposed to the host application
 
-Each dataset's latest commit has the following Noms type:
-
-```
-Struct Commit {
-  meta: Struct Meta {
-    date: Struct Date {
-      NanosSinceEpoch: Number,
-    },
-    tx: Struct {
-      args: List<Value>,
-      code: Ref<Blob>,
-      name: String,
-      origin: String,
-    },
-  },
-  parents: Set<Ref<Cycle<Commit>>>,
-  value: Struct {
-    txCode: Ref<Set<Blob>>,
-    data: Map<String, Value>,
-  },
-}
-```
-
-Each Noms `Commit` represents a transaction in Replicant. The `meta.tx` field describes the transaction that was run that resulted in the commit. Specifically:
-
-* `origin`: The node the transaction was originally run on (useful for debug purposes)
-* `code`: The code that contains the transaction function that was invoked (see "registering transactions")
-* `name`: The name of the transaction function from `code` that was run
-* `args`: The arguments that were passed to the transaction function
-
-The standard `meta.date` field is also used for the current datetime inside the transaction. 
-
-The value of the transaction has two parts:
-
-* `txCode`: All registered transactions (see 'registering transactions')
-* `data`: A map of all currently stored user data, by ID (see data model, below)
-
-***TODO:** Indexes need to go here somewhere. They aren't synchronized, but they need to be updated atomically with commits.*
+Each dataset is either empty or has one of the Replicant `Commit` types (see "Data Model").
 
 ## User Data Model
 
@@ -239,7 +217,7 @@ The data model exposed to user code is a fairly standard document database appro
 - you can query into a subtree of a value using a path syntax
 - you can optionally declare indexes on any path
 
-*** TODO:** This needs a lot more work. I haven't thought a lot about it because it's not relevant to the core problem Replicant is solving, only the developer ergonomics (which is also important! but can be done a bit later).*
+*** TODO:*** *This needs a lot more work. I haven't thought a lot about it because it's not relevant to the core problem Replicant is solving, only the developer ergonomics (which is also important! but can be done a bit later).*
 
 ## Transaction Language
 
@@ -257,7 +235,7 @@ I am currently thinking that the initial transaction language should be JavaScri
 * Running a JavaScript interpreter inside [wasmi](https://github.com/paritytech/wasmi) - this is a whitelist approach that was built from the ground-up for determinism, but it's slow
 * Running inside a forked [Otto](https://github.com/robertkrimen/otto) that enforced determinism - also slow
 
-I think that we do not need determinism to be rock-solid because we will detect non-deterministic transactions automatically during sync. All we need to do is make non-deterministic transactions hard to trigger by accident, and the deterministic.js approach is sufficient for that.
+I think that we do not need determinism to be rock-solid because we will detect non-deterministic transactions automatically during sync. All we need to do is make non-deterministic transactions hard to trigger by accident, and the deterministic.js approach is sufficient for that while allowing us to use a modern JIT'd VM for performance.
 
 ## Invoking Transactions
 
@@ -283,19 +261,19 @@ However, its role in the system is different: a Replicant Server's main responsi
 
 Unlike clients, Replicant Servers do not ever rewind. The server is Truth, and the clients dance to its tune. Once a transaction is accepted by a server and written to its history, by either clients or the server itself, it is final, and clients will rewind and replay as necessary to match.
 
-This does not mean, however, that servers have to accept whatever clients write. Servers have full discretion over whether to accept any given transaction, and they validate all work clients do. See "synchronization" for details.
+This does not mean, however, that servers have to accept whatever clients write. Servers have full discretion over whether to accept any given transaction, and they validate all work clients do. See "synchronization" and "integration" for details.
 
 ## Noms Schema
 
-The same as the client, except there's only a single dataset, `master`, since the server doesn't need to allow a separate branch to evolve while sync is in progress the way the client does.
+The same as the client, except there's only a `local` dataset, since the server doesn't need to allow a separate branch to evolve while sync is in progress the way the client does.
 
 ## Consistency Requirements
 
-Each Replicant Server acts as a single strictly serialized logical database, even though they are typically a distributed system internally. In the event of a partition internal to the replicant server, it ceases to be available rather than give inconsistent results. Note that this is fine, however, since the clients are designed to be frequently disconnected from their server.
+Each Replicant Server acts as a single strictly serialized logical database, even though they are typically a distributed system internally. In the event of a partition internal to the replicant server, it ceases to be available rather than give inconsistent results. This has no effect on client availability or performance, since interaction with the server is in the background as connectivity allows.
 
 ## API
 
-For each Replicant Server, the Replicant Service exposes an API that is the same as the [Noms Remote Server API](https://github.com/attic-labs/noms/blob/master/go/datas/database_server.go#L64), except that `PostRoot()` is non-public and a new `Commit(newHead hash.Hash)` endpoint is added. See Synchronization for details.
+For each Replicant Server, the Replicant Service exposes an API that is the same as the [Noms Remote Server API](https://github.com/attic-labs/noms/blob/master/go/datas/database_server.go#L64), except that `PostRoot()` is non-public and a new `Commit(newHead hash.Hash)` endpoint is added. See "Synchronization" for details.
 
 ## Registering Transactions
 
@@ -305,21 +283,26 @@ We expect that users will typically want to *register* transaction functions at 
 2. We expect that developers will usually want to whitelist transaction functions that can run, based on known hashes of code bundles. Otherwise, malicious clients could attack good clients by way or the sync protocol.
 3. For many transaction types originating on clients, there will be server-side actions that need to happen -- either to actually execute the transaction in reality, or to validate the transaction. It's natural to integrate these handlers at the point of registration.
 
-This is implemented as a special pair of transaction functions baked into all Replicant nodes: `registerTransaction` and `unregisterTransaction` that update the `value.txCode` field of the server's `master` dataset. Since these transaction functions could never be themselves registered, they will always fail validation during sync and thus will not be allowed to be called by clients (see Synchronization).
+This is implemented as a special pair of transaction functions baked into all Replicant nodes: `registerTransaction` and `unregisterTransaction` that update the `value.txCode` field of the server's `local` dataset. Since these transaction functions could never be themselves registered, they will always fail validation during sync and thus will not be allowed to be called by clients (see Synchronization).
 
 ## Replicant Service
 
-The Replicant Service is a stateless, horizontally scalable application server server written in Go that runs one or more Replicant servers. Because Replicant Servers store a small amount of data, there is no need to split the data of a single Replicant Server across multiple servers. However, it may be the case that for a variety of reasons there are multiple instances of the same Replicant Server running at once.
+The Replicant Service is a horizontally scalable application server server written in Go that runs one or more Replicant servers. All state is stored persistently in S3/Dynamo (see [NBS-on-AWS](https://github.com/attic-labs/noms/blob/master/go/nbs/NBS-on-AWS.md)).
 
-An easy way to meet these requirements is to store all the state in Noms, configured to use S3/Dynamo as its backend (see [NBS-on-AWS](https://github.com/attic-labs/noms/blob/master/go/nbs/NBS-on-AWS.md)). However, one side-effect of doing that naively would be that there would be no data deduplication between Replicant Servers.
+Because Replicant Servers store a small amount of data (that is, just the data that should be replicated to user devices), there is no need to shard the data of a single Replicant Server across multiple instances of the service. However, it may be the case that for a variety of reasons there are multiple instances of the service hosting the same Replicant Server at once.
+
+Each NBS instance has its own isolated backing storage, meaning that for some applications, the Replicant Service might end
+up duplicating a lot of data server-side in separate Replicant Servers. To combat that, Replicant Service could be setup to
+share a single NBS instance across all users. The downside (in the current code) is that all commits to NBS serialized. This
+would probably still be fine up to lots of users, but at some point would need to be fixed.
 
 # Synchronization
 
-Synchronization is a three-part process that should feel very similar to anyone who has looked under the covers at Git. It takes advantage of Noms' built-in fast one-way replication to accelerate "fast-forward" syncs.
+Synchronization is a three-part process that should feel very similar to anyone who has looked under the covers at Git. However, it takes advantage of the ability of the server to replay transactions and create merges on behalf of clients to reduce the entire process to just one logical round trip (under the cover, lots of HTTP transactions are happening).
 
 ## Step 1: Client pushes to server
 
-The client uses (effectively) [`noms sync`](https://github.com/attic-labs/noms/blob/master/doc/cli-tour.md#noms-sync) to push all missing chunks from the client's `local` dataset to the server's `master` dataset. At the end of the push, the client calls `Commit(newHead hash.Hash)`.
+The client uses (effectively) [`noms sync`](https://github.com/attic-labs/noms/blob/master/doc/cli-tour.md#noms-sync) to push all missing chunks from the client's `local` dataset to the server's `local` dataset. At the end of the push, the client calls `Commit(newHead hash.Hash)`.
 
 ## Step 2: Commit on the server
 
@@ -345,7 +328,7 @@ On the server-side, `Commit(newHead)` looks like:
 
 ## Step 3: Client-Side Pull
 
-Back on the client-side, the `Commit()` call has just returned with a new head that should become the head of the `remote` dataset. This is trival. We trust the server and this makes no changes to our local state, so we just `noms sync` the server's `master` dataset to our `remote` dataset, which pulls all the relevant chunks and we're done.
+Back on the client-side, the `Commit()` call has just returned with a new head that should become the head of the `remote` dataset. This is trival. We trust the server and this makes no changes to our local state, so we just `noms sync` the server's `local` dataset to our `remote` dataset, which pulls all the relevant chunks and we're done.
 
 ## Step 4: Client-Side Rebase
 
@@ -366,44 +349,139 @@ As a result, after step 3 finishes, we may have some new commits in the `local` 
 
 # Conflicts
 
+And now, after an immense amount of setup, we can circle back around to where we started.
+
+Let's talk about conflicts.
+
 There are a lot of different things that people mean when they say "conflicts". Let's go through some of them:
 
-## A single read-write register based on paramters
+## Case that work nicely
+
+### A single read-write register based on user data
 
 Example:
 
 ```js
-setCellValue(spreadsheetID, row, column, value) {
-  db.set(_id: spreadsheetID, `.rows[${row}].cells[${column}]`, value);
+function setStatus(present, status, emoji) {
+  db.set({
+    _id: 'status'
+    present,
+    status,
+    emoji,
+  });
 }
 ```
 
-In this example, a transaction takes data from the user and sets a value in the database. If this runs concurrently at two sites, there is no way to merge them. One must win, or we must ask the user.
+In this example, a transaction takes data from the user and sets the user's current away status. If this runs concurrently at two sites, there is no way to merge them. One must win, or we must ask the user.
 
-However, remember that this case isn't just a part of offline applications - it happens in normal client/server apps too. It is perfectly possible for a user to set a cell in their spreadsheet, and then another client overwrites it an instant later. This is not really different.
+In this case, it clearly doesn't matter which one wins and isn't worth the user. The system must just choose one consistently. This is naturally solved by running transactions serially in a consistent order on all nodes.
 
-## Multiple register writes
+### Multiple register writes
 
-## Arithmetic
+```js
+function moveKanbanCard(cardID, fromColumnID, toColumnID) {
+  const fromColumn = db.get(fromColumnID);
+  const toColumn = db.get(toColumnID);
+  fromColumn.items = fromColumns.items.splice(fromColumns.items.findIndex(c => c._id == cardID));
+  toColumns.items.push(cardID);
+  db.set(fromColumn);
+  db.set(toColumn);
+}
+```
 
-## Accumulation
+In this example, we modify two data items. Each write only makes sense if the other write succeeds. We need the card to end
+up in either one row or the other.
 
-## Data structure maintenance
+This example is difficult to achieve reliably in existing solutions that use simple last-write-wins semantics because there is no easy way to guarantee that the two writes only happen together.
 
-## Dependent write
+### Arithmetic
 
-All the above are handled naturally. Then there is:
+```js
+funtion updateHighScore(newScore) {
+  const highScore = db.get('high-score');
+  highScore.value = Math.max(highScore.value, newScore);
+  db.set(highScore);
+}
+```
 
-## Sequence manipulation
+In this example, we perform some simple arithmetic on a register. Again, this is naturally handled by enforcing a consistent serial order on transactions, and is not easy to solve with standard CRDTs or LWW semantics.
 
-Unclear how badly this is needed, but if it is, we can add a Noms type that is a sequence CRDT. Since we know the ancestery of all parallel writes, we can use a CRDT and it will automatically make the correct sequence edits.
+Another common example of this class of conflict include a number that can't go negative (number of items in stock), or counters.
+
+### Accumulation
+
+```js
+function addTodo(text) {
+  const list = db.get('todos');
+  list.value.append(text);
+  db.set(list);
+}
+```
+
+This example appends an item to a list. This would not work in a LWW system (though it would work with sequence CRDTs).
+
+### Data structure maintenance
+
+```js
+function insert(db, text) {
+  const val = db.get('index');
+  val.sorted = val.sorted || [];
+  let idx = val.sorted.findIndex(v => v > text);
+  if (idx == -1) {
+    idx = val.sorted.length;
+  }
+  val.sorted.splice(idx, 0, text);
+  db.set(val);
+}
+```
+
+This example maintains a sorted list for fast searching. This cannot be done easily in either a LWW system or with CRDTs, yet it is resolved completely naturally here.
+
+This applies to all kinds of complex data structures like geoindices, text indices, etc.
+
+## Cases that do not work automatically
+
+### Sequence manipulation (not automatically solved! (but...))
+
+Arbitrary sequence manipulation is an example of an operation that **does not** get automatically handled by running transactions in serial:
+
+```js
+function moveTodoItem(itemID, newIdx) {
+  const list = db.get('todos');
+  const currIdx = list.value.findIndex(item => item._id == itemID);
+  if (currIdx == newIdx) {
+    return;
+  }
+  if (currIdx < newIdx) {
+    newIdx--;
+  }
+  const item = list.splice(currIdx, 1);
+  list.splice(newIdx, 0, item);
+}
+```
+
+This case can be made to work with Replicant by changing the parameters of the function to do more work inside the function (finding the insert position). However, more complex cases don't naturally work.
+
+This can be supported quite nicely in Replicant by changing the Noms `List` type to be backed by a sequence CRDT. It would not change the allowed operations, users would not even have to know.
+
+### Cases where we want to ask the user
+
+Replicant addresses the majority of merge cases quite naturally, but there are still bound to be the occasional reason to
+ask the user to merge a conflict.
+
+Such cases can naturally be located after merge has occurred by finding the merge commits and then applying a new transaction
+that performs whatever fixup the user specified.
 
 # Future Work
+
+## Host-Proof Hosting
 
 ## Optimizations
 - local (parallelism via deterministic locks, ala calvin)
 - remote (hinting of affected keys)
 - running Noms on the server
+
+# Other Applications
 
 ## P2P Database
 
