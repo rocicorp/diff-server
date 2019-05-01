@@ -39,42 +39,32 @@ and can build arbitrarily complex data structures on this primitive that are sti
 
 # Intuition
 
-*TODO: Maybe remove this section or reduce and merge with below*
+<img src="./replicant-data-model.svg" alt="Evolution of a Forked Unsigned Integer" align="right" width="50%">
 
-Replicant is heavily inspired by [Calvin](http://cs.yale.edu/homes/thomson/publications/calvin-sigmod12.pdf).
+Replicant is heavily inspired by [Calvin](http://cs.yale.edu/homes/thomson/publications/calvin-sigmod12.pdf), a high-throughput strictly serialized distributed database.
 
 The key insight in Calvin is that the problem of ordering transactions can be separated from the problem of
 executing transactions. As long as transactions are pure functions, and all nodes agree to an ordering, and
 the database is a deterministic, then execution can be performed coordination-free by each node independently.
 
-This insight is used by Calvin to create a high-throughput, strictly serialized distributed database without the need
-for physical clocks. Calvin nodes coordinate synchronously only to establish transaction order, then run their
-transactions locally.
-
 In Replicant, we turn the knob further: As in Calvin, Replicant transactions are pure functions in a
-fully-featured programming language. But unlike Calvin, nodes do not coordinate synchronously to establish order,
+fully-featured programming language. Unlike Calvin, nodes do not coordinate synchronously to establish order,
 or for any other reason. Instead nodes execute transactions completely locally, responding immediately to the calling
-application. A log is maintained at each node of the local order transactions occurred in. Asynchronously, when
-connectivity allows, "client nodes" (those running the user interface) synchronize their logs with a special (logical)
-node called the "Replicant Server", which decides authoratively what the total order is. The resulting totally ordered 
-transaction log is then replicated back to each client node.
+application. A log is maintained at each node containing the local history of transactions. Asynchronously, when
+connectivity allows, nodes synchronize their logs with a single authoritative server to arrive at a single linear history.
 
 This will commonly result in a client node learning about transactions that occurred "in the past" from its
-point of view (because they happened concurrently on other nodes) after synchronizing with the server. In that case,
-the client rewinds its database back to the point of divergence and replays the transactions in the correct order.
+perspective. In that case,
+the client rewinds its state back to the point of divergence and replays the transactions in the correct order.
 
-Thus, once all nodes have the same log, they will execute the same sequence of transactions and are guaranteed to arrive at 
-the same database state.
+***The key promise Replicant makes is that once synchronization is complete, all nodes will have the same transaction 
+history and the exact same state. There is no transaction that any node can perform that will stop nodes from synchronizing.***
 
-The key promise that Replicant makes is that once synchronization is complete, all nodes will have the same transaction 
-history and the exact same state. There is no transaction that any node can perform that will stop this from happening. This 
-is a powerful invariant to build on that makes reasoning about a disconnected system much easier. As we will see it also
+This is a powerful invariant to build on that makes reasoning about a disconnected system much easier. As we will see it also
 means that most types of what are commonly called "merge conflicts" just go away, and those that remain are much easier
-to handle.
+to handle correctly.
 
 # Processing Model
-
-<img src="./replicant-data-model.svg" alt="Evolution of a Forked Unsigned Integer" align="right" width="50%">
 
 Replicant builds on [Noms](https://github.com/attic-labs/noms), a versioned, transactional, forkable database.
 
