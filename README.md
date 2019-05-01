@@ -73,11 +73,10 @@ the client rewinds its state back to the point of divergence and replays the tra
 
 <hr>
 
-***The key promise Replicant makes is that once synchronization is complete, all nodes will have the same transaction 
-history and the exact same state. There is no transaction that any node can perform that will stop nodes from converging.***
+***The key promise that replicant makes is that a) all transactions will execute atomically b) in the exact same order c) with the exact same results d) on all nodes. There is no transaction that any node can execute that will stop the system from converging.***
 
 This is a powerful invariant to build on that makes reasoning about disconnected systems much easier. As we will see it also
-means that most types of what are commonly called "merge conflicts" just go away, and those that remain are much easier
+means that most types of what are commonly called "merge conflicts" just go away, and those that remain simpler 
 to handle correctly.
 
 # Data Model
