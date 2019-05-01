@@ -394,7 +394,7 @@ function setStatus(present, status, emoji) {
 
 In this example, a transaction takes data from the user and sets the user's current away status. If this runs concurrently at two sites, there is no way to merge them. One must win, or we must ask the user.
 
-In this case, it clearly doesn't matter which one wins and isn't worth the user. The system must just choose one consistently. This is naturally solved by running transactions serially in a consistent order on all nodes.
+In this case, it clearly doesn't matter which one wins and isn't worth bothering the user. The system must just choose one consistently. This is naturally solved by running transactions serially in a consistent order on all nodes.
 
 ### Multiple register writes
 
