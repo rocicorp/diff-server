@@ -474,9 +474,9 @@ This applies to all kinds of complex data structures like geoindices, text indic
 
 ## Cases that do not work automatically
 
-### Sequence manipulation (not automatically solved! (but...))
+### Arbitrary sequence manipulation
 
-Arbitrary sequence manipulation is an example of an operation that **does not** get automatically handled by running transactions in serial:
+Arbitrary sequence manipulation is not nicely addressed by Replicant as proposed above:
 
 ```js
 function moveTodoItem(itemID, newIdx) {
@@ -493,11 +493,11 @@ function moveTodoItem(itemID, newIdx) {
 }
 ```
 
-This case can be made to work with Replicant by changing the parameters of the function to do more work inside the function (finding the insert position). However, more complex cases don't naturally work.
+Many cases, including the above, can be made to work by changing the parameters of the function such that more is done inside the transaction (in this case: finding the insert position). However, other more complex cases don't naturally work.
 
-This can be supported quite nicely in Replicant by changing the Noms `List` type to be backed by a sequence CRDT. It would not change the allowed operations, users would not even have to know.
+One way to improve Replicant to support these cases better would be to change the Noms `List` type to be backed by a sequence CRDT. It would not change the allowed operations, users would not even have to know the implementation details.
 
-### Cases where we want to ask the user
+### Asking the user
 
 Replicant addresses the majority of merge cases quite naturally, but there are still bound to be the occasional reason to
 ask the user to merge a conflict.
