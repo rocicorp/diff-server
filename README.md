@@ -78,20 +78,26 @@ to handle.
 
 Replicant builds on [Noms](https://github.com/attic-labs/noms), a versioned, transactional, forkable database.
 
-Noms has a data model that is very similar to Git and related systems: Each change to the system is represented by a _commit_ that represents an immutable snapshot of the system as of that change. The previous change (or changes, in the case where a fork is merged) is referenced by a set of _parents_. As with Git, Noms makes use of content-addressing and persistent data structures to reduce duplication. The main difference between Noms and Git is that Git stores mainly text and is intended to
+Noms has a data model that is very similar to Git and related systems: Each change to the system is represented by a _commit_ object that contains an immutable snapshot of the system as of that change. The previous change (or changes, in the case where a fork is merged) is referenced by a set of _parents_. As with Git, Noms makes use of content-addressing and persistent data structures to reduce duplication and facilitate fast diff and sync.
+
+The main difference between Noms and Git is that Git stores mainly text and is intended to
 be used by humans, while Noms stores mainly data structures, and is intended to be used by software. But you could actually build Replicant with Git instead of Noms -- it would just be a lot slower and harder.
 
-Replicant builds on the Noms data model by annotating each commit with the transaction function and parameters that created it. Since transactions are pure functions, this means that any node, starting with a commit's parent and executing that commit's transaction annotation, will arrive at that exact same commit.
+Replicant builds on the Noms data model by annotating each commit with the transaction function and parameters that created 
+it. Since transactions are pure functions, this means that any node, can execute a commit's transaction against its parent 
+commit and arrive at the exact same commit.
 
-Thus, a Replicant _client_ (a mobile app embedding the Replicant client library) moves forward by executing transactions
-that modify its local state and append to its local commit log.
+A Replicant _client_ (a mobile app embedding the Replicant client library) moves forward by executing transactions
+that create new commits, and appending each new commit to its local log.
 
 Periodically, the client will _synchronize_ with its server, sending its novel commits to the server, and getting the latest 
 updates to the totally ordered transaction set in return.
 
 When this happens, the client will frequently see that there were transactions that happened in parallel on other nodes. In this case, the client rewinds to the point of divergence and replays the transactions in the correct order according to the log.
 
-## Noms Schemas
+## Noms Schema
+
+These schema are written in [NomDL](https://github.com/attic-labs/noms/blob/master/go/nomdl/parser.go#L82), the type definition language for Noms. You don't need to know Noms in detail to be able to follow along.
 
 ### Normal Commit
 
@@ -104,9 +110,7 @@ struct Commit {
     // The date that the commit was started on the origin.
     // This is the date that is returned for any call to the current time in the transaction on any node.
     // Random sources are also seeded from this.
-    date struct Date {
-      MsSinceEpoch uint64
-    }
+    date Date
     // The details of the transaction that was executed and led to this commit
     tx struct {
       // Identifies the node the transaction was originally run on - useful for debugging
