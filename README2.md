@@ -76,7 +76,7 @@ to handle.
 
 # Data Model
 
-TODO: diagram showing evolution of a fork
+<img src="./replicant-data-model.svg" alt="Evolution of a Forked Unsigned Integer" align="right">
 
 Replicant builds on [Noms](https://github.com/attic-labs/noms), a versioned, transactional, forkable database.
 
