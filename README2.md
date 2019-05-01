@@ -39,7 +39,7 @@ arbitrarily complex data structures on this primitive that are still conflict-fr
 
 # Intuition
 
-*TODO: Maybe remove this section*
+*TODO: Maybe remove this section or reduce and merge with below*
 
 Replicant is heavily inspired by [Calvin](http://cs.yale.edu/homes/thomson/publications/calvin-sigmod12.pdf).
 
@@ -186,7 +186,7 @@ A deployed system of replicant nodes is called a *Replicant Group* and consists 
 
 Typically each Replicant Group models data for a single user of a service across all the user's devices. But a Replicant Group could be more fine-grained (if, for example, it's desirable to replicate a different subset of data to different device types) or more coarse-grained (if there are groups of users collaborating on the same dataset).
 
-One or more Replicant Servers are run by the Replicant Service. The Replicant Service is run alongside the application's existing server stack and database of record. Plumbing is added to route relevant updates from the database of record to Replicant Servers and the reverse (see integration). The Replicant Service can also be relied on as an external service, at http://replicant.io.
+One or more Replicant Servers are run by the Replicant Service. The Replicant Service is run alongside the application's existing server stack and database of record. Plumbing is added to route relevant updates from the database of record to Replicant Servers and the reverse (see "integration"). The Replicant Service can also be relied on as an external service, at http://replicant.io.
 
 # Replicant Client
 
@@ -267,14 +267,6 @@ This does not mean, however, that servers have to accept whatever clients write.
 
 The same as the client, except there's only a `local` dataset, since the server doesn't need to allow a separate branch to evolve while sync is in progress the way the client does.
 
-## Consistency Requirements
-
-Each Replicant Server acts as a single strictly serialized logical database, even though they are typically a distributed system internally. In the event of a partition internal to the replicant server, it ceases to be available rather than give inconsistent results. This has no effect on client availability or performance, since interaction with the server is in the background as connectivity allows.
-
-## API
-
-For each Replicant Server, the Replicant Service exposes an API that is the same as the [Noms Remote Server API](https://github.com/attic-labs/noms/blob/master/go/datas/database_server.go#L64), except that `PostRoot()` is non-public and a new `Commit(newHead hash.Hash)` endpoint is added. See "Synchronization" for details.
-
 ## Registering Transactions
 
 We expect that users will typically want to *register* transaction functions at the server-side, rather than let clients execute whatever transactions they want, for a few reasons:
@@ -285,7 +277,11 @@ We expect that users will typically want to *register* transaction functions at 
 
 This is implemented as a special pair of transaction functions baked into all Replicant nodes: `registerTransaction` and `unregisterTransaction` that update the `value.txCode` field of the server's `local` dataset. Since these transaction functions could never be themselves registered, they will always fail validation during sync and thus will not be allowed to be called by clients (see Synchronization).
 
-## Replicant Service
+## Consistency Requirements
+
+Each Replicant Server acts as a single strictly serialized logical database, even though they are typically a distributed system internally. In the event of a partition internal to the replicant server, it ceases to be available rather than give inconsistent results. This has no effect on client availability or performance, since interaction with the server is in the background as connectivity allows.
+
+# Replicant Service
 
 The Replicant Service is a horizontally scalable application server server written in Go that runs one or more Replicant servers. All state is stored persistently in S3/Dynamo (see [NBS-on-AWS](https://github.com/attic-labs/noms/blob/master/go/nbs/NBS-on-AWS.md)).
 
@@ -295,6 +291,43 @@ Each NBS instance has its own isolated backing storage, meaning that for some ap
 up duplicating a lot of data server-side in separate Replicant Servers. To combat that, Replicant Service could be setup to
 share a single NBS instance across all users. The downside (in the current code) is that all commits to NBS serialized. This
 would probably still be fine up to lots of users, but at some point would need to be fixed.
+
+## Integration
+
+Most Replicant Groups will not be self-contained. Creating and synchronizing data amongst themselves it not enough: they must
+interact with the outside world -- either with other existing parts of the service stack, or with other replicant groups. Myriad examples include sending emails, billing customers, sending data to and from other users on the same service, updating and reflecting updates to the system of record, etc.
+
+Connecting a Replicant Group with the outside world is called _Integration_.
+
+The Replicant Service exposes the following conceptual API (represnted here as Go pseudo-code, but in reality available as
+either REST or via a Golang API) to update a Replicant Group:
+
+```Go
+type ReplicantService interface {
+  // Executes a replicant transaction
+  Execute(origin string, code hash.Hash, funcName string, args []types.Value)
+
+  // Specifies a service to handle the specified transaction functions. "Handling" means that for each transaction with
+  // one of the specified names, the service will be invoked 
+  SetHandler(funcNames []string, handler *url.URL)
+}
+
+type ReplicantHandler interface {
+  // Invoked synchronously for each transaction matching the previous call to SetHandler().
+  // If returns false, then Replicant will replace the specified transaction with a FailureCommit in the history.
+  // Handle() will keep getting called until it returns either true or false (replicant tracks whether it has received an 
+  // answer for each transaction and doesn't proceed until it does). So this should do minimum validation to get to the point
+  // where it can definitely proceed, then return to Replicant.
+  Handle(replicantServer *url.URL, commit hash.Hash) bool
+```
+
+## API
+
+For each Replicant Server, the Replicant Service exposes:
+* The Transaction Registration API
+* The Integration API above
+* The [Noms Remote Server API](https://github.com/attic-labs/noms/blob/master/go/datas/database_server.go#L64) (except that `PostRoot()` is non-public)
+* The `Commit(newHead hash.Hash)` method - see "Synchronization" for details
 
 # Synchronization
 
@@ -472,17 +505,32 @@ ask the user to merge a conflict.
 Such cases can naturally be located after merge has occurred by finding the merge commits and then applying a new transaction
 that performs whatever fixup the user specified.
 
-# Future Work
+# Other Ideas
 
 ## Host-Proof Hosting
 
-## Optimizations
-- local (parallelism via deterministic locks, ala calvin)
-- remote (hinting of affected keys)
-- running Noms on the server
+One challenge with the system as proposed is that customers must either run the Replicant Service inside their datacenter and 
+take on the ops burden for that, or else rely on replicant.io. This latter case is tempting, but means that replicant.io
+will see the customer's user data.
+
+A solution to this problem would be change the Replicant Service to store only an ordered log of transaction functions and
+arguments, not the actual data. This moves the work of merging transactions to the client, probably slowing down sync. However 
+the advantage would be that the log can be encrypted using a key that only the client knows, dramatically improving privacy
+and security from the customer's point of view.
 
 # Other Applications
 
+## Low-Latency/Edge Database
+
+The same basic design presented here can be used as a classic distributed transactional database. Such a database would have
+the interesting property of near-instant transactional commit to a "pending status", with delayed finality. This is sort of
+like the classic strategy of combining a queue with a transactional database to reduce latency. However, it has the twist
+that once something is put on the queue, the database is queryable as normal including the pending data.
+
+One special case of this would be to run the database in CDNs, very close to end-users. This would give applications an
+extremely low latency "transactional" database, with delayed finalization.
+
 ## P2P Database
 
-## Edge Database
+I think that consensus can also be determined in a purely peer-to-peer mode with no authoritative server. This would be
+interesting for peer-to-peer applications, if those ever take off.
