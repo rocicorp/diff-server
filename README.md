@@ -320,11 +320,11 @@ Synchronization is a four-step process that should feel familiar to anyone who h
 
 ## Step 1: Client pushes to server
 
-The client uses (effectively) [`noms sync`](https://github.com/attic-labs/noms/blob/master/doc/cli-tour.md#noms-sync) to push all missing chunks from the client's `local` dataset to the server's `local` dataset. At the end of the push, the client calls `Commit(newHead hash.Hash)`.
+The client uses (effectively) [`noms sync`](https://github.com/attic-labs/noms/blob/master/doc/cli-tour.md#noms-sync) to push all missing chunks from the client's `local` dataset to the server's `local` dataset. At the end of the push, the client calls `Sync(newHead hash.Hash)`.
 
 ## Step 2: Commit on the server
 
-On the server-side, `Commit(newHead)` looks like:
+On the server-side, `Sync(newHead)` looks like:
 
 1. The call is queued behind any other commit to the same Replicant Server. Since Replicant Groups are usually small numbers of nodes, this will typically be a very short wait.
 2. When the call continues:
@@ -346,7 +346,7 @@ On the server-side, `Commit(newHead)` looks like:
 
 ## Step 3: Client-Side Pull
 
-Back on the client-side, the `Commit()` call has just returned with a new head that should become the head of the `remote` dataset. This is trival. We trust the server and this makes no changes to our local state, so we just `noms sync` the server's `local` dataset to our `remote` dataset, which pulls all the relevant chunks and we're done.
+Back on the client-side, the `Sync()` call has just returned with a new head that should become the head of the `remote` dataset. This is trival. We trust the server and this makes no changes to our local state, so we just `noms sync` the server's `local` dataset to our `remote` dataset, which pulls all the relevant chunks and we're done.
 
 ## Step 4: Client-Side Rebase
 
