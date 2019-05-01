@@ -76,10 +76,10 @@ The main difference between Noms and Git is that Git stores mainly text and is i
 be used by humans, while Noms stores mainly data structures, and is intended to be used by software. But you could actually implement Replicant with Git instead of Noms — it would just be a lot slower and harder to build.
 
 Replicant builds on the Noms data model by annotating each commit with the transaction function and parameters that created 
-it (see "Noms Schema" for details on how transactions are recorded). Since transactions are pure functions, this means that any node can execute a commit's transaction against its parent 
+it. Since transactions are pure functions, this means that any node can execute a commit's transaction against its parent 
 commit and arrive at the exact same commit.
 
-A replicant _client_ (a mobile app embedding the Replicant client library) progresses by executing a transaction against its latest local commit. The transaction that was executed, including its parameters, are recorded in the new commit, and it becomes the new latest.
+A replicant _client_ progresses by executing a transaction against its latest local commit. The transaction that was executed, including its parameters, are recorded in the new commit, and it becomes the new latest.
 
 Periodically, the client _synchronizes_ with its server, sending its latest local commits, receiving the rest of the merged history in exchange, and integrating it into its local state. See "Synchronization" for details.
 
@@ -122,6 +122,7 @@ struct Commit {
   }
 }
 ```
+</details>
 
 TODO: Also need indexes somewhere. It's a bit tricky because they will *not* be synchronized, and might even be
 device specific, but ideally they move atomically with commits. Seems like they really need to be in another
