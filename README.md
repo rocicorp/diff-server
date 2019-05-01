@@ -57,10 +57,12 @@ This will commonly result in a client node learning about transactions that occu
 perspective. In that case,
 the client rewinds its state back to the point of divergence and replays the transactions in the correct order.
 
-***The key promise Replicant makes is that once synchronization is complete, all nodes will have the same transaction 
-history and the exact same state. There is no transaction that any node can perform that will stop nodes from synchronizing.***
+<hr>
 
-This is a powerful invariant to build on that makes reasoning about a disconnected system much easier. As we will see it also
+***The key promise Replicant makes is that once synchronization is complete, all nodes will have the same transaction 
+history and the exact same state. There is no transaction that any node can perform that will stop nodes from converging.***
+
+This is a powerful invariant to build on that makes reasoning about disconnected systems much easier. As we will see it also
 means that most types of what are commonly called "merge conflicts" just go away, and those that remain are much easier
 to handle correctly.
 
@@ -68,28 +70,24 @@ to handle correctly.
 
 Replicant builds on [Noms](https://github.com/attic-labs/noms), a versioned, transactional, forkable database.
 
-Noms has a data model that is very similar to Git and related systems: Each change to the system is represented by a _commit_ object that contains an immutable snapshot of the system as of that change. The previous change (or changes, in the case where a fork is merged) is referenced by a set of _parents_. As with Git, Noms makes use of content-addressing and persistent data structures to reduce duplication and facilitate fast diff and sync.
+Noms has a data model that is very similar to Git and related systems: Each change to the system is represented by a _commit_ object that contains an immutable snapshot of the system as of that moment. The previous change (or changes, in the case where a fork is merged) is referenced by a set of _parents_. As with Git, Noms makes use of content-addressing and persistent data structures to reduce duplication and facilitate fast diff and sync.
 
 The main difference between Noms and Git is that Git stores mainly text and is intended to
-be used by humans, while Noms stores mainly data structures, and is intended to be used by software. But you could actually build Replicant with Git instead of Noms -- it would just be a lot slower and harder.
+be used by humans, while Noms stores mainly data structures, and is intended to be used by software. But you could actually implement Replicant with Git instead of Noms — it would just be a lot slower and harder to build.
 
 Replicant builds on the Noms data model by annotating each commit with the transaction function and parameters that created 
-it. Since transactions are pure functions, this means that any node, can execute a commit's transaction against its parent 
+it. Since transactions are pure functions, this means that any node can execute a commit's transaction against its parent 
 commit and arrive at the exact same commit.
 
-A Replicant _client_ (a mobile app embedding the Replicant client library) moves forward by executing transactions
-that create new commits, and appending each new commit to its local log.
+A replicant _client_ (a mobile app embedding the Replicant client library) progresses by executing a transaction against its latest local commit. The transaction that was executed, including its parameters, are recorded in the new commit, and it becomes the new latest.
 
-Periodically, the client will _synchronize_ with its server, sending its novel commits to the server, and getting the latest 
-updates to the totally ordered transaction set in return.
+Periodically, the client _synchronizes_ with its server, sending its latest local commits, receiving the rest of the merged history in exchange, and integrating it into its local state. See "Synchronization" for details.
 
-When this happens, the client will frequently see that there were transactions that happened in parallel on other nodes. In this case, the client rewinds to the point of divergence and replays the transactions in the correct order according to the log.
+# Noms Schema
 
-## Noms Schema
+These types describe the Noms data that is used to track history on both the client and server. They are written in [NomDL](https://github.com/attic-labs/noms/blob/master/go/nomdl/parser.go#L82), the type definition language for Noms. But you don't need to know Noms or NomDL in detail to be able to follow along.
 
-These schema are written in [NomDL](https://github.com/attic-labs/noms/blob/master/go/nomdl/parser.go#L82), the type definition language for Noms. You don't need to know Noms in detail to be able to follow along.
-
-### Normal Commit
+## Normal Commit
 
 This is the basic commit in Replicant that records a transaction having been run. To replay this transaction, execute the
 transaction specified by `.meta.tx` against the single parent commit, if any.
@@ -148,7 +146,7 @@ struct Commit {
 }
 ```
 
-### Failed Commit
+## Failed Commit
 
 This commit records a transaction that failed server-side validation (see "integration"). `.parents` has either
 zero or one entries, which is the commit that the failed commit would have been ordered after, had it succeeded.
