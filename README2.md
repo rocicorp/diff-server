@@ -8,9 +8,9 @@ These applications are highly desired by product teams and users because they ar
 reliable than applications that are directly dependent upon servers. By using a local database as a buffer, offline-first
 applications are instantaneously responsive and reliable in any network conditions.
 
-Unfortunately, offline-first applications have historically been very challenging to build. Bidirectional
+Unfortunately, offline-first applications are really hard to build. Bidirectional
 sync is a famously difficult problem, and one which has elluded satisfying general
-solutions. Existing attempts to build such general solutions (Apple CloudKit, Android Sync, Google FireStore, Realm, PouchDB) all have one or more of the following serious problems:
+solutions. Existing attempts to build general solutions (Apple CloudKit, Android Sync, Google FireStore, Realm, PouchDB) all have one or more of the following serious problems:
 
 * **Requiring that developers manually merge conflicting writes.** Consult the [Android Sync](http://www.androiddocs.com/training/cloudsave/conflict-res.html) or [PouchDB](https://pouchdb.com/guides/conflicts.html) docs for a taste of how difficult this is for even simple cases. Every single pair of operations that can possibly conflict needs to be considered for conflicts, and the resulting conflict resolution code needs to be kept up to date as the application evolves. Developers are also responsible for ensuring the resulting merge is equivalent on all devices, otherwise the application ends up [split-brained](https://en.wikipedia.org/wiki/Split-brain_(computing)).
 * **Lack of atomic transactions.** Some solutions claim to support automatic merge, but lack atomic transactions. Without transactions, automatic merge means that any two sequences of writes might interleave. This is analogous to multithreaded programming without locks.
