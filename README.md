@@ -1,4 +1,18 @@
-# Replicant: Spinner-Free Mobile Applications
+# Table of Contents
+
+* [Spinner-Free Mobile Applications](#replicant-spinner-free-mobile-applications)
+* [Introducing Replicant](#introducing-replicant)
+* [Intuition](#intuition)
+* [Data Model](#data-model)
+* [System Architecture](#system-architecture)
+* [Replicant Client](#replicant-client)
+* [Replicant Server](#replicant-server)
+* [Replicant Service](#replicant-service)
+* [Synchronization](#synchronization)
+* [Conflicts](#conflicts)
+* [Other Ideas](#other-ideas)
+
+# Spinner-Free Mobile Applications
 
 "[Offline-First](https://www.google.com/search?q=offline+first)" describes an application architecture where
 data is read and written from a local database on user devices, then synchronized lazily with servers whenever
@@ -489,8 +503,6 @@ A solution to this problem would be change the Replicant Service to store only a
 arguments, not the actual data. This moves the work of merging transactions to the client, probably slowing down sync. However 
 the advantage would be that the log can be encrypted using a key that only the client knows, dramatically improving privacy
 and security from the customer's point of view.
-
-# Other Applications
 
 ## Low-Latency/Edge Database
 
