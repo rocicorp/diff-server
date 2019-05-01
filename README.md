@@ -316,7 +316,7 @@ To be notified of new transactions, register for notifications. To validate, and
 
 # Synchronization
 
-Synchronization is a three-part process that should feel very similar to anyone who has looked under the covers at Git. However, it takes advantage of the ability of the server to replay transactions and create merges on behalf of clients to reduce the entire process to just one logical round trip (under the cover, lots of HTTP transactions are happening).
+Synchronization is a four-step process that should feel very similar to anyone who has looked under the covers at Git. However, Replicant takes advantage of the ability to replay transactions on the server to reduce the entire process to just one logical round trip.
 
 ## Step 1: Client pushes to server
 
