@@ -23,18 +23,20 @@ expensive and technically risky endeavor.
 
 # Introducing Replicant
 
-Replicant dramatically reduces the difficulty to build these "offline-first" mobile applications.
+Replicant dramatically reduces the difficulty to build offline-first mobile applications.
 
 The key features that contribute to Replicant's leap in usability are:
 
-* **Transactions**: Replicant supports complex multikey read/write transactions. Transactions are arbitrary
-functions in a standard programming language, which are run serially and completely isolated from each other.
-* **Conflict-free**: All nodes are guaranteed to resolve to the same state once all transactions have been synced (aka "[strong eventual consistency](https://en.wikipedia.org/wiki/Eventual_consistency#Strong_eventual_consistency)"). Developers,
-in almost all cases, do not need to think about the fact that nodes are disconnected. They simply use the database as if
-it was a local database and synchronization happens behind the scenes.
-* **Standard Data Model**: The replicant data model is a standard document database. From an API perspective, it's
-very similar to FireStore, Mongo, Couchbase, Fauna, etc. You don't need to learn anything new, and can build
-arbitrarily complex data structures on this primitive that are still conflict-free. You don't need a special `Counter` datatype to model a counter. You just use arithmetic.
+* **Transactions**: Replicant supports full [ACID](https://en.wikipedia.org/wiki/ACID_(computer_science)) multikey read/write 
+transactions. Transactions in Replicant are expressed as arbitrary functions, which are executed serially and isolated from 
+each other.
+* **Conflict-free**: All nodes are guaranteed to arrive at the same state once all transactions have been synced. That is, 
+Replicant has "[Strong Eventual Consistency](https://en.wikipedia.org/wiki/Eventual_consistency#Strong_eventual_consistency)"). This feature, combined with transactions
+means that in almost all cases, developers do not need to think about the fact that nodes are disconnected. They simply use 
+the database as if it was a local database and synchronization happens behind the scenes.
+* **Standard Data Model**: The Replicant data model is a standard document database. From an API perspective, it's
+very similar to Google Cloud Firestore, MongoDB, Couchbase, FaunaDB, and many others. You don't need to learn anything new, 
+and can build arbitrarily complex data structures on this primitive that are still conflict-free.
 * **Easy to Adopt**: Replicant is designed to integrate incrementally into existing systems, not take them over.
 
 # Intuition
