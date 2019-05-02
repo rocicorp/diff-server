@@ -167,7 +167,8 @@ zero or one entries, which is the commit that the failed commit would have been 
 The `.meta.failed` field contains the commit that failed validation.
 
 To replay this transaction, do nothing. The data in `.value` should be identical to the data in the parent commit,
-if any.
+if any. This commit type is used only to communicate to clients that a commit was rejected by the server without
+needing to modify that commit.
 
 ```cpp
 struct Commit {
