@@ -65,7 +65,7 @@ In Replicant, we turn the knob further: As in Calvin, Replicant transactions are
 fully-featured programming language. Unlike Calvin, nodes do not coordinate synchronously to establish order,
 or for any other reason. Instead nodes execute transactions completely locally, responding immediately to the calling
 application. A log is maintained at each node containing the local history of transactions. Asynchronously, when
-connectivity allows, nodes synchronize their logs with a single authoritative server to arrive at a single linear history.
+connectivity allows, nodes synchronize their logs with an authoritative service to arrive at a single linear history.
 
 This will commonly result in a client node learning about transactions that occurred "in the past" from its
 perspective. In that case,
