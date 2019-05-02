@@ -105,7 +105,7 @@ These types describe the Noms data that is used to track history on both the cli
 This is the basic commit in Replicant that records a transaction having been run. To replay this transaction, execute the
 transaction specified by `.meta.tx` against the single parent commit, if any.
 
-```
+```cpp
 struct Commit {
   meta struct {
     // The date that the commit was started on the origin.
@@ -147,7 +147,7 @@ This commit records a fork in history being merged back together. `.parents` wil
 one of them will also be in `.meta.first`. To replay this transaction, first replay the commit at `.meta.first`,
 then replay the other commit in `parents`.
 
-```
+```cpp
 struct Commit {
   meta struct {
     first Ref<Cycle<Commit>>
@@ -169,7 +169,7 @@ The `.meta.failed` field contains the commit that failed validation.
 To replay this transaction, do nothing. The data in `.value` should be identical to the data in the parent commit,
 if any.
 
-```
+```cpp
 struct Commit {
   meta struct {
     failed Ref<Cycle<Commit>>
