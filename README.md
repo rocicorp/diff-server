@@ -341,11 +341,11 @@ On the server-side, `Sync(newHead)` looks like:
         - If the handler rejects the transaction, replace the transaction with a failed commit transaction
     - Let _newHead_ equal the head of the validated chain
     - Let _oldHead_ equal the current head of the `local` dataset
+    - If `newHead` is not descendant from `oldHead`
+      - Create a merge commit whose parents are `oldHead` and `newHead`, and with `first` set to `oldHead`
+      - Set _newHead_ to the merge commit
     - Commit `newHead` to the `local` dataset
-    - If `newHead` is descendant from `oldHead`
-      - Return `newHead`
-    - Else:
-      - Add a merge commit whose parents are `oldHead` and `newHead`, and with `first` set to `oldHead`
+    - Return `newHead`
 
 ## Step 3: Client-Side Pull
 
