@@ -73,7 +73,7 @@ the client rewinds its state back to the point of divergence and replays the tra
 
 <hr>
 
-***The key promise that Replicant makes is that a) all transactions will execute b) atomically c) after all transactions that were visible to it d) in the same order e) with the same results f) on all nodes.***
+***The key promise that Replicant makes is that all transactions will eventually execute, in the same exact order, with the same exact results, on all nodes. There is no transaction that any node can execute which will stop synchronization from converging to the same database state.***
 
 In other words, Replicant is [Causal Consistent](https://jepsen.io/consistency/models/causal).
 
