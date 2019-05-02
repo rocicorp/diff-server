@@ -73,7 +73,9 @@ the client rewinds its state back to the point of divergence and replays the tra
 
 <hr>
 
-***The key promise that replicant makes is that a) all transactions will execute atomically b) in the exact same order c) with the exact same results d) on all nodes. There is no transaction that any node can execute that will stop the system from converging.***
+***The key promise that Replicant makes is that a) all transactions will execute b) atomically c) after all transactions that were visible to it d) in the same order e) with the same results f) on all nodes.***
+
+In other words, Replicant is [Causal Consistent](https://jepsen.io/consistency/models/causal).
 
 This is a powerful invariant to build on that makes reasoning about disconnected systems much easier. As we will see it also
 means that most types of what are commonly called "merge conflicts" just go away, and those that remain simpler 
