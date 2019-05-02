@@ -77,7 +77,7 @@ the client rewinds its state back to the point of divergence and replays the tra
 
 In other words, Replicant is [Causal Consistent](https://jepsen.io/consistency/models/causal).
 
-This is a powerful invariant to build on that makes reasoning about disconnected systems much easier. As we will see it also
+This is a powerful invariant to build on that makes reasoning about disconnected systems much easier. As we will see, it also
 means that most types of what are commonly called "merge conflicts" just go away, and those that remain become easier 
 to handle correctly.
 
