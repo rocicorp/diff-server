@@ -192,7 +192,7 @@ A deployed system of replicant nodes is called a *Replicant Group* and consists 
 
 Typically each Replicant Group models data for a single user of a service across all the user's devices. But a Replicant Group could be more fine-grained (if, for example, it's desirable to replicate a different subset of data to different device types) or more coarse-grained (if there are groups of users collaborating on the same dataset).
 
-One or more Replicant Servers are run by the Replicant Service. The Replicant Service is run alongside the application's existing server stack and database of record. Plumbing is added to route relevant updates from the database of record to Replicant Servers and the reverse (see "integration"). The Replicant Service can also be relied on as an external service, at http://replicant.io.
+One or more Replicant Servers are run by the Replicant Service. The Replicant Service is run alongside the application's existing server stack and database of record. Plumbing is added to route relevant updates from the database of record to Replicant Servers and the reverse (see "integration"). We also intend to run the Replicant Service as a SaSS business at http://replicate.to.
 
 # Replicant Client
 
@@ -497,7 +497,7 @@ that performs whatever fixup the user specified.
 ## Host-Proof Hosting
 
 One challenge with the system as proposed is that customers must either run the Replicant Service inside their datacenter and 
-take on the ops burden for that, or else rely on replicant.io. This latter case is tempting, but means that replicant.io
+take on the ops burden for that, or else rely on replicate.to. This latter case is tempting, but means that replicate.to
 will see the customer's user data.
 
 A solution to this problem would be change the Replicant Service to store only an ordered log of transaction functions and
