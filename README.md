@@ -342,7 +342,7 @@ On the server-side, `Sync(newHead)` looks like:
     - Let _newHead_ equal the head of the validated chain
     - Let _oldHead_ equal the current head of the `local` dataset
     - Commit `newHead` to the `local` dataset
-    - If `oldHead` is identical to `newHead`
+    - If `newHead` is descendant from `oldHead`
       - Return `newHead`
     - Else:
       - Add a merge commit whose parents are `oldHead` and `newHead`, and with `first` set to `oldHead`
