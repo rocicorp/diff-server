@@ -43,7 +43,7 @@ The key features that contribute to Replicant's leap in usability are:
 * **Transactions**: Replicant supports full [ACID](https://en.wikipedia.org/wiki/ACID_(computer_science)) multikey read/write 
 transactions. Transactions in Replicant are expressed as arbitrary functions, which are executed serially and isolated from 
 each other.
-* **Conflict-free**: Replicant is "[Strongly Eventually Consistent](https://en.wikipedia.org/wiki/Eventual_consistency#Strong_eventual_consistency)"): all nodes are guaranteed to arrive at the same state once all transactions have been synced. This feature, combined with atomic transactions,
+* **Conflict-free**: Replicant is [Causal Consistent](https://jepsen.io/consistency/models/causal): transactions are guaranteed to run in the same order on all nodes, and result in the same database state. This feature, combined with transaction atomicity,
 means that developers typically do not need to think about the fact that nodes are disconnected. They simply use 
 the database as if it was a local database and synchronization happens behind the scenes.
 * **Standard Data Model**: The Replicant data model is a standard document database. From an API perspective, it's
@@ -74,8 +74,6 @@ the client rewinds its state back to the point of divergence and replays the tra
 <hr>
 
 ***The key promise that Replicant makes is that all transactions will eventually execute, in the same exact order, with the same exact results, on all nodes. There is no transaction that any node can execute which will stop synchronization from converging to the same database state.***
-
-In other words, Replicant is [Causal Consistent](https://jepsen.io/consistency/models/causal).
 
 This is a powerful invariant to build on that makes reasoning about disconnected systems much easier. As we will see, it also
 means that most types of what are commonly called "merge conflicts" just go away, and those that remain become easier 
