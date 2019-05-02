@@ -219,12 +219,12 @@ The data model exposed to user code is a fairly standard document database appro
 - keys are byte arrays
 - values are JSON-like trees, except:
   - special _class field supported to give json objects a "type", which type that they can later be queried by
-  - special _id field for unqiue id
+  - special _id field for unique id
   - blobs supported
 - you can query into a subtree of a value using a path syntax
 - you can optionally declare indexes on any path
 
-** TODO:** *This needs a lot more work. I haven't thought a lot about it because it's not relevant to the core problem Replicant is solving, only the developer ergonomics (which is also important! but can be done a bit later).*
+***TODO:*** *This needs a lot more work. I haven't thought a lot about it because it's not relevant to the core problem Replicant is solving, only the developer ergonomics (which is also important! but can be done a bit later).*
 
 ## Transaction Language
 
@@ -233,7 +233,7 @@ The key desired features for the transaction language are:
 * *Determinism*: Every invocation with the same database state and parameters must result in the same output
 and effect on the database, on all platforms Replicant runs on.
 * *Popularity*: Replicant cannot be easy to use if it requires you to learn a new programming language. Also
-popularity on each target platform needs to be considered. For example, Matlab is popular, but it's not popular
+popularity on each target platform needs to be considered. For example, MATLAB is popular, but it's not popular
 with Android or iOS developers.
 
 I am currently thinking that the initial transaction language should be JavaScript. Determinism *could* be **enforced** a variety of ways:
@@ -250,46 +250,48 @@ A Replicant client can be interacted with either via language-specific bindings 
 existing Noms CLI). The API contains:
 
 * The entire Noms API
-  * Note: things like `commit` can be used in a way that break Replicant, but can be useful for debugging
+  * Note: `Commit()` can be used to commit arbitrary Noms data, which can break the Replicant client or make its transactions fail server-side validation. But `Commit` is also useful for debugging, and isn't dangerous to the system as a whole, so I see no reason to remove it.
 * A way to manage the currently registered set of transactions (see Registering Transactions)
   * Note: servers will frequently whitelist allowed transactions though
 * A way to execute transactions and get their results
 * A way to listen for transactions or specific sets of transactions
-  * A way to listen for transactions synchronously, such that the listener can abort the transaction from committing. This is mostly used by the server (see "Integration"), but could be useful on the client to and has no downside.
+  * A way to listen for transactions synchronously, such that the listener can abort the transaction from committing. This is mostly used by the server (see "Integration"), but could be useful on the client too and has no downside.
 
 # Replicant Server
 
 Structurally, a Replicant Server is very similar to a client. It contains a Noms database and executes transactions in the same way.
 
-However, its role in the system is very different: a Replicant Server's main responsibility is to maintain the authorative history of transactions that have occurred for a particular Replicant Group and their results.
+However, its role in the system is very different: a Replicant Server's main responsibility is to maintain the authoritative history of transactions that have occurred for a particular Replicant Group and their results.
 
 Unlike clients, Replicant Servers do not ever rewind. The server is Truth, and the clients dance to its tune. Once a transaction is accepted by a server and written to its history, by either clients or the server itself, it is final, and clients will rewind and replay as necessary to match.
 
 This does not mean, however, that servers have to accept whatever clients write. Servers have full discretion over whether to accept any given transaction, and they validate all work clients do. See "synchronization" and "integration" for details.
 
+## Consistency Requirements
+
+Each Replicant Server acts as a single strictly serialized logical database, even though they are typically a distributed system internally. In the event of a partition internal to the replicant server, it will become unavailable rather than give inconsistent results. This is required for correctness of clients and integrations, which are reliant on transactions that are marked finalized by the server remaining so.
+
+This requirement has no effect on client availability or performance, since interaction with the server is already in the background as connectivity allows.
+
 ## Noms Schema
 
-The same as the client, except there's only a `local` dataset, since the server doesn't need to allow a separate branch to evolve while sync is in progress the way the client does.
+The server uses the same schema as the client, except there's only a `local` dataset, since the server doesn't need to allow a separate branch to evolve while sync is in progress the way the client does.
 
 ## Registering Transactions
 
 We expect that users will typically want to *register* transaction functions at the server-side, rather than let clients execute whatever transactions they want, for a few reasons:
 
-1. Without this, clients would have to include the code in their packages, and then write it into their databases, which would double the amount of storage the clients would consume.
+1. Without this, clients would have to include the transaction code in their packages, and then write it into their databases, which would double the amount of storage the clients would consume.
 2. We expect that developers will usually want to whitelist transaction functions that can run, based on known hashes of code bundles. Otherwise, malicious clients could attack good clients by way or the sync protocol.
-3. For many transaction types originating on clients, there will be server-side actions that need to happen -- either to actually execute the transaction in reality, or to validate the transaction.
+3. For many transaction types originating on clients, there will be server-side actions that need to happen -- either to actually execute the transaction in reality, or to validate the transaction (see "Integration"). It's natural to implement these server-side handlers nearby the place where registration happens.
 
-This is implemented as a special pair of transaction functions baked into all Replicant nodes: `registerTransaction` and `unregisterTransaction` that update the `value.txCode` field of the server's `local` dataset. Since these transaction functions could never be themselves registered, they will always fail validation during sync and thus will not be allowed to be called by clients (see Synchronization).
-
-## Consistency Requirements
-
-Each Replicant Server acts as a single strictly serialized logical database, even though they are typically a distributed system internally. In the event of a partition internal to the replicant server, it ceases to be available rather than give inconsistent results. This has no effect on client availability or performance, since interaction with the server is in the background as connectivity allows.
+Registration is implemented as a special pair of transaction functions baked into all Replicant nodes: `registerTransaction` and `unregisterTransaction` that update the `value.txCode` field of the server's `local` dataset.
 
 # Replicant Service
 
 The Replicant Service is a horizontally scalable application server server written in Go that runs one or more Replicant servers. All state is stored persistently in S3/Dynamo (see [NBS-on-AWS](https://github.com/attic-labs/noms/blob/master/go/nbs/NBS-on-AWS.md)).
 
-Because Replicant Servers store a small amount of data (that is, just the data that should be replicated to user devices), there is no need to shard the data of a single Replicant Server across multiple instances of the service. However, it may be the case that for a variety of reasons there are multiple instances of the service hosting the same Replicant Server at once.
+Because each Replicant Server stores only a small amount of data (that is, just the data that should be replicated to user devices), there is no need to partition individual servers. However, it may be the case that for a variety of reasons there are multiple instances of the service hosting the same Replicant Server at once.
 
 Each NBS instance has its own isolated backing storage, meaning that for some applications, the Replicant Service might end
 up duplicating a lot of data server-side in separate Replicant Servers. To combat that, Replicant Service could be setup to
@@ -307,21 +309,19 @@ For each Replicant Server it hosts, the Replicant Service exposes an HTTP/REST A
 ## Integration
 
 Most Replicant Groups will not be self-contained. Creating and synchronizing data amongst themselves it not enough: they must
-interact with the outside world -- either with other existing parts of the service stack, or with other replicant groups. Myriad examples include sending emails, billing customers, sending data to and from other users on the same service, updating and reflecting updates to the system of record, etc.
+interact with the outside world -- either with other existing parts of the service stack, or with other replicant groups. Examples include sending emails, billing customers, sending data to and from other users on the same service, updating and reflecting updates to the system of record, etc.
 
-Connecting a Replicant Group with the outside world is called _Integration_.
-
-Integration is done mostly via the Replicant Service API. To push data into a Replicant Group, register a transaction that
+Integration with the outside world is done via the Replicant Service API. To push data into a Replicant Group, register a transaction that
 implements the change, and invoke that transaction. To pull data out of a Replicant Group, use the database API as normal.
 To be notified of new transactions, register for notifications. To validate, and potentially reject a transaction, use the synchronous notification API.
 
 # Synchronization
 
-Synchronization is a four-step process that should feel familiar to anyone who has looked under the covers at Git. However, Replicant sync never requires human intervention because it does the merge server-side by reordering and replaying transactions.
+Synchronization is a four-step process that should feel familiar to anyone who has looked under the covers at Git. However, Replicant sync never requires human intervention and can always complete the merge on the first attempt, because it merges server-side by reordering and replaying transactions.
 
 ## Step 1: Client pushes to server
 
-The client uses (effectively) [`noms sync`](https://github.com/attic-labs/noms/blob/master/doc/cli-tour.md#noms-sync) to push all missing chunks from the client's `local` dataset to the server's `local` dataset. At the end of the push, the client calls `Sync(newHead hash.Hash)`.
+The client uses something similar to [`noms sync`](https://github.com/attic-labs/noms/blob/master/doc/cli-tour.md#noms-sync) to push all missing chunks from the client's `local` dataset to the server. At the end of the push, the client calls `Sync(newHead hash.Hash)`.
 
 ## Step 2: Commit on the server
 
@@ -330,42 +330,42 @@ On the server-side, `Sync(newHead)` looks like:
 1. The call is queued behind any other commit to the same Replicant Server. Since Replicant Groups are usually small numbers of nodes, this will typically be a very short wait.
 2. When the call continues:
   - Find the fork point between the client's commit and the server's latest commit
-  - If the server commit is a fast-forward from client (the server already included these commits):
+  - If the server commit is descendent from the client commit (the server already included these commits):
     - Respond with the new head, there's nothing more to do
   - Else:
     - Validate each new commit (each commit after the fork point on the client side):
       - Check that the specified transaction codebase is registered (exists in .value.txCode) and the function is known
       - Execute the transaction
-      - If the resulting hash doesn't match the one the client specified, the client is badly behaved, return 40x (see badly-behaved clients)
-      - If the transaction has server-side validation registered, run that validation (see integration)
-        - If the validation fails, replace the transaction with a CommitFailure transaction
-      - Let _newHead_ equal the head of the validated chain
-      - Let _oldHead_ equal the current head of the `local` dataset
-      - Commit `newHead` to the `local` dataset
-      - If `oldHead` is identical to `newHead`
-        - Return `newHead`
-      - Else:
-        - Add a merge commit whose parents are `oldHead` and `newHead`, and with `first` set to `oldHead`
+      - If the resulting hash doesn't match the one the client specified, the client is badly behaved, return 40x
+      - If the transaction has a synchronous handler registered, run that handler (see integration)
+        - If the handler rejects the transaction, replace the transaction with a failed commit transaction
+    - Let _newHead_ equal the head of the validated chain
+    - Let _oldHead_ equal the current head of the `local` dataset
+    - Commit `newHead` to the `local` dataset
+    - If `oldHead` is identical to `newHead`
+      - Return `newHead`
+    - Else:
+      - Add a merge commit whose parents are `oldHead` and `newHead`, and with `first` set to `oldHead`
 
 ## Step 3: Client-Side Pull
 
-Back on the client-side, the `Sync()` call has just returned with a new head that should become the head of the `remote` dataset. This is trival. We trust the server and this makes no changes to our local state, so we just `noms sync` the server's `local` dataset to our `remote` dataset, which pulls all the relevant chunks and we're done.
+Back on the client-side, the `Sync()` call has just returned with a new head that should become the head of the `remote` dataset. This is trival. We trust the server and this makes no changes to our `local` dataset, so we just `noms sync` the server's `local` dataset to our `remote` dataset, which pulls all the relevant chunks and we're done.
 
 ## Step 4: Client-Side Rebase
 
-We want to enable clients to make local progress between Step 1 and Step 3. Otherwise apps will be stalled waiting for syncs that may take awhile, or even stall in the face of flaky networks.
+We want to enable clients to make local progress between Step 1 and Step 3. Otherwise users will be blocked waiting for syncs that may take a long time, or even stall, in the face of flaky networks.
 
 Therefore we allow the `local` dataset to evolve as normal while the sync is in progress.
 
 As a result, after step 3 finishes, we may have some new commits in the `local` dataset since when step 1 started. We must rebase these commits:
 
 - Find fork point between `remote` and `local` heads
-- If local is ff of remote (no other client submitted work in meantime)
+- If local is descendent from remote (no other clients had work included in the result of the sync)
   - nothing to do
-- If remote dataset is ff of local (no local work happened in meantime):
+- If remote dataset is descendent from local (no local work happened while sync was in progress):
   - Set local to remote
 - Else:
-  - Rebase each new commit from local fork onto `remote` head
+  - Rebase each new commit from local fork onto a new chain starting at the head of `remote`
   - Commit result to `local`
 
 # Conflicts
@@ -413,7 +413,7 @@ function moveKanbanCard(cardID, fromColumnID, toColumnID) {
 In this example, we modify two data items. Each write only makes sense if the other write succeeds. We need the card to end
 up in either one row or the other.
 
-This example is difficult to achieve reliably in existing solutions that use simple last-write-wins semantics because there is no easy way to guarantee that the two writes only happen together.
+This example is difficult to achieve reliably in existing solutions that use simple last-write-wins semantics or CRDTs because there is no easy way to guarantee that the two writes only happen together.
 
 ### Arithmetic
 
@@ -485,6 +485,8 @@ Many cases, including the above, can be made to work by changing the parameters 
 
 One way to improve Replicant to support these cases better would be to change the Noms `List` type to be backed by a sequence CRDT. It would not change the allowed operations, users would not even have to know the implementation details.
 
+Transactions would still run serially in the same order on every node. So in a sense, we'd not be using the full power of CRDTs, just the bit where they know how to adjust the semantics of a sequence edit operation to account for changes in op order.
+
 ### Asking the user
 
 Replicant addresses the majority of merge cases quite naturally, but there are still bound to be the occasional reason to
@@ -502,16 +504,16 @@ take on the ops burden for that, or else rely on replicate.to. This latter case 
 will see the customer's user data.
 
 A solution to this problem would be change the Replicant Service to store only an ordered log of transaction functions and
-arguments, not the actual data. This moves the work of merging transactions to the client, probably slowing down sync. However 
+arguments, not the actual data. This moves the work of merging transactions to the client, possibly slowing down sync. However 
 the advantage would be that the log can be encrypted using a key that only the client knows, dramatically improving privacy
 and security from the customer's point of view.
 
 ## Low-Latency/Edge Database
 
-The same basic design presented here can be used as a classic distributed transactional database. Such a database would have
-the interesting property of near-instant transactional commit to a "pending status", with delayed finality. This is sort of
-like the classic strategy of combining a queue with a transactional database to reduce latency. However, it has the twist
-that once something is put on the queue, the database is queryable as normal including the pending data.
+The same basic design presented here can be used as an AP transactional database. Such a database would have
+the interesting property of near-instant transactional throughput to a "pending status", with delayed finality. It's a bit
+like the strategy of combining a queue with a transactional database to reduce latency. It just has the twist
+that once something is put on the queue, the database is queryable and will include the pending writes.
 
 One special case of this would be to run the database in CDNs, very close to end-users. This would give applications an
 extremely low latency "transactional" database, with delayed finalization.
@@ -519,4 +521,4 @@ extremely low latency "transactional" database, with delayed finalization.
 ## P2P Database
 
 I think that consensus can also be determined in a purely peer-to-peer mode with no authoritative server. This would be
-interesting for peer-to-peer applications, if those ever take off.
+interesting for peer-to-peer applications.
