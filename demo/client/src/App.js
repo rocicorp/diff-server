@@ -20,7 +20,8 @@ class App extends Component {
             return {hash: k, code: v};
           }),
         });
-      });
+      })
+      .catch(e => console.error(e))
   }
 
   render() {
