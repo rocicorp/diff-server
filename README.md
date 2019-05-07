@@ -73,7 +73,7 @@ the client rewinds its state back to the point of divergence and replays the tra
 
 <hr>
 
-***The key promise that Replicant makes is that all transactions will execute atomically, in the exact same order, with the exact same results, on all nodes. There is no transaction that any node can execute which will stop synchronization from converging to the same database state.***
+***The key promise that Replicant makes is that all transactions will execute atomically, in the exact same order, with the exact same results, on all nodes. There is no transaction that any node can execute which will stop this from happening.***
 
 This is a powerful invariant to build on that makes reasoning about disconnected systems much easier. As we will see, it also
 means that most types of what are commonly called "merge conflicts" just go away, and those that remain become easier 
