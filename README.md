@@ -55,7 +55,7 @@ and can build arbitrarily complex data structures on this primitive that are sti
 
 <img src="./replicant-data-model.svg" alt="Evolution of a Forked Unsigned Integer" align="right" width="51%">
 
-Replicant is heavily inspired by [Calvin](http://cs.yale.edu/homes/thomson/publications/calvin-sigmod12.pdf), a high-throughput strictly serialized distributed database.
+Replicant is heavily inspired by [Calvin](http://cs.yale.edu/homes/thomson/publications/calvin-sigmod12.pdf), a high-throughput, strictly serialized, transactional distributed database.
 
 The key insight in Calvin is that the problem of *ordering* transactions can be separated from the problem of
 *executing* transactions. As long as transactions are pure functions, and all nodes agree to an ordering, and
