@@ -12,7 +12,9 @@ async function toggleColor(db) {
 
 async function append(db, text) {
     const val = await db.get();
-    val.words = val.words || [];
+    if (!val.words) {
+        val.words = [];
+    }
     val.words.push(text);
     db.set(val);
 }
@@ -26,7 +28,10 @@ async function dog(db) {
 
 async function stockWidgets(db, inc) {
     const val = await db.get();
-    val.widgets = (val.widgets || 0) + parseInt(inc);
+    if (!val.widgets) {
+        val.widgets = 0;
+    }
+    val.widgets += parseInt(inc);
     db.set(val);
 }
 
@@ -38,9 +43,11 @@ async function sellWidget(db) {
     db.set(val);
 }
 
-async function insert(db, text) {
+async function index(db, text) {
     const val = await db.get();
-    val.sorted = val.sorted || [];
+    if (!val.sorted) {
+        val.sorted = [];
+    }
     let idx = val.sorted.findIndex(v => v > text);
     if (idx == -1) {
         idx = val.sorted.length;
