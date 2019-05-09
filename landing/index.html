@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+  <!-- Basic Page Needs
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <meta charset="utf-8">
+  <title>Replicant: Conflict-Free Replicated Database</title>
+
+  <!-- Mobile Specific Metas
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- FONT
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <link href="https://fonts.googleapis.com/css?family=Inconsolata|Raleway" rel="stylesheet">
+
+  <!-- CSS
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <link rel="stylesheet" href="css/normalize.css">
+  <link rel="stylesheet" href="css/skeleton.css">
+
+  <!-- Favicon
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <link rel="icon" type="image/png" href="images/favicon.png">
+
+  <style>
+    html {
+      padding-bottom: 4em;
+    }
+    h1, h2, .subhead {
+      font-family: 'Inconsolata', monospace;
+    }
+    h1 {
+      margin-bottom:0;
+    }
+    h2 {
+      margin-bottom: 0.2em;
+    }
+    .subhead {
+      margin-top: 0;
+      color: #555;
+      font-size: 1.1em;
+    }
+    .container {
+      max-width: 1200px!important;
+    }
+    ul {
+      list-style: circle outside;
+      padding-left: 1.3em;
+    }
+    li {
+      margin-bottom: 0.5em;
+    }
+  </style>
+
+</head>
+<body>
+
+  <!-- Primary Page Layout
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <div class="container">
+    <div class="row">
+      <div class="six columns" style="margin-top: 4em;">
+        <header>
+          <h1>Replicant</h1>
+          <p class='subhead'>Conflict-Free Sync for Mobile Apps
+        </header>
+
+        <section>
+          <p>Replicant is a new approach to mobile sync which finally makes it easy — pleasant, even — to offline-enable your mobile application.
+          <p>Who cares about offline? You should. Because it makes your app instantaneously responsive and reliable under all network conditions, including no network. It permanently banishes spinners and hangs from your user experience. And every interaction with your app feels local, with changes synchronized in the background when there is connectivity.
+        </section>
+        
+        <section>
+        <h2>Features</h2>
+        <ul>
+          <li><strong>Local-first.</strong> All reads and writes go to a local on-device database by default, which is synchronized with the server lazily.</li>
+          <li><strong>Conflict-free.</strong> There is zero manual conflict resolution, by either developers or users, for virtually all cases.
+          <li><strong>Convergent.</strong> Every client is guaranteed to converge with the server state. It is impossible for two devices to settle into different states.
+          <li><strong>Transactional.</strong> Arbitrarily complex transactions are supported and are guaranteed consistent across all nodes.
+          <li><strong>Easy.</strong> The data model is a document store, like Firestore, RethinkDB, Mongo, FaunaDB, etc. Transactions are executed serially, like in a single-node transactional database. There is nothing new to learn. You use Replicant like you use any other local datastore, except it also syncs with the server and all other clients.
+          <li><strong>Compatible.</strong> Replicant doesn’t demand that you move to a whole new server-side database or stack. It works alongside just about any existing technology.
+        </ul>
+        </section>
+        
+        <section>
+          <h2>Team</h2>
+          <p>Replicant is a new project led by <a href="https://www.linkedin.com/in/aaron-boodman-12b150/">Aaron Boodman</a>, the lead designer of <a href="https://github.com/attic-labs/noms">Noms</a>, <a href="https://developers.chrome.com/extensions">Chrome Extensions</a>, <a href="https://en.wikipedia.org/wiki/Gears_(software)">Google Gears</a>, <a href="https://en.wikipedia.org/wiki/Greasemonkey">Greasemonkey</a>, and <a href="http://www.aaronboodman.com/#projects">other projects</a>.
+          <p>Aaron has over fifteen years of experience looking at “the sync problem”, from different angles, and then slowly, cautiously, backing away.
+          <p>This is the first time he has felt like there is a satisfying general solution.
+        </section>
+        
+        <section>
+          <h2>Technology</h2>
+          <p>Replicant builds on the latest academic research to transform a disconnected set of single-node transactional databases into a <a href="https://en.wikipedia.org/wiki/CAP_theorem>AP</a> <a href="https://jepsen.io/consistency/models/causal">Causal-Consistent</a> distributed database. This <a href="http://www.cs.cornell.edu/lorenzo/papers/cac-tr.pdf">has been proven</a> to be the highest consistency level possible in a disconnected system. But until now, there have been no commercial systems that implement it for offline synchronization.
+          <p>While Replicant is technically a <a href="https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type">CRDT</a>, it differs from currently popular CRDTs in that it: (a) permits arbitrarily complex operations over a rich data model, and (b) guarantees transactional consistency.
+          <p>What this means is that developers don’t need to adapt their problem to fit a constrained data model. They can use natural data models and simple sequential algorithms, without giving up the key promise of CRDTs: guaranteed convergence.
+          <p>There is a full design document available to early adopters, which is scheduled for review this year by <a href="https://jepsen.io/services">Jepsen, LLC</a>.
+        </section>
+      </div>
+      <div class="one column">&nbsp;</div>
+
+      <div class="five columns" style="margin-top: 4em; background:lightgoldenrodyellow; padding: 1rem 2rem; border-radius: 2rem;">
+        <section id="signup">
+          <h2>Interested?</h2>
+
+          <p>Replicant will be generally available in mid-2020, but we are currently accepting beta users on a first-come first-served basis.
+
+          <p style="margin-bottom:0.5em"><strong>Cost</strong></p>
+          <ul style="margin-top:0">
+              <li>$200 refundable deposit to hold your spot
+              <li>$200/month once you begin using Replicant
+          </ul>
+
+          <p>The Replicant beta supports iOS and Android mobile apps written in Objective-C, Swift, Java, Kotlin, or React Native. Support for desktop apps and other environments will follow.
+
+          <form action="https://submit-form.com/oLO9njEFr_1h_YAulIJo-" method="POST">
+            <label for="email">Your email</label>
+            <input class="u-full-width" type="email" placeholder="test@mailbox.com" id="email" name="email">
+
+            <label for="link">URL to your application</label>
+            <input class="u-full-width" type="url" placeholder="https://www.mymobileapp.com/" id="link" name="link">
+
+            <label for="message">Message</label>
+            <textarea class="u-full-width" placeholder="Hi Dave …" id="message" name="message"></textarea>
+
+            <p><button class="button-primary">I’m interested!</button>
+          </form>
+
+        </section>
+      </div>
+    </div>
+    <div class="twelve columns" style="margin-top:4em; color: #999; font-family: 'Inconsolata'">Copyright 2019, Rocicorp.</div>
+  </div>
+
+<!-- End Document
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+</body>
+</html>
