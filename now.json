@@ -1,6 +1,7 @@
 {
     "version": 2,
     "name": "replicant",
+    "alias": "replicate.to",
     "builds": [
         { "src": "landing/**", "use": "@now/static" }
     ],
