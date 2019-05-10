@@ -53,7 +53,7 @@ and can build arbitrarily complex data structures on this primitive that are sti
 
 # Intuition
 
-<img src="./replicant-data-model.svg" alt="Evolution of a Forked Unsigned Integer" align="right" width="51%">
+<img src="./doc/replicant-data-model.svg" alt="Evolution of a Forked Unsigned Integer" align="right" width="51%">
 
 Replicant is heavily inspired by [Calvin](http://cs.yale.edu/homes/thomson/publications/calvin-sigmod12.pdf), a high-throughput, strictly serialized, transactional distributed database.
 
@@ -188,7 +188,7 @@ struct Commit {
 A deployed system of replicant nodes is called a *Replicant Group* and consists of a single logical *Replicant Server* and one or more *Replicant Clients*. Replicant Clients are typically mobile apps running in iOS or Android, but traditional desktop apps and web apps could also be clients, or really any software that embeds the Replicant Client library.
 
 <p align="center">
-  <img src="./replicant.svg" alt="System Architecture Diagram">
+  <img src="./doc/replicant.svg" alt="System Architecture Diagram">
 </p>
 
 Typically each Replicant Group models data for a single user of a service across all the user's devices. But a Replicant Group could be more fine-grained (if, for example, it's desirable to replicate a different subset of data to different device types) or more coarse-grained (if there are groups of users closely collaborating on the exact same dataset).
@@ -197,7 +197,7 @@ One or more Replicant Servers are run by the Replicant Service. The Replicant Se
 
 # Replicant Client
 
-<img src="./replicant-client.svg" alt="System Architecture Diagram" align="right">
+<img src="./doc/replicant-client.svg" alt="System Architecture Diagram" align="right">
 
 A Replicant Client is embedded within a client-side application, typically a mobile app in iOS or Android, but also potentially a desktop or web app. The application, or _host_, uses the client as its local datastore.
 
