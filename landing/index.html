@@ -69,17 +69,17 @@
 
         <section>
           <p>Replicant is a new approach to mobile sync which finally makes it easy — pleasant, even — to offline-enable your mobile application.
-          <p>Who cares about offline? You should. Because it makes your app instantaneously responsive and reliable under all network conditions, including no network. It permanently banishes spinners and hangs from your user experience. And every interaction with your app feels local, with changes synchronized in the background when there is connectivity.
+          <p>Who cares about offline? You should. Because it makes your app instantaneously responsive and reliable under all network conditions, including no network. It banishes spinners and hangs from your user experience. Every interaction with your app feels local and fluid, with changes synchronized in the background when there is connectivity.
         </section>
         
         <section>
         <h2>Features</h2>
         <ul>
           <li><strong>Local-first.</strong> All reads and writes go to a local on-device database by default, which is synchronized with the server lazily.</li>
-          <li><strong>Conflict-free.</strong> There is zero manual conflict resolution, by either developers or users, for virtually all cases.
-          <li><strong>Convergent.</strong> Every client is guaranteed to converge with the server state. It is impossible for two devices to settle into different states.
-          <li><strong>Transactional.</strong> Arbitrarily complex transactions are supported and are guaranteed consistent across all nodes.
-          <li><strong>Easy.</strong> The data model is a document store, like Firestore, RethinkDB, Mongo, FaunaDB, etc. Transactions are executed serially, like in a single-node transactional database. There is nothing new to learn. You use Replicant like you use any other local datastore, except it also syncs with the server and all other clients.
+          <li><strong>Convergent.</strong> Every client is guaranteed to converge with the server. It is impossible for two devices to settle into different states.
+          <li><strong>Virtually Conflict-Free.</strong> The real world has conflicts, and nothing can erase them completely. But, by combining recent research results with smart API design, the day-to-day developer experience of using Replicant is remarkably conflict-free. When you must deal with them, Replicant makes merges easy to reason about and implement correctly.
+          <li><strong>Transactional.</strong> Arbitrarily complex transactions are supported and are guaranteed to execute consistently and with the same results across all nodes.
+          <li><strong>Easy.</strong> The data model is a document store, like Firestore, RethinkDB, Mongo, or FaunaDB. Transactions are executed serially, like in a local database. The query model is SQL-ish. There is little new to learn. You use Replicant like you use any other local datastore, except it also syncs with the server and all other clients.
           <li><strong>Compatible.</strong> Replicant doesn’t demand that you move to a whole new server-side database or stack. It works alongside just about any existing technology.
         </ul>
         </section>
@@ -94,7 +94,7 @@
         <section>
           <h2>Technology</h2>
           <p>Replicant builds on the latest academic research to transform a disconnected set of single-node transactional databases into an <a href="https://en.wikipedia.org/wiki/CAP_theorem">AP</a> <a href="https://jepsen.io/consistency/models/causal">Causal-Consistent</a> distributed database. This <a href="http://www.cs.cornell.edu/lorenzo/papers/cac-tr.pdf">has been proven</a> to be the highest consistency level possible in a disconnected system. But until now, there have been no commercial systems that implement it for offline synchronization.
-          <p>While Replicant is technically a <a href="https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type">CRDT</a>, it differs from currently popular CRDTs in that it: (a) permits arbitrarily complex operations over a rich data model, and (b) guarantees transactional consistency.
+          <p>Replicant is technically a <a href="https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type">CRDT</a>, but it differs from currently popular CRDTs in that it: (a)&nbsp;permits arbitrary operations over a rich data model, and (b)&nbsp;guarantees transactional consistency.
           <p>What this means is that developers don’t need to adapt their problem to fit a constrained data model. They can use natural data models and simple sequential algorithms, without giving up the key promise of CRDTs: guaranteed convergence.
           <p>There is a full design document available to early adopters, which is scheduled for review this year by <a href="https://jepsen.io/services">Jepsen, LLC</a>.
         </section>
@@ -113,7 +113,7 @@
               <li>$200/month once you begin using Replicant
           </ul>
 
-          <p>The Replicant beta supports iOS and Android mobile apps written in Objective-C, Swift, Java, Kotlin, or React Native. Support for desktop apps and other environments will follow.
+          <p>The Replicant beta supports iOS and Android mobile apps written in Objective-C, Swift, Java, Kotlin, or React Native. Support for desktop apps, the web, and other environments will follow.
 
           <form action="https://submit-form.com/oLO9njEFr_1h_YAulIJo-" method="POST">
             <label for="email">Your email</label>
