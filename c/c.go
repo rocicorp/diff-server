@@ -1,5 +1,10 @@
 package main
 
+// compile like:
+// go build -buildmode=c-archive -o rep.a c.go
+//
+// then see instructions in rep.c
+
 import (
 	"C"
 	"fmt"
