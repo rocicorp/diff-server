@@ -52,12 +52,3 @@ graduate to real Noms as their needs develop.
 
 This would imply both much more sophistiicated bindings layer on the Go side, and also richer bindings on the
 host side.
-
-## Performance (2)
-
-Another thought on performance:
-
-Currently `replicant put` is converting JSON to Noms. We could not do that. We could just store the JSON, in
-a Noms Blob type. It is certainly possible to read JSON in a streaming way, so even subpath reads could be
-supported. The main downside of this strategy is that the rest of the existing Noms tools use a lot of their
-utility (e.g., CLI tools like `noms insert` could not be used as-is).
