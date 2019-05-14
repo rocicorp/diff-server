@@ -1,6 +1,6 @@
 mvp
 ===
-- generic c api which is basically a reflection of the cli (1 wk?)
+x generic c api which is basically a reflection of the cli (1 wk?)
 - sample app for ios and android embedding c api (1 wk)
   - where is data stored on each device?
 - tx reg and execution apis (1-2 wk)
