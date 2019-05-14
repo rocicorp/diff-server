@@ -1,16 +1,18 @@
 # API Design Thoughts
 
-Replicant is an interesting piece of software in that it needs to have bindings to so many places:
+Replicant is an interesting piece of software in that it needs to have bindings to so many places.
+
+Even to be minimally useful, we need:
 
 * iOS (Objective-C and Swift)
 * Android (Java and Kotlin)
 * JavaScript (from inside transaction functions)
-* The Web (if there is to be a web implementation)
 * CLI (for debugging, exploration)
 * HTTP (for sync and server-side integration)
 
 Longer-term, there is also:
 
+* The Web (if there is to be a web implementation)
 * Windows/OSX (for electron/desktop app support)
 * Dart
 * ... etc ...
