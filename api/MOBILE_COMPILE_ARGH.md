@@ -23,7 +23,10 @@ Here's the trail of tears as a note to myself or whoever:
 - The instructions in xgo [mention this problem](https://github.com/karalabe/xgo#mobile-libraries):
   - I was able to find iOS Simulator SDK v9.3 on dev.apple.com
     - Amusingly part of the XCode 7.3.1
-    - But after a bunch of work hacking xgo, I still did not succeed in creating a working build
+    - But after a [bunch of work hacking xgo](https://github.com/aboodman/xgo/commit/c330d531d8c1aa33d2949da3d9b762cd4752ec70), I still did not succeed in creating a working build
+    - Fails building with some autoconf related bullshit
+    - Also the SDK is gigantic - like 3GB uncompressed and the docker build script extracts and recompresses it several times, which makes debugging painful
+    - I'm not sure why the SDK is so large, the more recent ones are much smaller
 - Le sigh. Rewinding again.
 - It is actually possible to just build the simulator version without xgo on a mac, because cross-compiling isn't required:
   - `go build -tags=ios -buildmode=c-archive -o api.a api.go`
