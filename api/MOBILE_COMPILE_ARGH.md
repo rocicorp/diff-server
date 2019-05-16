@@ -15,12 +15,15 @@ Here's the trail of tears as a note to myself or whoever:
   - Use `go mod vendor` to populate the vendor directory of replicant
   - Symlink replicant dir to `$GOPATH/src/github.com/aboodman/replicant`
 - Now `xgo` works!
-  - ~/src/github.com/karalabe/xgo/xgo --targets=ios/*,android/* ./api
+  - `~/src/github.com/karalabe/xgo/xgo --targets=ios/*,android/* ./api`
   - It builds a `.framework` and `.aar` file
   - And for iOS in particular, the framework includes builds for arm7 and arm64
 - But, for iOS, it doesn't build an x86 version for the simulator
   - The simulator build is crucial because developers typically develop first on it, then test on phones later
 - The instructions in xgo [mention this problem](https://github.com/karalabe/xgo#mobile-libraries):
+  - But iPhone Simulator SDK v9.3 is suuuper old. Current version is 12.x.
+  - Using the current version of the SDK there doesn't work. The build fails looking for [these objects](https://github.com/karalabe/xgo/blob/master/docker/base/update_ios.sh#L35).
+    - Why are we doing this surgery on the SDK in the first place?? unknown.
   - I was able to find iOS Simulator SDK v9.3 on dev.apple.com
     - Amusingly part of the XCode 7.3.1
     - But after a [bunch of work hacking xgo](https://github.com/aboodman/xgo/commit/c330d531d8c1aa33d2949da3d9b762cd4752ec70), I still did not succeed in creating a working build
