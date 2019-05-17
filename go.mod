@@ -3,8 +3,6 @@ module github.com/aboodman/replicant
 go 1.12
 
 require (
-	github.com/aboodman/noms-gx v0.0.0-20180714061401-d6cb97cb040b
-	github.com/alecthomas/kingpin v2.2.6+incompatible
 	github.com/attic-labs/noms v0.0.0-20190508041645-614eb763b982
 	github.com/aws/aws-sdk-go v1.19.28 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect

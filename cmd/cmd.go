@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"errors"
 	"io"
 
@@ -20,12 +21,36 @@ type Get struct {
 	ID string `json:"id"`
 }
 
-func Dispatch(db db.DB, cmd Command, in io.Reader, out io.Writer) error {
+func DispatchString(db db.DB, cs []byte) (outR io.ReadCloser, inW io.WriteCloser, ec chan error, err error) {
+	var c Command
+	err = json.Unmarshal(cs, &c)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	outR, inW, ec = Dispatch(db, c)
+	return
+}
+
+func Dispatch(db db.DB, cmd Command) (outR io.ReadCloser, inW io.WriteCloser, ec chan error) {
+	inR, inW := io.Pipe()
+	outR, outW := io.Pipe()
+	ec = make(chan error)
+
+	go func() {
+		err := dispatch(db, cmd, inR, outW)
+		outW.Close()
+		ec <- err
+	}()
+
+	return outR, inW, ec
+}
+
+func dispatch(db db.DB, cmd Command, inR io.Reader, outW io.Writer) error {
 	switch {
 	case cmd.Put != nil:
-		return db.Put(string(cmd.Put.ID), in)
+		return db.Put(string(cmd.Put.ID), inR)
 	case cmd.Get != nil:
-		return db.Get(string(cmd.Get.ID), out)
+		return db.Get(string(cmd.Get.ID), outW)
 	}
 	return errors.New("Unknown command")
 }

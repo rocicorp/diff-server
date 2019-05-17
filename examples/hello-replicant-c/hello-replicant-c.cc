@@ -20,7 +20,6 @@ void exec(int connID, const std::string& cmd, const std::string& in, std::string
 
     if (!in.empty()) {
         checkErr("ExecWrite", ExecWrite(execID, const_cast<char*>(in.data()), in.size()));
-        checkErr("ExecWriteDone", ExecWriteDone(execID));
     }
 
     if (out != NULL) {
@@ -34,7 +33,6 @@ void exec(int connID, const std::string& cmd, const std::string& in, std::string
             }
             out->resize(out->size()+chunkSize);
         }
-        checkErr("ExecReadDone", ExecReadDone(execID));
     }
 
     checkErr("ExecDone", ExecDone(execID));

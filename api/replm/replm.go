@@ -1,7 +1,6 @@
 package replm
 
 import (
-	"encoding/json"
 	"io"
 
 	"github.com/attic-labs/noms/go/spec"
@@ -27,25 +26,15 @@ func Open(dbSpec string) (*Connection, error) {
 }
 
 func (conn *Connection) Exec(cs []byte) (*Command, error) {
-	var c cmd.Command
-	err := json.Unmarshal(cs, &c)
+	outR, inW, ec, err := cmd.DispatchString(conn.db, cs)
 	if err != nil {
 		return nil, err
 	}
-
-	inR, inW := io.Pipe()
-	outR, outW := io.Pipe()
 	r := &Command{
 		inW:  inW,
 		outR: outR,
-		err:  make(chan error),
+		err:  ec,
 	}
-	go func() {
-		err := cmd.Dispatch(conn.db, c, inR, outW)
-		outW.Close()
-		r.err <- err
-	}()
-
 	return r, nil
 }
 

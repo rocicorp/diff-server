@@ -10,7 +10,6 @@ package main
 import "C"
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"reflect"
@@ -77,26 +76,17 @@ func Exec(conn ConnectionID, cs unsafe.Pointer, csLen C.int, execID *C.int) (err
 		return C.CString("invalid connection")
 	}
 
-	var c cmd.Command
-	err := json.Unmarshal(cbufToByteSlice(cs, csLen), &c)
+	id := ExecID(atomic.AddInt32(&nextID, 1))
+	outR, inW, ec, err := cmd.DispatchString(db, cbufToByteSlice(cs, csLen))
 	if err != nil {
 		return C.CString(err.Error())
 	}
-
-	id := ExecID(atomic.AddInt32(&nextID, 1))
-	inR, inW := io.Pipe()
-	outR, outW := io.Pipe()
 	info := &execInfo{
 		in:  inW,
 		out: outR,
-		err: make(chan error),
+		err: ec,
 	}
 	execs[id] = info
-	go func() {
-		err := cmd.Dispatch(db, c, inR, outW)
-		outW.Close()
-		info.err <- err
-	}()
 
 	*execID = C.int(id)
 	return (*C.char)(C.NULL)
@@ -117,21 +107,6 @@ func ExecWrite(id C.int, data unsafe.Pointer, dataLen C.int) (errMsg *C.char) {
 	return (*C.char)(C.NULL)
 }
 
-// ExecWriteDone completes a series of writes to a execution started previously with
-// `Exec`.
-//export ExecWriteDone
-func ExecWriteDone(id C.int) (errMsg *C.char) {
-	info, ok := execs[ExecID(id)]
-	if !ok {
-		return C.CString(fmt.Sprintf("Invalid execID: %d", id))
-	}
-	err := info.in.Close()
-	if err != nil {
-		return C.CString(err.Error())
-	}
-	return (*C.char)(C.NULL)
-}
-
 // ExecRead reads data from the output stream of an execution started previously with
 // `Exec`. When ExecRead has read all data, buf will be NULL and bufLen zero.
 //export ExecRead
@@ -149,21 +124,6 @@ func ExecRead(id C.int, buf unsafe.Pointer, bufLen C.int, readLen *C.int) (errMs
 		return C.CString(err.Error())
 	}
 	*readLen = C.int(n)
-	return (*C.char)(C.NULL)
-}
-
-// ExecReadDone completes a series of reads from an execution started previously with
-// `Exec`.
-//export ExecReadDone
-func ExecReadDone(id C.int) (errMsg *C.char) {
-	info, ok := execs[ExecID(id)]
-	if !ok {
-		return C.CString(fmt.Sprintf("Invalid execID: %d", id))
-	}
-	err := info.out.Close()
-	if err != nil {
-		return C.CString(err.Error())
-	}
 	return (*C.char)(C.NULL)
 }
 
