@@ -1,4 +1,5 @@
-package replm
+// package remp implements a Gomobile-compatible API to replicant.
+package repm
 
 import (
 	"io"
