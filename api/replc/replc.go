@@ -1,4 +1,4 @@
-// package api implements a low-level C API to Replicant
+// package replc implements a low-level C API to Replicant
 // suitable for embedding within iOS, Android, desktop
 // software, etc.
 package main

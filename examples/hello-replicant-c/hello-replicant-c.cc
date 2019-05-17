@@ -2,8 +2,8 @@
 #include <unistd.h>
 #include <string>
 
-// > go build -buildmode=c-archive -o api.a ../../api/api.go
-// > clang++ *.cc api.a -o hello-replicant-c -framework CoreFoundation -framework Security
+// > go build -buildmode=c-archive -o replc.a ../../api/replc
+// > clang++ *.cc replc.a -o hello-replicant-c -framework CoreFoundation -framework Security
 // > ./hello-replicant-c
 // Hello, from Replicant!
 
