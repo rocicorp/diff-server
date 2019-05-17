@@ -1,10 +1,10 @@
-// package replc implements a low-level C API to Replicant
+// package repc implements a low-level C API to Replicant
 // suitable for embedding within iOS, Android, desktop
 // software, etc.
 package main
 
 // compile like:
-// go build -buildmode=c-archive -o api.a api.go
+// go build -buildmode=c-archive -o repc.a repc.go
 
 // #include <stdio.h>
 import "C"
