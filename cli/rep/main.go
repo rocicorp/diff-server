@@ -36,7 +36,7 @@ func main() {
 		return
 	}
 
-	err = cmd.Dispatch(db, command, os.Stdin, os.Stdout)
+	err = cmd.DispatchSync(db, command, os.Stdin, os.Stdout)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 	}

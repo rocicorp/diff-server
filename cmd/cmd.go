@@ -37,7 +37,7 @@ func Dispatch(db db.DB, cmd Command) (outR io.ReadCloser, inW io.WriteCloser, ec
 	ec = make(chan error)
 
 	go func() {
-		err := dispatch(db, cmd, inR, outW)
+		err := DispatchSync(db, cmd, inR, outW)
 		outW.Close()
 		ec <- err
 	}()
@@ -45,7 +45,7 @@ func Dispatch(db db.DB, cmd Command) (outR io.ReadCloser, inW io.WriteCloser, ec
 	return outR, inW, ec
 }
 
-func dispatch(db db.DB, cmd Command, inR io.Reader, outW io.Writer) error {
+func DispatchSync(db db.DB, cmd Command, inR io.Reader, outW io.Writer) error {
 	switch {
 	case cmd.Put != nil:
 		return db.Put(string(cmd.Put.ID), inR)
