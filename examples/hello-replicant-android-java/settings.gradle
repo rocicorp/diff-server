@@ -1,0 +1,2 @@
+include ':app', ':repm'
+rootProject.name='Hello Replicant Android Java'
