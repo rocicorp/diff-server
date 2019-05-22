@@ -1,10 +1,13 @@
 package db
 
 import (
+	"bufio"
+	"errors"
 	"fmt"
 	"io"
 
 	"github.com/attic-labs/noms/go/datas"
+	"github.com/attic-labs/noms/go/hash"
 	"github.com/attic-labs/noms/go/nomdl"
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/attic-labs/noms/go/types"
@@ -12,7 +15,10 @@ import (
 )
 
 var (
-	objsMapType = nomdl.MustParseType(`Struct {data: Map<String, Value>}`)
+	schema = nomdl.MustParseType(`Struct {
+	code: Ref<Set<Blob>>,
+	data: Ref<Map<String, Value>>,
+}`)
 )
 
 // Not thread-safe
@@ -20,8 +26,8 @@ var (
 type DB struct {
 	db   datas.Database
 	ds   datas.Dataset
-	h    types.Struct
-	objs *types.MapEditor
+	data *types.MapEditor
+	code *types.SetEditor
 }
 
 func Load(sp spec.Spec) (DB, error) {
@@ -29,16 +35,16 @@ func Load(sp spec.Spec) (DB, error) {
 	ds := db.GetDataset("local")
 	hv, ok := ds.MaybeHeadValue()
 	if !ok {
-		return DB{db, ds, types.NewStruct("", types.StructData{}), types.NewMap(db).Edit()}, nil
+		return DB{db, ds, types.NewMap(db).Edit(), types.NewSet(db).Edit()}, nil
 	}
 	hvt := types.TypeOf(hv)
-	// TODO: Check type of entire commit?
-	if !types.IsSubtype(objsMapType, hvt) {
+	if !types.IsSubtype(schema, hvt) {
 		return DB{}, fmt.Errorf("Dataset '%s::local' exists and has non-Replicant data of type: %s", sp.String(), hvt.Describe())
 	}
 	h := hv.(types.Struct)
-	m := h.Get("data").(types.Map)
-	return DB{db, ds, h, m.Edit()}, nil
+	data := h.Get("data").(types.Ref).TargetValue(db).(types.Map).Edit()
+	code := h.Get("code").(types.Ref).TargetValue(db).(types.Set).Edit()
+	return DB{db, ds, data, code}, nil
 }
 
 func (db DB) Put(id string, r io.Reader) error {
@@ -46,12 +52,12 @@ func (db DB) Put(id string, r io.Reader) error {
 	if err != nil {
 		return err
 	}
-	db.objs.Set(types.String(id), v)
+	db.data.Set(types.String(id), v)
 	return nil
 }
 
 func (db DB) Get(id string, w io.Writer) error {
-	vv := db.objs.Get(types.String(id))
+	vv := db.data.Get(types.String(id))
 	if vv == nil {
 		return nil
 	}
@@ -67,13 +73,60 @@ func (db DB) Get(id string, w io.Writer) error {
 	return nil
 }
 
+func (db DB) PutFunc(r io.Reader, w io.Writer) error {
+	// TODO: Do we want to validate that it compiles or whatever???
+	b := types.NewBlob(db.db, r)
+	db.code.Insert(b)
+	bw := bufio.NewWriter(w)
+	bw.WriteString(b.Hash().String())
+	bw.WriteByte('\n')
+	bw.Flush()
+	return nil
+}
+
+func (db DB) GetFunc(hash string) (types.Blob, error) {
+	h, err := parseHash(hash)
+	if err != nil {
+		return types.Blob{}, err
+	}
+
+	it := db.code.Set().Iterator()
+	for v := it.Next(); v != nil; v = it.Next() {
+		if v.Hash() == h {
+			// Downcast here is known to be safe because we checked schema in Load().
+			return v.(types.Blob), err
+		}
+	}
+
+	return types.Blob{}, errors.New("func not found")
+}
+
+func (db DB) DelFunc(hash string) error {
+	v, err := db.GetFunc(hash)
+	if err != nil {
+		return err
+	}
+	db.code.Remove(v)
+	return nil
+}
+
 func (db DB) Commit() error {
-	h := db.h.Set("data", db.objs.Value())
+	h := types.NewStruct("", types.StructData{
+		"data": db.db.WriteValue(db.data.Map()),
+		"code": db.db.WriteValue(db.code.Set()),
+	})
 	ds, err := db.db.CommitValue(db.ds, h)
 	if err != nil {
 		return err
 	}
 	db.ds = ds
-	db.h = h
 	return nil
+}
+
+func parseHash(h string) (hash.Hash, error) {
+	r, ok := hash.MaybeParse(h)
+	if !ok {
+		return hash.Hash{}, errors.New("Invalid hash string")
+	}
+	return r, nil
 }

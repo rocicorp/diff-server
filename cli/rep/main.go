@@ -49,14 +49,14 @@ func addSubCommand(app *kingpin.Application, cmd *cmd.Command, cmdType reflect.T
 	subCmdField := cmdType.Field(fieldIndex)
 	subCmdVal := reflect.New(subCmdField.Type.Elem())
 	kingpinCommand := app.Command(strings.ToLower(subCmdField.Name), "TODO")
+	kingpinCommand.PreAction(func(*kingpin.ParseContext) error {
+		cmdVal.Elem().Field(fieldIndex).Set(subCmdVal)
+		return nil
+	})
 	for i := 0; i < subCmdField.Type.Elem().NumField(); i++ {
 		ft := subCmdField.Type.Elem().Field(i)
 		fv := subCmdVal.Elem().Field(i)
 		clause := kingpinCommand.Arg(strings.ToLower(ft.Name), "TODO").Required()
-		clause.PreAction(func(*kingpin.ParseContext) error {
-			cmdVal.Elem().Field(fieldIndex).Set(subCmdVal)
-			return nil
-		})
 		switch ft.Type {
 		case reflect.TypeOf(""):
 			clause.StringVar(fv.Addr().Interface().(*string))
