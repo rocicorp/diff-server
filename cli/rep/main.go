@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"reflect"
 
@@ -15,67 +16,64 @@ import (
 	"github.com/aboodman/replicant/util/kp"
 )
 
-type dir int
-
-const (
-	in dir = iota
-	out
-)
-
 type opt struct {
-	Flags    []string
 	Args     []string
 	OutField string
 }
 
 func main() {
+	impl(os.Args[1:], os.Stdin, os.Stdout, os.Stderr, os.Exit)
+}
+
+func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 	app := kingpin.New("replicant", "Conflict-Free Replicated Database")
+	app.ErrorWriter(errs)
+	app.UsageWriter(errs)
+	app.Terminate(exit)
+
 	sp := kp.DatabaseSpec(app.Flag("db", "Database to connect to. See https://github.com/attic-labs/noms/blob/master/doc/spelling.md#spelling-databases.").Required().PlaceHolder("/path/to/db"))
+
+	code := app.Command("code", "Interact with code.")
+	reg(sp, code, &cmd.CodePut{}, "put", "Set a new JavaScript transaction bundle.", opt{
+	}, in, out, errs)
+	reg(sp, code, &cmd.CodeGet{}, "get", "Get the current transaction bundle.", opt{
+	}, in, out, errs)
 
 	data := app.Command("data", "Interact with data.")
 	// TODO: Remove this one once exec works.
-	reg(sp, data, &cmd.DataPut{}, "put", "Write a value.", opt{
+	reg(sp, data, &cmd.DataPut{}, "put", "Write the content of stdin as a value. Value must be JSON-formatted.", opt{
 		Args: []string{"ID"},
-	})
+	}, in, out, errs)
 	reg(sp, data, &cmd.DataHas{}, "has", "Check value existence.", opt{
 		Args:     []string{"ID"},
 		OutField: "OK",
-	})
+	}, in, out, errs)
 	reg(sp, data, &cmd.DataGet{}, "get", "Read a value.", opt{
 		Args: []string{"ID"},
-	})
+	}, in, out, errs)
 	reg(sp, data, &cmd.DataDel{}, "del", "Delete a value.", opt{
 		Args: []string{"ID"},
-	})
+	}, in, out, errs)
 
-	code := app.Command("code", "Interact with code.")
-	reg(sp, code, &cmd.CodePut{}, "put", "Write code.", opt{
-		OutField: "Hash",
-	})
-	reg(sp, code, &cmd.CodeHas{}, "has", "Check code existence.", opt{
-		Args:     []string{"Hash"},
-		OutField: "OK",
-	})
-	reg(sp, code, &cmd.CodeGet{}, "get", "Read code.", opt{
-		Args: []string{"Hash"},
-	})
-
-	kingpin.MustParse(app.Parse(os.Args[1:]))
+	_, err := app.Parse(args)
+	if err != nil {
+		fmt.Fprintln(errs, err.Error())
+		exit(1)
+	}
 }
 
-func reg(sp *spec.Spec, parent *kingpin.CmdClause, rc cmd.Command, name, doc string, o opt) {
+func reg(sp *spec.Spec, parent *kingpin.CmdClause, rc cmd.Command, name, doc string, o opt, in io.Reader, out, errs io.Writer) {
 	val := reflect.ValueOf(rc).Elem()
 	inVal := val.FieldByName("In")
 	outVal := val.FieldByName("Out")
 
 	kc := parent.Command(name, doc)
-	for _, _ = range o.Flags {
-		// TODO
-	}
-	for _, fn := range o.Args {
-		fv := field(inVal, fn)
-		// TODO: optional if pointer type
+
+	for i := 0; i < inVal.NumField(); i++ {
+		fn := inVal.Type().Field(i).Name
+		fv := inVal.Field(i)
 		clause := kc.Arg(fn, "TODO").Required()
+		// TODO: optional if pointer type
 		switch fullName(fv.Type()) {
 		case ".string":
 			clause.StringVar(fv.Addr().Interface().(*string))
@@ -90,13 +88,13 @@ func reg(sp *spec.Spec, parent *kingpin.CmdClause, rc cmd.Command, name, doc str
 	inStreamField := rcv.FieldByName("InStream")
 	if inStreamField.IsValid() {
 		chk.Equal("io.Reader", fullName(inStreamField.Type()))
-		inStreamField.Set(reflect.ValueOf(os.Stdin))
+		inStreamField.Set(reflect.ValueOf(in))
 	}
 
 	outStreamField := rcv.FieldByName("OutStream")
 	if outStreamField.IsValid() {
 		chk.Equal("io.Writer", fullName(outStreamField.Type()))
-		outStreamField.Set(reflect.ValueOf(os.Stdout))
+		outStreamField.Set(reflect.ValueOf(out))
 	}
 
 	kc.Action(func(_ *kingpin.ParseContext) error {
@@ -110,17 +108,17 @@ func reg(sp *spec.Spec, parent *kingpin.CmdClause, rc cmd.Command, name, doc str
 			return err
 		}
 
+		err = db.Commit()
+		if err != nil {
+			return err
+		}
+
 		if o.OutField != "" {
 			if outStreamField.IsValid() {
 				chk.Fail("Cannot set both OutField and OutStream")
 			}
 			fv := field(outVal, o.OutField)
-			fmt.Printf("%v\n", fv.Interface())
-		}
-
-		err = db.Commit()
-		if err != nil {
-			return err
+			fmt.Fprintf(out, "%v\n", fv.Interface())
 		}
 
 		return nil

@@ -29,7 +29,7 @@ func init() {
 }
 
 type Connection struct {
-	db db.DB
+	db *db.DB
 }
 
 func Open(dbSpec string) (*Connection, error) {
@@ -101,15 +101,15 @@ func (c *Command) Write(data []byte) (n int, err error) {
 func (c *Command) Done() (r []byte, err error) {
 	if c.inW != nil {
 		err := c.inW.Close()
-		chk.NotNil(err)
+		chk.NoError(err)
 	}
 	if c.outR != nil {
 		err := c.outR.Close()
-		chk.NotNil(err)
+		chk.NoError(err)
 	}
 	outVal := reflect.ValueOf(c).Elem().FieldByName("c").Elem().Elem().FieldByName("Out")
-	if outVal.IsValid() {
-		r, err = json.Marshal(outVal.Addr().Interface())
+	if outVal.NumField() > 0 {
+		r, err = json.Marshal(outVal.Interface())
 		if err != nil {
 			return nil, err
 		}

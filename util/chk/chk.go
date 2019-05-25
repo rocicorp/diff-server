@@ -22,8 +22,14 @@ func Equal(expected interface{}, actual interface{}) {
 	}
 }
 
-func NotNil(v interface{}, msgAndParams ...interface{}) {
-	if v != nil {
+func NotNil(v interface{}) {
+	if v == nil {
 		Fail("Expected non-nil value, but was: %#v", v)
+	}
+}
+
+func NoError(err error) {
+	if err != nil {
+		Fail("Unexpected error: %#v", err)
 	}
 }
