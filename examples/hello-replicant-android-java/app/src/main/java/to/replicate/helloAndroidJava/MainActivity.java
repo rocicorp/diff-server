@@ -24,11 +24,11 @@ public class MainActivity extends AppCompatActivity {
         try {
             File f = this.getFileStreamPath("db1");
             repm.Connection conn = repm.Repm.open(f.getAbsolutePath());
-            repm.Command cmd = conn.exec("{\"put\": {\"id\": \"obj1\"}}".getBytes());
+            repm.Command cmd = conn.exec("data/put", "{\"ID\": \"obj1\"}".getBytes());
             cmd.write("\"Hello, from Replicant!\"".getBytes());
             cmd.done();
 
-            cmd = conn.exec("{\"get\": {\"id\": \"obj1\"}}".getBytes());
+            cmd = conn.exec("data/get", "{\"ID\": \"obj1\"}".getBytes());
             byte[] buf = new byte[1024];
             long n = cmd.read(buf);
             message = new String(buf, 0, (int)n);
