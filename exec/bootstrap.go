@@ -7,14 +7,7 @@ var commands = {
 	'get': 2,
 };
 
-function recv(fn, args) {
-	var f = this[fn];
-	if (!f) {
-		throw new Error('Unknown function: ' + fn);
-	}
-
-	args = JSON.parse(args);
-
+var db = (function() {
 	var handleError = function(res) {
 		if (res.error) {
 			throw new Error(res.error);
@@ -28,7 +21,7 @@ function recv(fn, args) {
 		}
 	};
 
-	var db = {
+	return {
 		put: function(id, val) {
 			validID(id);
 			var undef;
@@ -49,8 +42,14 @@ function recv(fn, args) {
 			return res.ok ? JSON.parse(res.data) : undefined;
 		},
 	};
+})();
 
-	args.splice(0, 0, db);
-	f.apply(null, args);
+function recv(fn, args) {
+	var f = this[fn];
+	if (!f) {
+		throw new Error('Unknown function: ' + fn);
+	}
+	var parsed = JSON.parse(args);
+	f.apply(null, parsed);
 }
 `

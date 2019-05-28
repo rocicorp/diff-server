@@ -27,7 +27,7 @@ func Run(db *db.DB, source io.Reader, fn string, args types.List) error {
 	_, err := vm.Run(bootstrap)
 	chk.NoError(err)
 
-	_, err = vm.Run(source)
+	_, err = vm.Eval(source)
 	if err != nil {
 		return fmt.Errorf("Error loading code bundle: %s", err.Error())
 	}

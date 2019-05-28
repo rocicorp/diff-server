@@ -20,7 +20,7 @@ func TestBasic(t *testing.T) {
 	db, err := db.Load(sp)
 	assert.NoError(err)
 
-	code := `function incr(db, d) {
+	code := `function incr(d) {
 	var prev = db.get('v1') || 0;
 	db.put('v1', prev + d);
 }
