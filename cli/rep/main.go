@@ -5,13 +5,18 @@ import (
 	"io"
 	"os"
 	"reflect"
+	"strconv"
+	"strings"
 
 	"github.com/attic-labs/noms/go/hash"
 	"github.com/attic-labs/noms/go/spec"
+	"github.com/attic-labs/noms/go/types"
+	jn "github.com/attic-labs/noms/go/util/json"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/aboodman/replicant/cmd"
 	"github.com/aboodman/replicant/db"
+	"github.com/aboodman/replicant/exec"
 	"github.com/aboodman/replicant/util/chk"
 	"github.com/aboodman/replicant/util/kp"
 )
@@ -34,16 +39,11 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 	sp := kp.DatabaseSpec(app.Flag("db", "Database to connect to. See https://github.com/attic-labs/noms/blob/master/doc/spelling.md#spelling-databases.").Required().PlaceHolder("/path/to/db"))
 
 	code := app.Command("code", "Interact with code.")
-	reg(sp, code, &cmd.CodePut{}, "put", "Set a new JavaScript transaction bundle.", opt{
-	}, in, out, errs)
-	reg(sp, code, &cmd.CodeGet{}, "get", "Get the current transaction bundle.", opt{
-	}, in, out, errs)
+	regPut(sp, code, in)
+	reg(sp, code, &cmd.CodeGet{}, "get", "Get the current transaction bundle.", opt{}, in, out, errs)
+	regExec(sp, code)
 
 	data := app.Command("data", "Interact with data.")
-	// TODO: Remove this one once exec works.
-	reg(sp, data, &cmd.DataPut{}, "put", "Write the content of stdin as a value. Value must be JSON-formatted.", opt{
-		Args: []string{"ID"},
-	}, in, out, errs)
 	reg(sp, data, &cmd.DataHas{}, "has", "Check value existence.", opt{
 		Args:     []string{"ID"},
 		OutField: "OK",
@@ -60,6 +60,58 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 		fmt.Fprintln(errs, err.Error())
 		exit(1)
 	}
+}
+
+func regPut(sp *spec.Spec, parent *kingpin.CmdClause, in io.Reader) {
+	kc := parent.Command("put", "Set a new JavaScript transaction bundle.")
+	rc := &cmd.CodePut{}
+	rc.InStream = in
+
+	kc.Flag("origin", "Name for the source of this transaction").Default("cli").StringVar(&rc.In.Origin)
+
+	kc.Action(func(_ *kingpin.ParseContext) error {
+		return runCommand(rc, sp)
+	})
+}
+
+func regExec(sp *spec.Spec, parent *kingpin.CmdClause) {
+	kc := parent.Command("run", "Execute a transaction.")
+	rc := exec.CodeExec{}
+
+	kc.Flag("origin", "Name for the source of this transaction").Default("cli").StringVar(&rc.In.Origin)
+	kc.Arg("name", "Name of function from current transaction bundle to execute").Required().StringVar(&rc.In.Name)
+	raw := kc.Arg("args", "").Strings()
+
+	parse := func(s string) (types.Value, error) {
+		switch s {
+		case "true":
+			return types.Bool(true), nil
+		case "false":
+			return types.Bool(false), nil
+		}
+		switch s[0] {
+		case '[', '{', '"':
+			return jn.FromJSON(strings.NewReader(s), sp.GetDatabase(), jn.FromOptions{})
+		default:
+			if f, err := strconv.ParseFloat(s, 10); err == nil {
+				return types.Number(f), nil
+			}
+		}
+		return types.String(s), nil
+	}
+
+	kc.Action(func(_ *kingpin.ParseContext) error {
+		args := make([]types.Value, 0, len(*raw))
+		for _, r := range *raw {
+			v, err := parse(r)
+			if err != nil {
+				return err
+			}
+			args = append(args, v)
+		}
+		rc.In.Args = types.NewList(sp.GetDatabase(), args...)
+		return runCommand(rc, sp)
+	})
 }
 
 func reg(sp *spec.Spec, parent *kingpin.CmdClause, rc cmd.Command, name, doc string, o opt, in io.Reader, out, errs io.Writer) {
@@ -98,17 +150,7 @@ func reg(sp *spec.Spec, parent *kingpin.CmdClause, rc cmd.Command, name, doc str
 	}
 
 	kc.Action(func(_ *kingpin.ParseContext) error {
-		db, err := db.Load(*sp)
-		if err != nil {
-			return err
-		}
-
-		err = rc.Run(db)
-		if err != nil {
-			return err
-		}
-
-		err = db.Commit()
+		err := runCommand(rc, sp)
 		if err != nil {
 			return err
 		}
@@ -123,6 +165,20 @@ func reg(sp *spec.Spec, parent *kingpin.CmdClause, rc cmd.Command, name, doc str
 
 		return nil
 	})
+}
+
+func runCommand(c cmd.Command, sp *spec.Spec) error {
+	db, err := db.Load(*sp)
+	if err != nil {
+		return err
+	}
+
+	err = c.Run(db)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func fullName(t reflect.Type) string {

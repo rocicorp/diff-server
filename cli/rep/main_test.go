@@ -12,17 +12,17 @@ import (
 func TestCommands(t *testing.T) {
 	assert := assert.New(t)
 
-	tc := []struct{
+	tc := []struct {
 		label string
-		in string
-		args string
-		code int
-		out string
-		err string
+		in    string
+		args  string
+		code  int
+		out   string
+		err   string
 	}{
 		{
 			"code put good",
-			"function foo(){}",
+			"function futz(db, k, v){ db.put(k, v) }",
 			"code put",
 			0,
 			"",
@@ -33,29 +33,37 @@ func TestCommands(t *testing.T) {
 			"",
 			"code get",
 			0,
-			"function foo(){}",
+			"function futz(db, k, v){ db.put(k, v) }",
 			"",
 		},
 		{
-			"data put bad missing-arg",
+			"code run unknown-function",
 			"",
-			`data put`,
+			"code run monkey",
 			1,
 			"",
-			"required argument 'ID' not provided\n",
+			"Error: Unknown function: monkey\n",
 		},
 		{
-			"data put bad missing-arg-2",
+			"code run missing-key",
 			"",
-			`data put foo"`,
+			"code run futz",
 			1,
 			"",
-			"Could not write value: EOF\n",
+			"Error: Invalid id\n",
 		},
 		{
-			"data put good",
-			`"bar"`,
-			`data put foo`,
+			"code run missing-val",
+			"",
+			"code run futz foo",
+			1,
+			"",
+			"Error: Invalid value\n",
+		},
+		{
+			"code run good",
+			"",
+			"code run futz foo bar",
 			0,
 			"",
 			"",

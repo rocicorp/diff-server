@@ -22,16 +22,29 @@ function recv(fn, args) {
 		return res;
 	};
 
+	var validID = function(id) {
+		if (!id) {
+			throw new Error("Invalid id");
+		}
+	};
+
 	var db = {
 		put: function(id, val) {
+			validID(id);
+			var undef;
+			if (val === null || val === undef) {
+				throw new Error("Invalid value");
+			}
 			handleError(send(commands.put, id, JSON.stringify(val)));
 		},
 
 		has: function(id) {
+			validID(id);
 			return handleError(send(commands.has, id)).ok;
 		}
 
 		get: function(id) {
+			validID(id);
 			var res = handleError(send(commands.get, id));
 			return res.ok ? JSON.parse(res.data) : undefined;
 		},

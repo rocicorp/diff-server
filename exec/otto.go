@@ -2,17 +2,17 @@ package exec
 
 import (
 	"bytes"
-	"strings"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/attic-labs/noms/go/types"
 	jn "github.com/attic-labs/noms/go/util/json"
 	o "github.com/robertkrimen/otto"
 
-	"github.com/aboodman/replicant/util/chk"
 	"github.com/aboodman/replicant/cmd"
 	"github.com/aboodman/replicant/db"
+	"github.com/aboodman/replicant/util/chk"
 )
 
 const (
@@ -83,7 +83,7 @@ func Run(db *db.DB, source io.Reader, fn string, args types.List) error {
 	buf := &bytes.Buffer{}
 	err = jn.ToJSON(args, buf, jn.ToOptions{
 		Lists: true,
-		Maps: true,
+		Maps:  true,
 	})
 	if err != nil {
 		return err

@@ -18,7 +18,7 @@ func False(cond bool, msg string, params ...interface{}) {
 
 func Equal(expected interface{}, actual interface{}) {
 	if expected != actual {
-		Fail("Expected %#v, got: %#v - %s", expected, actual)
+		Fail("Expected %#v, got: %#v", expected, actual)
 	}
 }
 
