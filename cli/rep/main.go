@@ -18,6 +18,7 @@ import (
 	"github.com/aboodman/replicant/db"
 	"github.com/aboodman/replicant/exec"
 	"github.com/aboodman/replicant/util/chk"
+	"github.com/aboodman/replicant/util/jsoms"
 	"github.com/aboodman/replicant/util/kp"
 )
 
@@ -76,7 +77,7 @@ func regPut(sp *spec.Spec, parent *kingpin.CmdClause, in io.Reader) {
 
 func regExec(sp *spec.Spec, parent *kingpin.CmdClause) {
 	kc := parent.Command("run", "Execute a transaction.")
-	rc := exec.CodeExec{}
+	rc := &exec.CodeExec{}
 
 	kc.Flag("origin", "Name for the source of this transaction").Default("cli").StringVar(&rc.In.Origin)
 	kc.Arg("name", "Name of function from current transaction bundle to execute").Required().StringVar(&rc.In.Name)
@@ -109,7 +110,7 @@ func regExec(sp *spec.Spec, parent *kingpin.CmdClause) {
 			}
 			args = append(args, v)
 		}
-		rc.In.Args = types.NewList(sp.GetDatabase(), args...)
+		rc.In.Args = jsoms.Value{Value: types.NewList(sp.GetDatabase(), args...)}
 		return runCommand(rc, sp)
 	})
 }
@@ -139,13 +140,11 @@ func reg(sp *spec.Spec, parent *kingpin.CmdClause, rc cmd.Command, name, doc str
 	rcv := reflect.ValueOf(rc).Elem()
 	inStreamField := rcv.FieldByName("InStream")
 	if inStreamField.IsValid() {
-		chk.Equal("io.Reader", fullName(inStreamField.Type()))
 		inStreamField.Set(reflect.ValueOf(in))
 	}
 
 	outStreamField := rcv.FieldByName("OutStream")
 	if outStreamField.IsValid() {
-		chk.Equal("io.Writer", fullName(outStreamField.Type()))
 		outStreamField.Set(reflect.ValueOf(out))
 	}
 

@@ -22,9 +22,15 @@ func Equal(expected interface{}, actual interface{}) {
 	}
 }
 
-func NotNil(v interface{}) {
+func NotNil(v interface{}, msgAndParams ...interface{}) {
 	if v == nil {
-		Fail("Expected non-nil value, but was: %#v", v)
+		var msg string
+		if len(msgAndParams) > 0 {
+			msg = fmt.Sprintf(msgAndParams[0].(string), msgAndParams[1:]...)
+		} else {
+			msg = "Expected non-nil value"
+		}
+		Fail(msg)
 	}
 }
 

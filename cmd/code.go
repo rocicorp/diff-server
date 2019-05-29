@@ -40,9 +40,17 @@ func (c *CodeGet) Run(db *db.DB) error {
 	if err != nil {
 		return err
 	}
+	c.Out.OK = true
 	_, err = io.Copy(c.OutStream, r)
 	if err != nil {
 		return err
 	}
+	if wc, ok := c.OutStream.(io.WriteCloser); ok {
+		err = wc.Close()
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }

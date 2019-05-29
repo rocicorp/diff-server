@@ -3,30 +3,22 @@ package repm
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"reflect"
 
 	"github.com/attic-labs/noms/go/spec"
+	"github.com/attic-labs/noms/go/types"
 
 	"github.com/aboodman/replicant/cmd"
 	"github.com/aboodman/replicant/db"
+	"github.com/aboodman/replicant/exec"
 	"github.com/aboodman/replicant/util/chk"
+	"github.com/aboodman/replicant/util/jsoms"
 )
 
 var (
 	cmds map[string]cmd.Command
 )
-
-func init() {
-	cmds = map[string]cmd.Command{
-		"data/put": &cmd.DataPut{}, // TODO: remove once exec exists
-		"data/has": &cmd.DataHas{},
-		"data/get": &cmd.DataGet{},
-		"data/del": &cmd.DataDel{},
-	}
-
-}
 
 type Connection struct {
 	db *db.DB
@@ -45,17 +37,17 @@ func Open(dbSpec string) (*Connection, error) {
 }
 
 func (conn *Connection) Exec(name string, cs []byte) (*Command, error) {
-	rc := cmds[name]
-	if rc == nil {
-		return nil, fmt.Errorf("Unknown command: %s", name)
-	}
-
-	err := json.Unmarshal(cs, &rc)
-	if err != nil {
-		return nil, err
-	}
-
+	rc := getCmd(name, conn.db.Noms())
 	val := reflect.ValueOf(rc).Elem()
+	in := val.FieldByName("In").Addr().Interface()
+
+	if len(cs) > 0 {
+		err := json.Unmarshal(cs, in)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	inval := val.FieldByName("InStream")
 	outval := val.FieldByName("OutStream")
 
@@ -98,7 +90,7 @@ func (c *Command) Write(data []byte) (n int, err error) {
 	return c.inW.Write(data)
 }
 
-func (c *Command) Done() (r []byte, err error) {
+func (c *Command) Done() ([]byte, error) {
 	if c.inW != nil {
 		err := c.inW.Close()
 		chk.NoError(err)
@@ -107,12 +99,36 @@ func (c *Command) Done() (r []byte, err error) {
 		err := c.outR.Close()
 		chk.NoError(err)
 	}
-	outVal := reflect.ValueOf(c).Elem().FieldByName("c").Elem().Elem().FieldByName("Out")
+
+	rerr := <-c.err
+	outVal := reflect.ValueOf(c.c).Elem().FieldByName("Out")
+	var r []byte
 	if outVal.NumField() > 0 {
+		var err error
 		r, err = json.Marshal(outVal.Interface())
-		if err != nil {
-			return nil, err
-		}
+		chk.NoError(err)
 	}
-	return r, <-c.err
+
+	return r, rerr
+}
+
+func getCmd(name string, noms types.ValueReadWriter) cmd.Command {
+	switch name {
+	case "code/put":
+		return &cmd.CodePut{}
+	case "code/get":
+		return &cmd.CodeGet{}
+	case "code/run":
+		r := &exec.CodeExec{}
+		r.In.Args = jsoms.Value{Noms: noms}
+		return r
+	case "data/has":
+		return &cmd.DataHas{}
+	case "data/get":
+		return &cmd.DataGet{}
+	case "data/del":
+		return &cmd.DataDel{}
+	}
+	chk.Fail("Unsupported command: %s", name)
+	return nil
 }

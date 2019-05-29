@@ -22,7 +22,7 @@ func TestCommands(t *testing.T) {
 	}{
 		{
 			"code put good",
-			"function futz(db, k, v){ db.put(k, v) }",
+			"function futz(k, v){ db.put(k, v) }",
 			"code put",
 			0,
 			"",
@@ -33,7 +33,7 @@ func TestCommands(t *testing.T) {
 			"",
 			"code get",
 			0,
-			"function futz(db, k, v){ db.put(k, v) }",
+			"function futz(k, v){ db.put(k, v) }",
 			"",
 		},
 		{

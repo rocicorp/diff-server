@@ -8,10 +8,10 @@ import (
 
 type DataPut struct {
 	In struct {
-		ID   string
+		ID string
 	}
 	InStream io.Reader
-	Out struct {
+	Out      struct {
 	}
 }
 
@@ -38,7 +38,7 @@ type DataGet struct {
 		ID string
 	}
 	Out struct {
-		OK   bool
+		OK bool
 	}
 	OutStream io.Writer
 }
@@ -47,6 +47,9 @@ func (c *DataGet) Run(db *db.DB) (err error) {
 	c.Out.OK, err = db.Get(c.In.ID, c.OutStream)
 	if err != nil {
 		return err
+	}
+	if wc, ok := c.OutStream.(io.WriteCloser); ok {
+		return wc.Close()
 	}
 	return nil
 }
