@@ -81,9 +81,8 @@
         <section>
         <h2>Features</h2>
         <ul>
-          <li><strong>Local-first.</strong> All reads and writes go to a local on-device database by default, which is synchronized with the server lazily.</li>
+          <li><strong>Local-first.</strong> All reads and writes go to a local on-device database by default, which is synchronized with the server continuously in the background.</li>
           <li><strong>Conflict-free.</strong> There is zero manual conflict resolution, by either developers or users, for virtually all cases.
-          <li><strong>Convergent.</strong> Every client is guaranteed to converge with the server. It is impossible for two devices to settle into different states.
           <li><strong>Transactional.</strong> Arbitrarily complex transactions are supported and are guaranteed to execute consistently and with the same results on all nodes.
           <li><strong>Easy.</strong> The data model is a document store, like Firestore, RethinkDB, Mongo, or FaunaDB. Transactions are executed serially, like in a local database. The query model is a SQL subset. There is little new to learn. You use Replicant like you use any other local datastore, except it also syncs with the server and all other clients.
           <li><strong>Compatible.</strong> Keep your existing server-side stack and database. Replicant runs on the client, along with a small service whose only job is to replicate data between the client and your backend.
