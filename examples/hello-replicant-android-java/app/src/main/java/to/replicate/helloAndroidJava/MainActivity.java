@@ -6,6 +6,8 @@ import android.app.AlertDialog;
 import android.os.Bundle;
 import android.util.Log;
 
+import org.json.JSONTokener;
+
 import java.io.File;
 
 public class MainActivity extends AppCompatActivity {
@@ -24,14 +26,17 @@ public class MainActivity extends AppCompatActivity {
         try {
             File f = this.getFileStreamPath("db1");
             repm.Connection conn = repm.Repm.open(f.getAbsolutePath());
-            repm.Command cmd = conn.exec("data/put", "{\"ID\": \"obj1\"}".getBytes());
-            cmd.write("\"Hello, from Replicant!\"".getBytes());
+            repm.Command cmd = conn.exec("code/put", null);
+            cmd.write("function setGreeting(greet) { db.put('greet', greet); }".getBytes());
             cmd.done();
 
-            cmd = conn.exec("data/get", "{\"ID\": \"obj1\"}".getBytes());
+            cmd = conn.exec("code/run", "{\"Name\": \"setGreeting\", \"Args\": [\"Aloha\"]}".getBytes());
+            cmd.done();
+
+            cmd = conn.exec("data/get", "{\"ID\": \"greet\"}".getBytes());
             byte[] buf = new byte[1024];
             long n = cmd.read(buf);
-            message = new String(buf, 0, (int)n);
+            message = (String)new JSONTokener(new String(buf, 0, (int)n)).nextValue() + ", Replicant!";
         } catch (Exception e) {
             Log.e("blech", e.toString());
         }
