@@ -71,6 +71,12 @@
           <p>Replicant is a new approach to mobile sync which finally makes it easy — pleasant, even — to offline-enable your mobile application.
           <p>Who cares about offline? You should. Because it makes your app instantaneously responsive and reliable under all network conditions, including no network. It banishes spinners and hangs from your user experience. Every interaction with your app feels local and fluid, with changes synchronized in the background when there is connectivity.
         </section>
+
+        <section>
+          <h2>Team</h2>
+          <p>Replicant is led by <a href="https://www.linkedin.com/in/aaron-boodman-12b150/">Aaron Boodman</a>, an engineer with over fifteen years of experience working on sync at Google and as a founder of venture-backed startups.</p>
+          <p>The design is made possible by recent academic research and is scheduled for review by <a href="https://jepsen.io/services">Jepsen, LLC</a> in 2019.</p>
+        </section>
         
         <section>
         <h2>Features</h2>
@@ -85,18 +91,11 @@
         </section>
         
         <section>
-          <h2>Team</h2>
-          <p>Replicant is a new project led by <a href="https://www.linkedin.com/in/aaron-boodman-12b150/">Aaron Boodman</a>, the lead designer of <a href="https://github.com/attic-labs/noms">Noms</a>, <a href="https://developers.chrome.com/extensions">Chrome Extensions</a>, <a href="https://en.wikipedia.org/wiki/Gears_(software)">Google Gears</a>, <a href="https://en.wikipedia.org/wiki/Greasemonkey">Greasemonkey</a>, and <a href="http://www.aaronboodman.com/#projects">other projects</a>.
-          <p>Aaron has over fifteen years of experience looking at “the sync problem”, from different angles, and then slowly, cautiously, backing away.
-          <p>This is the first time he has felt like there is a satisfying general solution.
-        </section>
-        
-        <section>
           <h2>Technology</h2>
           <p>Replicant builds on recent academic research to transform a disconnected set of single-node transactional databases into an <a href="https://en.wikipedia.org/wiki/CAP_theorem">AP</a> <a href="https://jepsen.io/consistency/models/causal">Causal-Consistent</a> distributed database. This <a href="http://www.cs.cornell.edu/lorenzo/papers/cac-tr.pdf">has been proven</a> to be the highest consistency level possible in a disconnected system. But until now, there have been no commercial systems that implement it for offline synchronization.
           <p>Replicant is technically a <a href="https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type">CRDT</a>, but it differs from currently popular CRDTs in that it: (a)&nbsp;permits arbitrary operations over a rich data model, and (b)&nbsp;guarantees transactional consistency.
           <p>What this means is that developers don’t need to adapt their problem to fit a constrained data model. They can use natural data structures and simple sequential algorithms, without giving up the key promise of CRDTs: guaranteed convergence.
-          <p>There is a full design document available to early adopters, which is scheduled for review this year by <a href="https://jepsen.io/services">Jepsen, LLC</a>.
+          <p>There is a full design document available to early adopters.
         </section>
       </div>
       <div class="one column">&nbsp;</div>
