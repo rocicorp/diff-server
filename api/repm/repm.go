@@ -7,7 +7,6 @@ import (
 	"reflect"
 
 	"github.com/attic-labs/noms/go/spec"
-	"github.com/attic-labs/noms/go/types"
 
 	"github.com/aboodman/replicant/cmd"
 	"github.com/aboodman/replicant/db"
@@ -37,7 +36,7 @@ func Open(dbSpec string) (*Connection, error) {
 }
 
 func (conn *Connection) Exec(name string, cs []byte) (*Command, error) {
-	rc := getCmd(name, conn.db.Noms())
+	rc := getCmd(name, conn.db)
 	val := reflect.ValueOf(rc).Elem()
 	in := val.FieldByName("In").Addr().Interface()
 
@@ -112,22 +111,25 @@ func (c *Command) Done() ([]byte, error) {
 	return r, rerr
 }
 
-func getCmd(name string, noms types.ValueReadWriter) cmd.Command {
+func getCmd(name string, d *db.DB) cmd.Command {
 	switch name {
 	case "code/put":
-		return &cmd.CodePut{}
+		return &db.CodePut{}
 	case "code/get":
-		return &cmd.CodeGet{}
+		return &db.CodeGet{}
 	case "code/run":
+		currentCode, err := d.GetCode()
+		chk.NoError(err)
 		r := &exec.CodeExec{}
-		r.In.Args = jsoms.Value{Noms: noms}
+		r.In.Code = jsoms.Hash{currentCode.Hash()}
+		r.In.Args = jsoms.Value{Noms: d.Noms()}
 		return r
 	case "data/has":
-		return &cmd.DataHas{}
+		return &db.DataHas{}
 	case "data/get":
-		return &cmd.DataGet{}
+		return &db.DataGet{}
 	case "data/del":
-		return &cmd.DataDel{}
+		return &db.DataDel{}
 	}
 	chk.Fail("Unsupported command: %s", name)
 	return nil

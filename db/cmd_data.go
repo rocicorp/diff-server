@@ -1,9 +1,7 @@
-package cmd
+package db
 
 import (
 	"io"
-
-	"github.com/aboodman/replicant/db"
 )
 
 type DataPut struct {
@@ -15,7 +13,7 @@ type DataPut struct {
 	}
 }
 
-func (c *DataPut) Run(db *db.DB) error {
+func (c *DataPut) Run(db *DB) error {
 	return db.Put(c.In.ID, c.InStream)
 }
 
@@ -28,7 +26,7 @@ type DataHas struct {
 	}
 }
 
-func (c *DataHas) Run(db *db.DB) (err error) {
+func (c *DataHas) Run(db *DB) (err error) {
 	c.Out.OK, err = db.Has(c.In.ID)
 	return
 }
@@ -43,7 +41,7 @@ type DataGet struct {
 	OutStream io.Writer
 }
 
-func (c *DataGet) Run(db *db.DB) (err error) {
+func (c *DataGet) Run(db *DB) (err error) {
 	c.Out.OK, err = db.Get(c.In.ID, c.OutStream)
 	if err != nil {
 		return err
@@ -63,7 +61,7 @@ type DataDel struct {
 	}
 }
 
-func (c *DataDel) Run(db *db.DB) (err error) {
+func (c *DataDel) Run(db *DB) (err error) {
 	c.Out.OK, err = db.Del(c.In.ID)
 	return
 }

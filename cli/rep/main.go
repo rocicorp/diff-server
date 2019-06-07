@@ -41,18 +41,18 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 
 	code := app.Command("code", "Interact with code.")
 	regPut(sp, code, in)
-	reg(sp, code, &cmd.CodeGet{}, "get", "Get the current transaction bundle.", opt{}, in, out, errs)
+	reg(sp, code, &db.CodeGet{}, "get", "Get the current transaction bundle.", opt{}, in, out, errs)
 	regExec(sp, code)
 
 	data := app.Command("data", "Interact with data.")
-	reg(sp, data, &cmd.DataHas{}, "has", "Check value existence.", opt{
+	reg(sp, data, &db.DataHas{}, "has", "Check value existence.", opt{
 		Args:     []string{"ID"},
 		OutField: "OK",
 	}, in, out, errs)
-	reg(sp, data, &cmd.DataGet{}, "get", "Read a value.", opt{
+	reg(sp, data, &db.DataGet{}, "get", "Read a value.", opt{
 		Args: []string{"ID"},
 	}, in, out, errs)
-	reg(sp, data, &cmd.DataDel{}, "del", "Delete a value.", opt{
+	reg(sp, data, &db.DataDel{}, "del", "Delete a value.", opt{
 		Args: []string{"ID"},
 	}, in, out, errs)
 
@@ -65,7 +65,7 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 
 func regPut(sp *spec.Spec, parent *kingpin.CmdClause, in io.Reader) {
 	kc := parent.Command("put", "Set a new JavaScript transaction bundle.")
-	rc := &cmd.CodePut{}
+	rc := &db.CodePut{}
 	rc.InStream = in
 
 	kc.Flag("origin", "Name for the source of this transaction").Default("cli").StringVar(&rc.In.Origin)
@@ -80,6 +80,7 @@ func regExec(sp *spec.Spec, parent *kingpin.CmdClause) {
 	rc := &exec.CodeExec{}
 
 	kc.Flag("origin", "Name for the source of this transaction").Default("cli").StringVar(&rc.In.Origin)
+	kp.Hash(kc.Flag("code", "Hash of code bundle to use - defaults to current"), &rc.In.Code.Hash)
 	kc.Arg("name", "Name of function from current transaction bundle to execute").Required().StringVar(&rc.In.Name)
 	raw := kc.Arg("args", "").Strings()
 
@@ -111,6 +112,19 @@ func regExec(sp *spec.Spec, parent *kingpin.CmdClause) {
 			args = append(args, v)
 		}
 		rc.In.Args = jsoms.Value{Value: types.NewList(sp.GetDatabase(), args...)}
+
+		if rc.In.Code.IsEmpty() {
+			db, err := db.Load(*sp)
+			if err != nil {
+				return err
+			}
+			b, err := db.GetCode()
+			if err != nil {
+				return err
+			}
+			rc.In.Code = jsoms.Hash{b.Hash()}
+		}
+
 		return runCommand(rc, sp)
 	})
 }

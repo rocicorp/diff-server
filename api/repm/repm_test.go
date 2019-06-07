@@ -3,6 +3,7 @@ package repm
 import (
 	"bytes"
 	"io"
+	"io/ioutil"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -39,10 +40,28 @@ func TestHelloWorld(t *testing.T) {
 			"",
 		},
 		{
+			"code/run missing-func",
+			"code/run",
+			"",
+			`{}`,
+			"",
+			"",
+			"Function name parameter is required",
+		},
+		{
+			"code/run missing-code",
+			"code/run",
+			"",
+			`{"Name": "foo"}`,
+			"",
+			"",
+			"Code bundle parameter required",
+		},
+		{
 			"code/run unknown-function",
 			"code/run",
 			"",
-			`{"Name": "monkey"}`,
+			`{"Code": "3he5j0cun94jgahqaebhd9oij3q3itag", "Name": "monkey"}`,
 			"",
 			"",
 			"Error: Unknown function: monkey",
@@ -51,7 +70,7 @@ func TestHelloWorld(t *testing.T) {
 			"code/run missing-key",
 			"code/run",
 			"",
-			`{"Name": "futz"}`,
+			`{"Code": "3he5j0cun94jgahqaebhd9oij3q3itag", "Name": "futz"}`,
 			"",
 			"",
 			"Error: Invalid id",
@@ -60,7 +79,7 @@ func TestHelloWorld(t *testing.T) {
 			"code/run missing-val",
 			"code/run",
 			"",
-			`{"Name": "futz", "Args": ["foo"]}`,
+			`{"Code": "3he5j0cun94jgahqaebhd9oij3q3itag", "Name": "futz", "Args": ["foo"]}`,
 			"",
 			"",
 			"Error: Invalid value",
@@ -69,7 +88,7 @@ func TestHelloWorld(t *testing.T) {
 			"code/run good",
 			"code/run",
 			"",
-			`{"Name": "futz", "Args": ["foo", "bar"]}`,
+			`{"Code": "3he5j0cun94jgahqaebhd9oij3q3itag", "Name": "futz", "Args": ["foo", "bar"]}`,
 			"",
 			"",
 			"",
@@ -94,12 +113,15 @@ func TestHelloWorld(t *testing.T) {
 		},
 	}
 
-	conn, err := Open("/tmp/db1")
+	td, err := ioutil.TempDir("", "")
+	assert.NoError(err)
+
+	conn, err := Open(td)
 	assert.NoError(err)
 
 	for _, c := range tc {
 		cmd, err := conn.Exec(c.cmd, []byte(c.args))
-		assert.NotNil(cmd)
+		assert.NotNil(cmd, c.label)
 		assert.NoError(err, c.label)
 		if c.in != "" {
 			n, err := cmd.Write([]byte(c.in))

@@ -24,7 +24,7 @@ public class MainActivity extends AppCompatActivity {
 
         String message = "Error";
         try {
-            File f = this.getFileStreamPath("db1");
+            File f = this.getFileStreamPath("db2");
             repm.Connection conn = repm.Repm.open(f.getAbsolutePath());
             repm.Command cmd = conn.exec("code/put", null);
             cmd.write("function setGreeting(greet) { db.put('greet', greet); }".getBytes());

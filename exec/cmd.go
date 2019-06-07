@@ -1,6 +1,9 @@
 package exec
 
 import (
+	"errors"
+	"io"
+
 	"github.com/attic-labs/noms/go/types"
 	"github.com/attic-labs/noms/go/util/datetime"
 
@@ -11,6 +14,7 @@ import (
 type CodeExec struct {
 	In struct {
 		Origin string
+		Code   jsoms.Hash
 		Name   string
 		Args   jsoms.Value
 	}
@@ -26,15 +30,43 @@ func (c *CodeExec) Run(db *db.DB) (err error) {
 		args = c.In.Args.Value.(types.List)
 	}
 
-	code, err := db.GetCode()
+	var code types.Value
+	var reader io.Reader
+	if c.In.Name == "" {
+		return errors.New("Function name parameter is required")
+	}
+	if isSystemFunction(c.In.Name) {
+		if !c.In.Code.IsEmpty() {
+			return errors.New("Invalid to specify code bundle with system function")
+		}
+	} else {
+		if c.In.Code.IsEmpty() {
+			return errors.New("Code bundle parameter required")
+		}
+		code = db.Noms().ReadValue(c.In.Code.Hash)
+		if code == nil {
+			return errors.New("Specified code bundle does not exist")
+		}
+		if code.Kind() != types.BlobKind {
+			return errors.New("Specified code bundle hash is not a blob")
+		}
+		reader = code.(types.Blob).Reader()
+	}
+
+	err = Run(db, reader, c.In.Name, args)
 	if err != nil {
 		return err
 	}
 
-	err = Run(db, code, c.In.Name, args)
+	commit, changes, err := db.MakeTx(c.In.Origin, code.(types.Blob), c.In.Name, args, datetime.Now())
 	if err != nil {
 		return err
 	}
-
-	return db.Commit(c.In.Origin, c.In.Name, args, datetime.Now())
+	if changes {
+		_, err = db.Commit(commit)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

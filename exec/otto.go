@@ -2,6 +2,7 @@ package exec
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -10,8 +11,7 @@ import (
 	jn "github.com/attic-labs/noms/go/util/json"
 	o "github.com/robertkrimen/otto"
 
-	"github.com/aboodman/replicant/cmd"
-	"github.com/aboodman/replicant/db"
+	dbp "github.com/aboodman/replicant/db"
 	"github.com/aboodman/replicant/util/chk"
 )
 
@@ -21,7 +21,11 @@ const (
 	cmdGet
 )
 
-func Run(db *db.DB, source io.Reader, fn string, args types.List) error {
+func Run(db *dbp.DB, source io.Reader, fn string, args types.List) error {
+	if isSystemFunction(fn) {
+		return runSystemFunction(db, fn, args)
+	}
+
 	vm := o.New()
 
 	_, err := vm.Run(bootstrap)
@@ -42,7 +46,7 @@ func Run(db *db.DB, source io.Reader, fn string, args types.List) error {
 
 		switch int(cmdID) {
 		case cmdPut:
-			c := cmd.DataPut{}
+			c := dbp.DataPut{}
 			c.In.ID = args[1].String()
 			c.InStream = strings.NewReader(args[2].String())
 			err = c.Run(db)
@@ -51,7 +55,7 @@ func Run(db *db.DB, source io.Reader, fn string, args types.List) error {
 			}
 
 		case cmdHas:
-			c := cmd.DataHas{}
+			c := dbp.DataHas{}
 			c.In.ID = args[1].String()
 			err = c.Run(db)
 			if err != nil {
@@ -61,7 +65,7 @@ func Run(db *db.DB, source io.Reader, fn string, args types.List) error {
 			}
 
 		case cmdGet:
-			c := cmd.DataGet{}
+			c := dbp.DataGet{}
 			c.In.ID = args[1].String()
 			sb := &strings.Builder{}
 			c.OutStream = sb
@@ -91,4 +95,23 @@ func Run(db *db.DB, source io.Reader, fn string, args types.List) error {
 
 	_, err = f.Call(o.NullValue(), fn, string(buf.Bytes()))
 	return err
+}
+
+func runSystemFunction(db *dbp.DB, fn string, args types.List) error {
+	switch fn {
+	case ".code.put":
+		if args.Len() != 1 || args.Get(0).Kind() != types.BlobKind {
+			return errors.New("Expected 1 blob argument")
+		}
+
+		// TODO: Do we want to validate that it compiles or whatever???
+		return db.PutCode(args.Get(0).(types.Blob))
+	default:
+		chk.Fail("Unknown system function: %s", fn)
+		return nil
+	}
+}
+
+func isSystemFunction(fn string) bool {
+	return fn[0] == '.'
 }

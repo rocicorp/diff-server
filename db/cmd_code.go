@@ -1,12 +1,10 @@
-package cmd
+package db
 
 import (
 	"io"
 
 	"github.com/attic-labs/noms/go/types"
 	"github.com/attic-labs/noms/go/util/datetime"
-
-	"github.com/aboodman/replicant/db"
 )
 
 type CodePut struct {
@@ -18,12 +16,22 @@ type CodePut struct {
 	}
 }
 
-func (c *CodePut) Run(db *db.DB) (err error) {
+func (c *CodePut) Run(db *DB) error {
 	// TODO: Do we want to validate that it compiles or whatever???
 	b := types.NewBlob(db.Noms(), c.InStream)
-	err = db.PutCode(b)
-	db.Commit(c.In.Origin, ".code.put", types.NewList(db.Noms(), b), datetime.Now())
-	return
+	err := db.PutCode(b)
+	if err != nil {
+		return err
+	}
+	commit, changes, err := db.MakeTx(c.In.Origin, types.NewEmptyBlob(db.Noms()), ".code.put", types.NewList(db.Noms(), b), datetime.Now())
+	if err != nil {
+		return err
+	}
+	if changes {
+		_, err = db.Commit(commit)
+		return err
+	}
+	return nil
 }
 
 type CodeGet struct {
@@ -35,13 +43,13 @@ type CodeGet struct {
 	OutStream io.Writer
 }
 
-func (c *CodeGet) Run(db *db.DB) error {
-	r, err := db.GetCode()
+func (c *CodeGet) Run(db *DB) error {
+	b, err := db.GetCode()
 	if err != nil {
 		return err
 	}
 	c.Out.OK = true
-	_, err = io.Copy(c.OutStream, r)
+	_, err = io.Copy(c.OutStream, b.Reader())
 	if err != nil {
 		return err
 	}
