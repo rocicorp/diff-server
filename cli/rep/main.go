@@ -14,10 +14,10 @@ import (
 	jn "github.com/attic-labs/noms/go/util/json"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
-	"github.com/aboodman/replicant/cmd"
 	"github.com/aboodman/replicant/db"
 	"github.com/aboodman/replicant/exec"
 	"github.com/aboodman/replicant/util/chk"
+	"github.com/aboodman/replicant/util/cmd"
 	"github.com/aboodman/replicant/util/jsoms"
 	"github.com/aboodman/replicant/util/kp"
 )
