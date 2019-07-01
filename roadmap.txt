@@ -1,18 +1,23 @@
 mvp
 ===
 x generic c api which is basically a reflection of the cli (1 wk?)
-- sample app for ios and android embedding c api (1 wk)
-  - where is data stored on each device?
+- hello world that embeds api
+  x android
+  - ios
+    - did it once but removed when futzing with api - redo
+    - do it again using swiftui
+    - maybe use a todo sample as a starting point?
 x tx reg and execution apis (1-2 wk)
   x run js code (v8? otto?)
   x expose api via js bindings
   x js library to make it minimally easy to use
 - notif api (2 days)
 - sync (1 wk)
-  - need to decide on hostproof hosting or not
+  x local-side sync
+  - server-side sync
 - server -> store data where? (several weeks)
   - ideally non-hostproof hosting
-  - blocking notifs
+- blocking notifs
 
 later
 =====
