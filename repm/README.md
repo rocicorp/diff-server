@@ -12,6 +12,6 @@ REPLICANT_SRC_DIR=`pwd`
 cd $GOPATH/src
 mkdir -p github.com/aboodman
 ln -s $REPLICANT_SRC_DIR github.com/aboodman/replicant
-cd github.com/aboodman/replicant/api/repm
+cd github.com/aboodman/replicant/repm
 gomobile bind . 
 ```
