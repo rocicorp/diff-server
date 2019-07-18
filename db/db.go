@@ -12,7 +12,6 @@ import (
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/attic-labs/noms/go/types"
 	"github.com/attic-labs/noms/go/util/datetime"
-	"github.com/attic-labs/noms/go/util/json"
 
 	"github.com/aboodman/replicant/util/chk"
 )
@@ -55,6 +54,7 @@ Struct Commit {
 
 // Not thread-safe
 // TODO: need to think carefully about concurrency here
+// TODO: can't this be simplified now to remove the distinction between "prev" and "current"?
 type DB struct {
 	db       datas.Database
 	prevHead types.Value
@@ -126,6 +126,22 @@ func (db DB) Fork(from hash.Hash) (*DB, error) {
 	})
 }
 
+func (db DB) HeadRef() types.Ref {
+	if db.prevHead == nil {
+		return types.Ref{}
+	} else {
+		return types.NewRef(db.prevHead)
+	}
+}
+
+func (db DB) HeadRefSlice() []types.Ref {
+	if db.prevHead == nil {
+		return nil
+	} else {
+		return []types.Ref{types.NewRef(db.prevHead)}
+	}
+}
+
 func (db DB) Head() types.Value {
 	return db.prevHead
 }
@@ -140,18 +156,6 @@ func (db DB) Noms() datas.Database {
 	return db.db
 }
 
-func (db *DB) Put(id string, r io.Reader) error {
-	v, err := json.FromJSON(r, db.db, json.FromOptions{})
-	if err != nil {
-		return fmt.Errorf("Invalid JSON: %s", err.Error())
-	}
-	if v == nil {
-		return errors.New("Cannot write null")
-	}
-	db.data.Set(types.String(id), v)
-	return nil
-}
-
 func (db *DB) Has(id string) (bool, error) {
 	return db.data.Has(types.String(id)), nil
 }
@@ -161,27 +165,7 @@ func (db *DB) Get(id string, w io.Writer) (bool, error) {
 	if vv == nil {
 		return false, nil
 	}
-	v := vv.Value()
-	err := json.ToJSON(v, w, json.ToOptions{
-		Lists:  true,
-		Maps:   true,
-		Indent: "",
-	})
-	if err != nil {
-		return false, fmt.Errorf("Key '%s' has non-Replicant data of type: %s", id, types.TypeOf(v).Describe())
-	}
-	if err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
-func (db *DB) Del(id string) (bool, error) {
-	if !db.data.Has(types.String(id)) {
-		return false, nil
-	}
-	db.data.Remove(types.String(id))
-	return true, nil
+	return streamGet(id, vv.Value(), w)
 }
 
 func (db *DB) PutCode(b types.Blob) error {
@@ -196,28 +180,30 @@ func (db *DB) GetCode() (types.Blob, error) {
 	return db.code, nil
 }
 
-func (db *DB) MakeTx(origin string, code types.Blob, fn string, args types.List, date datetime.DateTime) (c Commit, changed bool, err error) {
-	newData := db.data.Map()
-	newCode := db.code
+func MakeTx(vrw types.ValueReadWriter, parent types.Ref, origin string, bundle types.Ref, fn string, args types.List, date datetime.DateTime, data types.Ref, code types.Ref) (c Commit, err error) {
+	/*
+		newData := db.data.Map()
+		newCode := db.code
 
-	if db.prevData.Equals(newData) && db.prevCode.Equals(newCode) {
-		return Commit{}, false, nil
-	}
+		if db.prevData.Equals(newData) && db.prevCode.Equals(newCode) {
+			return Commit{}, false, nil
+		}
+	*/
 
 	var h Commit
-	if db.prevHead != nil {
-		h.Parents = append(h.Parents, types.NewRef(db.prevHead))
+	if !parent.IsZeroValue() {
+		h.Parents = append(h.Parents, parent)
 	}
 	h.Meta.Date = date
 	h.Meta.Tx.Origin = origin
-	h.Meta.Tx.Code = db.db.WriteValue(code)
+	h.Meta.Tx.Code = vrw.WriteValue(code)
 	h.Meta.Tx.Name = fn
 	h.Meta.Tx.Args = args
-	h.Value.Data = db.db.WriteValue(newData)
-	h.Value.Code = db.db.WriteValue(newCode)
-	h.Original = marshal.MustMarshal(db.db, h).(types.Struct)
+	h.Value.Data = vrw.WriteValue(data)
+	h.Value.Code = vrw.WriteValue(code)
+	h.Original = marshal.MustMarshal(vrw, h).(types.Struct)
 
-	return h, true, nil
+	return h, nil
 }
 
 func (db *DB) MakeReorder(target Commit, date datetime.DateTime) (Commit, error) {

@@ -52,9 +52,6 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 	reg(sp, data, &db.DataGet{}, "get", "Read a value.", opt{
 		Args: []string{"ID"},
 	}, in, out, errs)
-	reg(sp, data, &db.DataDel{}, "del", "Delete a value.", opt{
-		Args: []string{"ID"},
-	}, in, out, errs)
 
 	_, err := app.Parse(args)
 	if err != nil {

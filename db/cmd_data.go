@@ -4,19 +4,6 @@ import (
 	"io"
 )
 
-type DataPut struct {
-	In struct {
-		ID string
-	}
-	InStream io.Reader
-	Out      struct {
-	}
-}
-
-func (c *DataPut) Run(db *DB) error {
-	return db.Put(c.In.ID, c.InStream)
-}
-
 type DataHas struct {
 	In struct {
 		ID string
@@ -50,18 +37,4 @@ func (c *DataGet) Run(db *DB) (err error) {
 		return wc.Close()
 	}
 	return nil
-}
-
-type DataDel struct {
-	In struct {
-		ID string
-	}
-	Out struct {
-		OK bool
-	}
-}
-
-func (c *DataDel) Run(db *DB) (err error) {
-	c.Out.OK, err = db.Del(c.In.ID)
-	return
 }
