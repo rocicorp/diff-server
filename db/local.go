@@ -1,4 +1,4 @@
-package sync
+package db
 
 import (
 	"errors"
@@ -12,7 +12,6 @@ import (
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/attic-labs/noms/go/types"
 
-	"github.com/aboodman/replicant/db"
 	"github.com/aboodman/replicant/exec"
 	"github.com/aboodman/replicant/util/history"
 )
@@ -46,12 +45,12 @@ import (
 // The actual destination database can be remote, but if access to it is highly latent,
 // then this will be much slower than running the merge function at the destination.
 type LocalDest struct {
-	db  *db.DB
+	db  *DB
 	now func() time.Time
 }
 
 func NewLocalDest(sp spec.Spec) (LocalDest, error) {
-	db, err := db.Load(sp)
+	db, err := Load(sp)
 	if err != nil {
 		return LocalDest{}, err
 	}
@@ -76,12 +75,12 @@ func (ld *LocalDest) Merge(clientHash hash.Hash) (merged types.Ref, err error) {
 	return r, nil
 }
 
-func (ld *LocalDest) merge(clientHead, localHead types.Value) (db.Commit, error) {
+func (ld *LocalDest) merge(clientHead, localHead types.Value) (Commit, error) {
 	cache := history.NewCache(ld.db.Noms())
 	if localHead != nil {
 		err := cache.Populate(localHead.Hash())
 		if err != nil {
-			return db.Commit{}, err
+			return Commit{}, err
 		}
 	}
 
@@ -89,17 +88,17 @@ func (ld *LocalDest) merge(clientHead, localHead types.Value) (db.Commit, error)
 
 	r, err := ld.apply(clientHead, cache)
 	if err != nil {
-		return db.Commit{}, fmt.Errorf("Could not apply client head: %s", err.Error())
+		return Commit{}, fmt.Errorf("Could not apply client head: %s", err.Error())
 	}
 
 	return r, nil
 }
 
-func (ld *LocalDest) apply(clientHead types.Value, cache *history.Cache) (db.Commit, error) {
-	var parsed db.Commit
+func (ld *LocalDest) apply(clientHead types.Value, cache *history.Cache) (Commit, error) {
+	var parsed Commit
 	err := marshal.Unmarshal(clientHead, &parsed)
 	if err != nil {
-		return db.Commit{}, err
+		return Commit{}, err
 	}
 
 	// base case - already committed
@@ -112,30 +111,30 @@ func (ld *LocalDest) apply(clientHead types.Value, cache *history.Cache) (db.Com
 	if !claimedBasis.IsZeroValue() {
 		_, err := ld.apply(claimedBasis.TargetValue(ld.db.Noms()), cache)
 		if err != nil {
-			return db.Commit{}, err
+			return Commit{}, err
 		}
 	}
 	basis := ld.db.Head()
 	r, err := ld.replay(parsed, types.NewRef(basis))
 	if err != nil {
-		return db.Commit{}, err
+		return Commit{}, err
 	}
 	return r, nil
 }
 
-func (ld *LocalDest) replay(commit db.Commit, basis types.Ref) (db.Commit, error) {
+func (ld *LocalDest) replay(commit Commit, basis types.Ref) (Commit, error) {
 	// TODO: if trust, and basis same as onto, skip forward
 	c := commit
 	for {
 		switch c.Type() {
-		case db.CommitTypeTx:
+		case CommitTypeTx:
 			{
 				code := c.Meta.Tx.Code.TargetValue(ld.db.Noms()).(types.Blob)
 				err := exec.Run(ld.db, code.Reader(), c.Meta.Tx.Name, c.Meta.Tx.Args)
 				if err != nil {
-					return db.Commit{}, err
+					return Commit{}, err
 				}
-				var r db.Commit
+				var r Commit
 				if basis.Equals(commit.Basis()) {
 					r = commit
 				} else {
@@ -145,25 +144,25 @@ func (ld *LocalDest) replay(commit db.Commit, basis types.Ref) (db.Commit, error
 					}
 					r, err = ld.db.MakeReorder(commit, datetime.DateTime{now})
 					if err != nil {
-						return db.Commit{}, err
+						return Commit{}, err
 					}
 				}
 				_, err = ld.db.Commit(r)
 				if err != nil {
-					return db.Commit{}, err
+					return Commit{}, err
 				}
 				return r, nil
 			}
-		case db.CommitTypeReorder, db.CommitTypeReject:
+		case CommitTypeReorder, CommitTypeReject:
 			{
 				target, err := c.TargetCommit(ld.db.Noms())
 				if err != nil {
-					return db.Commit{}, err
+					return Commit{}, err
 				}
 				c = target
 			}
 		default:
-			return db.Commit{}, fmt.Errorf("Unknown commit type for commit: %s", commit.Original.Hash())
+			return Commit{}, fmt.Errorf("Unknown commit type for commit: %s", commit.Original.Hash())
 		}
 	}
 }

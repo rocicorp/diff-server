@@ -1,4 +1,4 @@
-package sync
+package db
 
 import (
 	"fmt"
@@ -7,11 +7,9 @@ import (
 	"github.com/attic-labs/noms/go/hash"
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/attic-labs/noms/go/types"
-
-	"github.com/aboodman/replicant/db"
 )
 
-// Destination is a place that we can sync to, typically the Replicant
+// destination is a place that we can sync to, typically the Replicant
 // Server for the group the client is a part of.
 //
 // The clientHead must already exist at the destination before calling
@@ -19,14 +17,14 @@ import (
 //
 // The resulting merged head references data at the destination. That
 // data must be pulled back to the client before it can be used there.
-type Destination interface {
+type destination interface {
 	Merge(clientHead hash.Hash) (mergedHead hash.Hash, err error)
 }
 
 // DoSync implements bidirectional replication and conflict resolution between
 // the src (the client) and dest (the server). See the Replicant design
 // doc for details.
-func DoSync(src *db.DB, dest spec.Spec) (types.Ref, error) {
+func (src *DB) Sync(dest spec.Spec) (types.Ref, error) {
 	destination, err := NewLocalDest(dest)
 	if err != nil {
 		return types.Ref{}, err
@@ -53,7 +51,7 @@ func DoSync(src *db.DB, dest spec.Spec) (types.Ref, error) {
 	}
 
 	// 4: Commit merged head to client remote branch
-	_, err = src.Noms().FastForward(src.Noms().GetDataset(db.REMOTE_DATASET), merged)
+	_, err = src.Noms().FastForward(src.Noms().GetDataset(REMOTE_DATASET), merged)
 	if err != nil {
 		return types.Ref{}, err
 	}

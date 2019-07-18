@@ -20,9 +20,9 @@ const (
 )
 
 type Database interface {
-	Put(id string, data io.Reader) error
+	Put(id string, value types.Value) error
 	Has(id string) (ok bool, err error)
-	Get(id string, w io.Writer) (ok bool, err error)
+	Get(id string) (types.Value, error)
 }
 
 func Run(db Database, source io.Reader, fn string, args types.List) error {

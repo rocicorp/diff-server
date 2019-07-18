@@ -1,4 +1,4 @@
-package sync
+package db
 
 import (
 	"bytes"
@@ -14,7 +14,6 @@ import (
 	"github.com/attic-labs/noms/go/util/datetime"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/aboodman/replicant/db"
 	"github.com/aboodman/replicant/exec"
 	"github.com/aboodman/replicant/util/chk"
 )
@@ -31,9 +30,9 @@ func TestReplay(t *testing.T) {
 	// - reordered commit with wrong basis
 
 	now := time.Now()
-	var d *db.DB
-	var fork, serverHead, clientHead db.Commit
-	var expected db.Commit
+	var d *DB
+	var fork, serverHead, clientHead Commit
+	var expected Commit
 
 	// - transaction already ordered correctly
 	d = initDB(assert)
@@ -70,7 +69,7 @@ func TestReplay(t *testing.T) {
 	merge(d, serverHead.Original.Hash(), now, clientHead, simulatedClient, assert)
 }
 
-func merge(d *db.DB, forkPoint hash.Hash, now time.Time, clientHead, expected db.Commit, assert *assert.Assertions) {
+func merge(d *DB, forkPoint hash.Hash, now time.Time, clientHead, expected Commit, assert *assert.Assertions) {
 	d, err := d.Fork(forkPoint)
 	assert.NoError(err)
 	ld := LocalDest{db: d}
@@ -87,11 +86,11 @@ func merge(d *db.DB, forkPoint hash.Hash, now time.Time, clientHead, expected db
 	}
 }
 
-func initDB(assert *assert.Assertions) *db.DB {
-	d, dir := db.LoadTempDB(assert)
+func initDB(assert *assert.Assertions) *DB {
+	d, dir := LoadTempDB(assert)
 	fmt.Println("testdb: ", dir)
 
-	cmd := db.CodePut{}
+	cmd := CodePut{}
 	cmd.In.Origin = "c1"
 	cmd.InStream = types.NewBlob(d.Noms(), strings.NewReader(`
 function append(id, item) {
@@ -106,7 +105,7 @@ function append(id, item) {
 	return d
 }
 
-func run(d *db.DB, item string, basis *db.Commit, doCommit bool) db.Commit {
+func run(d *DB, item string, basis *Commit, doCommit bool) Commit {
 	var err error
 	if basis != nil {
 		d, err = d.Fork(basis.Original.Hash())
@@ -128,11 +127,11 @@ func run(d *db.DB, item string, basis *db.Commit, doCommit bool) db.Commit {
 	return commit
 }
 
-func simulate(d *db.DB, date datetime.DateTime, item string, basis types.Value, value []string) db.Commit {
+func simulate(d *DB, date datetime.DateTime, item string, basis types.Value, value []string) Commit {
 	code, err := d.GetCode()
 	chk.NoError(err)
 	args := types.NewList(d.Noms(), types.String("o1"), types.String(item))
-	r := db.Commit{}
+	r := Commit{}
 	if basis != nil {
 		r.Parents = []types.Ref{types.NewRef(basis)}
 	}
@@ -155,10 +154,10 @@ func val(noms types.ValueReadWriter, s []string) types.List {
 	return r.List()
 }
 
-func simulateReorder(d *db.DB, date datetime.DateTime, basis *db.Commit, target db.Commit, value []string) db.Commit {
+func simulateReorder(d *DB, date datetime.DateTime, basis *Commit, target Commit, value []string) Commit {
 	d, err := d.Fork(basis.Original.Hash())
 	chk.NoError(err)
-	r := db.Commit{}
+	r := Commit{}
 	r.Parents = append(r.Parents, types.NewRef(target.Original))
 	if basis != nil {
 		r.Parents = append(r.Parents, types.NewRef(basis.Original))
