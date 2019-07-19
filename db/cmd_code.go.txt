@@ -1,6 +1,7 @@
 package db
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/attic-labs/noms/go/types"
@@ -19,7 +20,7 @@ type CodePut struct {
 
 func (c *CodePut) Run(db *DB) error {
 	b := types.NewBlob(db.noms, c.InStream)
-	return db.SetBundle(b)
+	return db.PutBundle(b)
 	/*
 		// TODO: Do we want to validate that it compiles or whatever???
 		if b.Equals(db.HeadCommit().Value.Code) {
@@ -45,12 +46,12 @@ type CodeGet struct {
 }
 
 func (c *CodeGet) Run(db *DB) error {
-	r, err := db.Bundle()
+	b, err := db.Bundle()
 	if err != nil {
 		return err
 	}
 	c.Out.OK = true
-	_, err = io.Copy(c.OutStream, r)
+	_, err = io.Copy(c.OutStream, b.Reader())
 	if err != nil {
 		return err
 	}
@@ -76,7 +77,10 @@ type CodeExec struct {
 }
 
 func (c *CodeExec) Run(db *DB) (err error) {
-	return db.Exec(c.In.Name)
+	if l, ok := c.In.Args.Value.(types.List); ok {
+		return db.Exec(c.In.Name, l)
+	}
+	return fmt.Errorf("Args must be a list")
 }
 
 /*

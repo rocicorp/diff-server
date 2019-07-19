@@ -28,8 +28,8 @@ type DataGet struct {
 	OutStream io.Writer
 }
 
-func (c *DataGet) Run(db *DB) (err error) {
-	c.Out.OK, err = db.Get(c.In.ID, c.OutStream)
+func (c *DataGet) Run(db *DB) error {
+	v, err := db.Get(c.In.ID)
 	if err != nil {
 		return err
 	}

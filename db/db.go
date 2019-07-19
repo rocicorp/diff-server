@@ -3,7 +3,6 @@ package db
 import (
 	"errors"
 	"fmt"
-	"io"
 	"strings"
 
 	"github.com/attic-labs/noms/go/datas"
@@ -70,9 +69,9 @@ func Load(sp spec.Spec, origin string) (*DB, error) {
 
 	if !ds.HasHead() {
 		genesis := Commit{}
-		genesis.Value.Data = types.NewMap(noms)
-		genesis.Value.Code = types.NewBlob(noms)
-		genesis.Original = marshal.MustMarshal(noms, genesis)
+		genesis.Value.Data = noms.WriteValue(types.NewMap(noms))
+		genesis.Value.Code = noms.WriteValue(types.NewBlob(noms))
+		genesis.Original = marshal.MustMarshal(noms, genesis).(types.Struct)
 		genRef := noms.WriteValue(genesis.Original)
 		_, err := noms.FastForward(ds, genRef)
 		if err != nil {
@@ -109,12 +108,12 @@ func (db *DB) Put(path string, v types.Value) error {
 	return db.execImpl(".putValue", types.NewList(db.noms, v))
 }
 
-func (db *DB) Bundle() (io.Reader, error) {
-	return db.head.Bundle(db.noms).Reader(), nil
+func (db *DB) Bundle() (types.Blob, error) {
+	return db.head.Bundle(db.noms), nil
 }
 
-func (db *DB) PutBundle(b io.Reader) error {
-	return db.execImpl(".putBundle", types.NewList(db.noms, types.N))
+func (db *DB) PutBundle(b types.Blob) error {
+	return db.execImpl(".putBundle", types.NewList(db.noms, b))
 }
 
 func (db *DB) Exec(function string, args types.List) error {
@@ -132,9 +131,9 @@ func (db *DB) Sync(remote spec.Spec) error {
 // interface in terms of noms because it will get called during sync, where we already have noms data.
 func (db *DB) execImpl(function string, args types.List) error {
 	oldBundle := db.head.Bundle(db.noms)
-	newBundle := bundle
+	newBundle := oldBundle
 	oldData := db.head.Data(db.noms)
-	ed := editor{oldData.Edit()}
+	ed := editor{db.noms, oldData.Edit()}
 
 	commit := Commit{}
 	commit.Parents = []types.Ref{types.NewRef(db.head.Original)}

@@ -20,6 +20,7 @@ const (
 )
 
 type Database interface {
+	Noms() types.ValueReadWriter
 	Put(id string, value types.Value) error
 	Has(id string) (ok bool, err error)
 	Get(id string) (types.Value, error)
@@ -46,7 +47,12 @@ func Run(db Database, source io.Reader, fn string, args types.List) error {
 
 		switch int(cmdID) {
 		case cmdPut:
-			err = db.Put(args[1].String(), strings.NewReader(args[2].String()))
+			v, err := jn.FromJSON(strings.NewReader(args[2].String()), db.Noms(), jn.FromOptions{})
+			if err != nil {
+				res.Set("error", err.Error())
+				break
+			}
+			err = db.Put(args[1].String(), v)
 			if err != nil {
 				res.Set("error", err.Error())
 			}
@@ -60,14 +66,23 @@ func Run(db Database, source io.Reader, fn string, args types.List) error {
 			}
 
 		case cmdGet:
-			sb := &strings.Builder{}
-			ok, err := db.Get(args[1].String(), sb)
+			v, err := db.Get(args[1].String())
 			if err != nil {
 				res.Set("error", err.Error())
-			} else {
-				res.Set("ok", ok)
-				res.Set("data", sb.String())
+				break
 			}
+			if v == nil {
+				res.Set("ok", false)
+				break
+			}
+			sb := &strings.Builder{}
+			err = jn.ToJSON(v, sb, jn.ToOptions{Lists: true, Maps: true})
+			if err != nil {
+				res.Set("error", err.Error())
+				break
+			}
+			res.Set("ok", true)
+			res.Set("data", sb.String())
 		}
 		return res.Value()
 	})
