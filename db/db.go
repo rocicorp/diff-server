@@ -105,7 +105,7 @@ func (db *DB) Get(id string) (types.Value, error) {
 }
 
 func (db *DB) Put(path string, v types.Value) error {
-	return db.execImpl(".putValue", types.NewList(db.noms, v))
+	return db.execImpl(".putValue", types.NewList(db.noms, types.String(path), v))
 }
 
 func (db *DB) Bundle() (types.Blob, error) {

@@ -140,6 +140,7 @@ func (c Commit) MarshalNoms(vrw types.ValueReadWriter) (val types.Value, err err
 		return nil, err
 	}
 	rs := r.(types.Struct)
+	fmt.Println(types.TypeOf(rs).Describe())
 	meta := rs.Get("meta").(types.Struct)
 	var found = false
 	for _, f := range []string{"tx", "reorder", "reject"} {
