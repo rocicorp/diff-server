@@ -44,8 +44,8 @@ type Commit struct {
 	}
 	Original types.Struct `noms:",original"`
 
-	data   types.Map
-	bundle types.Blob
+	data   types.Map  `noms:"-"`
+	bundle types.Blob `noms:"-"`
 }
 
 type CommitType uint8
@@ -151,9 +151,6 @@ func (c Commit) MarshalNoms(vrw types.ValueReadWriter) (val types.Value, err err
 			found = true
 		}
 	}
-	if !found {
-		return nil, errors.New("One of meta.{tx, reorder, reject} must be set")
-	}
 	return rs.Set("meta", meta), nil
 }
 
@@ -164,7 +161,7 @@ func (c *Commit) UnmarshalNoms(v types.Value) error {
 	}
 	op, ok := c.Original.Get("meta").(types.Struct).MaybeGet("op")
 	if !ok {
-		return errors.New("Required field 'op' not present")
+		return nil
 	}
 	ops, ok := op.(types.Struct)
 	if !ok {

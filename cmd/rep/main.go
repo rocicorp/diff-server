@@ -34,25 +34,25 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 
 	sp := kp.DatabaseSpec(app.Flag("db", "Database to connect to. See https://github.com/attic-labs/noms/blob/master/doc/spelling.md#spelling-databases.").Required().PlaceHolder("/path/to/db"))
 	origin := app.Flag("origin", "The unique name of the client to use as the origin of any write transactions.").Default("cli").String()
-	var rdb *db.DB
+	var rdb db.DB
 	app.Action(func(_ *kingpin.ParseContext) error {
 		r, err := db.Load(*sp, *origin)
 		if err != nil {
 			return err
 		}
-		*rdb = *r
+		rdb = *r
 		return nil
 	})
 
 	code := app.Command("code", "Interact with code.")
-	getBundle(code, rdb, out)
-	putBundle(code, rdb, sp, in)
-	exec(code, rdb, sp)
+	getBundle(code, &rdb, out)
+	putBundle(code, &rdb, sp, in)
+	exec(code, &rdb, sp)
 
 	data := app.Command("data", "Interact with data.")
-	has(data, rdb, out)
-	get(data, rdb, out)
-	put(data, rdb, sp, in)
+	has(data, &rdb, out)
+	get(data, &rdb, out)
+	put(data, &rdb, sp, in)
 
 	_, err := app.Parse(args)
 	if err != nil {

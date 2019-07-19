@@ -28,7 +28,7 @@ Struct Commit {
 		date: Struct DateTime {
 			secSinceEpoch: Number,
 		},
-		op: Struct Tx {
+		op?: Struct Tx {
 			origin: String,
 			code: Ref<Blob>,
 			name: String,
@@ -79,13 +79,13 @@ func Load(sp spec.Spec, origin string) (*DB, error) {
 		}
 		r.head = genesis
 	} else {
-		headType := types.TypeOf(ds.HeadValue())
+		headType := types.TypeOf(ds.Head())
 		if !types.IsSubtype(schema, headType) {
 			return nil, fmt.Errorf("Cannot load database. Specified head has non-Replicant data of type: %s", headType.Describe())
 		}
 
 		var head Commit
-		err := marshal.Unmarshal(ds.HeadValue(), &head)
+		err := marshal.Unmarshal(ds.Head(), &head)
 		if err != nil {
 			return nil, err
 		}
