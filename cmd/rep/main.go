@@ -1,24 +1,19 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
-	"reflect"
 	"strconv"
 	"strings"
 
-	"github.com/attic-labs/noms/go/hash"
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/attic-labs/noms/go/types"
 	jn "github.com/attic-labs/noms/go/util/json"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/aboodman/replicant/db"
-	"github.com/aboodman/replicant/exec"
-	"github.com/aboodman/replicant/util/chk"
-	"github.com/aboodman/replicant/util/cmd"
-	"github.com/aboodman/replicant/util/jsoms"
 	"github.com/aboodman/replicant/util/kp"
 )
 
@@ -38,20 +33,26 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 	app.Terminate(exit)
 
 	sp := kp.DatabaseSpec(app.Flag("db", "Database to connect to. See https://github.com/attic-labs/noms/blob/master/doc/spelling.md#spelling-databases.").Required().PlaceHolder("/path/to/db"))
+	origin := app.Flag("origin", "The unique name of the client to use as the origin of any write transactions.").Default("cli").String()
+	var rdb *db.DB
+	app.Action(func(_ *kingpin.ParseContext) error {
+		r, err := db.Load(*sp, *origin)
+		if err != nil {
+			return err
+		}
+		*rdb = *r
+		return nil
+	})
 
 	code := app.Command("code", "Interact with code.")
-	regPut(sp, code, in)
-	reg(sp, code, &db.CodeGet{}, "get", "Get the current transaction bundle.", opt{}, in, out, errs)
-	regExec(sp, code)
+	getBundle(code, rdb, out)
+	putBundle(code, rdb, sp, in)
+	exec(code, rdb, sp)
 
 	data := app.Command("data", "Interact with data.")
-	reg(sp, data, &db.DataHas{}, "has", "Check value existence.", opt{
-		Args:     []string{"ID"},
-		OutField: "OK",
-	}, in, out, errs)
-	reg(sp, data, &db.DataGet{}, "get", "Read a value.", opt{
-		Args: []string{"ID"},
-	}, in, out, errs)
+	has(data, rdb, out)
+	get(data, rdb, out)
+	put(data, rdb, sp, in)
 
 	_, err := app.Parse(args)
 	if err != nil {
@@ -59,27 +60,30 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 		exit(1)
 	}
 }
-
-func regPut(sp *spec.Spec, parent *kingpin.CmdClause, in io.Reader) {
-	kc := parent.Command("put", "Set a new JavaScript transaction bundle.")
-	rc := &db.CodePut{}
-	rc.InStream = in
-
-	kc.Flag("origin", "Name for the source of this transaction").Default("cli").StringVar(&rc.In.Origin)
-
+func getBundle(parent *kingpin.CmdClause, db *db.DB, out io.Writer) {
+	kc := parent.Command("get", "Get the current JavaScript code bundle.")
 	kc.Action(func(_ *kingpin.ParseContext) error {
-		return runCommand(rc, sp)
+		b, err := db.Bundle()
+		if err != nil {
+			return err
+		}
+		_, err = io.Copy(out, b.Reader())
+		return err
 	})
 }
 
-func regExec(sp *spec.Spec, parent *kingpin.CmdClause) {
-	kc := parent.Command("run", "Execute a transaction.")
-	rc := &exec.CodeExec{}
+func putBundle(parent *kingpin.CmdClause, db *db.DB, sp *spec.Spec, in io.Reader) {
+	kc := parent.Command("put", "Set a new JavaScript code bundle.")
+	kc.Action(func(_ *kingpin.ParseContext) error {
+		return db.PutBundle(types.NewBlob(sp.GetDatabase(), in))
+	})
+}
 
-	kc.Flag("origin", "Name for the source of this transaction").Default("cli").StringVar(&rc.In.Origin)
-	kp.Hash(kc.Flag("code", "Hash of code bundle to use - defaults to current"), &rc.In.Code.Hash)
-	kc.Arg("name", "Name of function from current transaction bundle to execute").Required().StringVar(&rc.In.Name)
-	raw := kc.Arg("args", "").Strings()
+func exec(parent *kingpin.CmdClause, db *db.DB, sp *spec.Spec) {
+	kc := parent.Command("run", "Execute a transaction.")
+
+	name := kc.Arg("name", "Name of function from current transaction bundle to execute.").Required().String()
+	raw := kc.Arg("args", "JSON-formatted arguments to the function. For convenience, bare strings are also supported.").Strings()
 
 	parse := func(s string) (types.Value, error) {
 		switch s {
@@ -108,95 +112,50 @@ func regExec(sp *spec.Spec, parent *kingpin.CmdClause) {
 			}
 			args = append(args, v)
 		}
-		rc.In.Args = jsoms.Value{Value: types.NewList(sp.GetDatabase(), args...)}
-
-		if rc.In.Code.IsEmpty() {
-			db, err := db.Load(*sp)
-			if err != nil {
-				return err
-			}
-			b, err := db.GetCode()
-			if err != nil {
-				return err
-			}
-			rc.In.Code = jsoms.Hash{b.Hash()}
-		}
-
-		return runCommand(rc, sp)
+		return db.Exec(*name, types.NewList(sp.GetDatabase(), args...))
 	})
 }
 
-func reg(sp *spec.Spec, parent *kingpin.CmdClause, rc cmd.Command, name, doc string, o opt, in io.Reader, out, errs io.Writer) {
-	val := reflect.ValueOf(rc).Elem()
-	inVal := val.FieldByName("In")
-	outVal := val.FieldByName("Out")
-
-	kc := parent.Command(name, doc)
-
-	for i := 0; i < inVal.NumField(); i++ {
-		fn := inVal.Type().Field(i).Name
-		fv := inVal.Field(i)
-		clause := kc.Arg(fn, "TODO").Required()
-		// TODO: optional if pointer type
-		switch fullName(fv.Type()) {
-		case ".string":
-			clause.StringVar(fv.Addr().Interface().(*string))
-		case "github.com/attic-labs/noms/go/hash.Hash":
-			kp.Hash(clause, fv.Addr().Interface().(*hash.Hash))
-		default:
-			panic(fmt.Sprintf("Unexpected field type: %+v", fv.Type()))
-		}
-	}
-
-	rcv := reflect.ValueOf(rc).Elem()
-	inStreamField := rcv.FieldByName("InStream")
-	if inStreamField.IsValid() {
-		inStreamField.Set(reflect.ValueOf(in))
-	}
-
-	outStreamField := rcv.FieldByName("OutStream")
-	if outStreamField.IsValid() {
-		outStreamField.Set(reflect.ValueOf(out))
-	}
-
+func has(parent *kingpin.CmdClause, db *db.DB, out io.Writer) {
+	kc := parent.Command("has", "Check whether a value exists in the database.")
+	id := kc.Arg("id", "id of the value to check for").Required().String()
 	kc.Action(func(_ *kingpin.ParseContext) error {
-		err := runCommand(rc, sp)
+		ok, err := db.Has(*id)
 		if err != nil {
 			return err
 		}
-
-		if o.OutField != "" {
-			if outStreamField.IsValid() {
-				chk.Fail("Cannot set both OutField and OutStream")
-			}
-			fv := field(outVal, o.OutField)
-			fmt.Fprintf(out, "%v\n", fv.Interface())
+		if ok {
+			out.Write([]byte("true"))
+		} else {
+			out.Write([]byte("false"))
 		}
-
 		return nil
 	})
 }
 
-func runCommand(c cmd.Command, sp *spec.Spec) error {
-	db, err := db.Load(*sp)
-	if err != nil {
-		return err
-	}
-
-	err = c.Run(db)
-	if err != nil {
-		return err
-	}
-
-	return nil
+func get(parent *kingpin.CmdClause, db *db.DB, out io.Writer) {
+	kc := parent.Command("get", "Reads a value from the database.")
+	id := kc.Arg("id", "id of the value to get").Required().String()
+	kc.Action(func(_ *kingpin.ParseContext) error {
+		v, err := db.Get(*id)
+		if err != nil {
+			return err
+		}
+		if v == nil {
+			return errors.New("not found")
+		}
+		return jn.ToJSON(v, out, jn.ToOptions{Lists: true, Maps: true, Indent: "  "})
+	})
 }
 
-func fullName(t reflect.Type) string {
-	return t.PkgPath() + "." + t.Name()
-}
-
-func field(v reflect.Value, n string) reflect.Value {
-	r := v.FieldByName(n)
-	chk.False(r == reflect.Value{}, "Unknown field: %s", n)
-	return r
+func put(parent *kingpin.CmdClause, db *db.DB, sp *spec.Spec, in io.Reader) {
+	kc := parent.Command("put", "Reads a JSON-formated value from stdin and puts it into the database.")
+	id := kc.Arg("id", "id of the value to put").Required().String()
+	kc.Action(func(_ *kingpin.ParseContext) error {
+		v, err := jn.FromJSON(in, sp.GetDatabase(), jn.FromOptions{})
+		if err != nil {
+			return err
+		}
+		return db.Put(*id, v)
+	})
 }
