@@ -125,9 +125,9 @@ func has(parent *kingpin.CmdClause, db *db.DB, out io.Writer) {
 			return err
 		}
 		if ok {
-			out.Write([]byte("true"))
+			out.Write([]byte("true\n"))
 		} else {
-			out.Write([]byte("false"))
+			out.Write([]byte("false\n"))
 		}
 		return nil
 	})

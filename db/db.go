@@ -28,9 +28,9 @@ Struct Commit {
 		date: Struct DateTime {
 			secSinceEpoch: Number,
 		},
-		op?: Struct Tx {
+		op?: Struct Tx {  // op omitted for genesis commit
 			origin: String,
-			code: Ref<Blob>,
+			code?: Ref<Blob>,  // code omitted for system functions
 			name: String,
 			args: List<Value>,
 		} |
