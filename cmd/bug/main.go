@@ -14,16 +14,16 @@ type Foo struct {
 }
 
 func main() {
-	// TODO: log this bug at noms
-	// basically: an empty/zero ref gets encoded to an empty buffer
-	// typically it's hard to cause this to happen but easy with marshaling, and the API does allow it  (see below)
-	// we should do ... something when encoding an empty noms value.
-	// either reject it and fail the encode, or encode a meaningful zero value, or something.
 	ts := &chunks.TestStorage{}
 	vs := types.NewValueStore(ts.NewView())
 
-	//nf := marshal.MustMarshal(vs, Foo{Baz:"monkey"}).(types.Struct)
-	//fmt.Println(nf.Get("bar"))
+	// This is how I discovered this bug - very easy mistake to make
+	// note missing `noms:",omitempty"` on `Bar` field.
+	//
+	// nf := marshal.MustMarshal(vs, Foo{Baz:"monkey"}).(types.Struct)
+	// fmt.Println(nf.Get("bar"))
+	//
+	// ... but you can also get the bug directly via the types API:
 
 	foo := types.NewStruct("", types.StructData{
 		"bar": types.Ref{},

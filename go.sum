@@ -9,6 +9,7 @@ github.com/attic-labs/graphql v0.0.0-20190507195614-b6552d20145f/go.mod h1:1U3eD
 github.com/attic-labs/kingpin v2.2.7-0.20180312050558-442efcfac769+incompatible/go.mod h1:Cp18FeDCvsK+cD2QAGkqerGjrgSXLiJWnjHeY2mneBc=
 github.com/attic-labs/noms v0.0.0-20190508041645-614eb763b982 h1:EIE1dC1o1Rd90RLvGxilW1mX3aB3lNc0LA6RUJabrMw=
 github.com/attic-labs/noms v0.0.0-20190508041645-614eb763b982/go.mod h1:1a5gpKOs8RN45+kajGg58gpDiQI+6RxJCRkZECSpp2Y=
+github.com/attic-labs/noms v0.0.0-20190623060218-889dc5547cf3 h1:bYIs27zLnBlLKkQSd8xCV78tbvmudBNRi4l7/tRn2uE=
 github.com/aws/aws-sdk-go v1.19.26 h1:GavKlzJDfYQGoS4jn2F+KYYZlR8QEhrLPfpf8+oJhS4=
 github.com/aws/aws-sdk-go v1.19.26/go.mod h1:KmX6BPdI08NWTb3/sm4ZGu5ShLoqVDhKgpiN924inxo=
 github.com/aws/aws-sdk-go v1.19.28 h1:u0KMC+Qv0YVyz8YR6mREEtslSPkdUMzXgDJFD5196O8=

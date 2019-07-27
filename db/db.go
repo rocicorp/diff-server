@@ -25,11 +25,11 @@ var (
 Struct Commit {
 	parents: Set<Ref<Cycle<Commit>>>,
 	meta: Struct {
+		origin: String,
 		date: Struct DateTime {
 			secSinceEpoch: Number,
 		},
 		op?: Struct Tx {  // op omitted for genesis commit
-			origin: String,
 			code?: Ref<Blob>,  // code omitted for system functions
 			name: String,
 			args: List<Value>,
@@ -68,10 +68,7 @@ func Load(sp spec.Spec, origin string) (*DB, error) {
 	}
 
 	if !ds.HasHead() {
-		genesis := Commit{}
-		genesis.Value.Data = noms.WriteValue(types.NewMap(noms))
-		genesis.Value.Code = noms.WriteValue(types.NewBlob(noms))
-		genesis.Original = marshal.MustMarshal(noms, genesis).(types.Struct)
+		genesis := makeGenesis(noms)
 		genRef := noms.WriteValue(genesis.Original)
 		_, err := noms.FastForward(ds, genRef)
 		if err != nil {
@@ -105,7 +102,7 @@ func (db *DB) Get(id string) (types.Value, error) {
 }
 
 func (db *DB) Put(path string, v types.Value) error {
-	return db.execImpl(".putValue", types.NewList(db.noms, types.String(path), v))
+	return db.execInternal(types.Blob{}, ".putValue", types.NewList(db.noms, types.String(path), v))
 }
 
 func (db *DB) Bundle() (types.Blob, error) {
@@ -113,34 +110,47 @@ func (db *DB) Bundle() (types.Blob, error) {
 }
 
 func (db *DB) PutBundle(b types.Blob) error {
-	return db.execImpl(".putBundle", types.NewList(db.noms, b))
+	return db.execInternal(types.Blob{}, ".putBundle", types.NewList(db.noms, b))
 }
 
 func (db *DB) Exec(function string, args types.List) error {
 	if strings.HasPrefix(function, ".") {
 		return fmt.Errorf("Cannot call system function: %s", function)
 	}
-	return db.execImpl(function, args)
+	return db.execInternal(db.head.Bundle(db.noms), function, args)
 }
 
-func (db *DB) Sync(remote spec.Spec) error {
+func (db *DB) execInternal(bundle types.Blob, function string, args types.List) (error) {
+	basis := types.NewRef(db.head.Original)
+	newBundle, newData, err := db.execImpl(basis, bundle, function, args)
+	if err != nil {
+		return err
+	}
+
+	var bundleRef types.Ref
+	if bundle != (types.Blob{}) {
+		bundleRef = types.NewRef(bundle)
+	}
+
+	commit := makeTx(db.noms, basis, db.origin, datetime.Now(), bundleRef, function, args, newBundle, newData)
+	commitRef := db.noms.WriteValue(commit.Original)
+
+	// FastForward not strictly needed here because we should have already ensured that we were
+	// fast-forwarding outside of Noms, but it's a nice sanity check.
+	_, err = db.noms.FastForward(db.noms.GetDataset(local_dataset), commitRef)
+	if err != nil {
+		return err
+	}
+	db.head = commit
 	return nil
 }
 
-// This is the one that will get called during sync, or one like it that doesn't commit.
-// interface in terms of noms because it will get called during sync, where we already have noms data.
-func (db *DB) execImpl(function string, args types.List) error {
-	oldBundle := db.head.Bundle(db.noms)
-	newBundle := oldBundle
+// TODO: add date and random source to this so that sync can set it up correctly when replaying.
+func (db *DB) execImpl(basis types.Ref, bundle types.Blob, function string, args types.List) (newBundleRef types.Ref, newDataRef types.Ref, err error) {
+	oldBundle := bundle
+	newBundle := bundle
 	oldData := db.head.Data(db.noms)
 	ed := editor{db.noms, oldData.Edit()}
-
-	commit := Commit{}
-	commit.Parents = []types.Ref{types.NewRef(db.head.Original)}
-	commit.Meta.Date = datetime.Now()
-	commit.Meta.Tx.Origin = db.origin
-	commit.Meta.Tx.Name = function
-	commit.Meta.Tx.Args = args
 
 	if strings.HasPrefix(function, ".") {
 		switch function {
@@ -154,30 +164,13 @@ func (db *DB) execImpl(function string, args types.List) error {
 			break
 		}
 	} else {
-		commit.Meta.Tx.Code = types.NewRef(oldBundle)
 		err := exec.Run(ed, oldBundle.Reader(), function, args)
 		if err != nil {
-			return err
+			return types.Ref{}, types.Ref{}, err
 		}
 	}
 
 	newData := ed.Finalize()
-	if newData.Equals(oldData) && newBundle.Equals(oldBundle) {
-		return nil
-	}
 
-	commit.Value.Data = db.noms.WriteValue(newData)
-	commit.Value.Code = db.noms.WriteValue(newBundle)
-	commit.Original = marshal.MustMarshal(db.noms, commit).(types.Struct)
-
-	nomsCommit := db.noms.WriteValue(commit.Original)
-
-	// FastForward not strictly needed here because we should have already ensured that we were
-	// fast-forwarding outside of Noms, but it's a nice sanity check.
-	_, err := db.noms.FastForward(db.noms.GetDataset(local_dataset), nomsCommit)
-	if err != nil {
-		return err
-	}
-	db.head = commit
-	return nil
+	return db.noms.WriteValue(newBundle), db.noms.WriteValue(newData), nil
 }

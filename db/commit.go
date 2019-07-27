@@ -13,10 +13,16 @@ import (
 
 // TODO: These types should be private
 type Tx struct {
-	Origin string
-	Code   types.Ref `noms:",omitempty"`
+	Code   types.Ref `noms:",omitempty"`  // TODO: rename: "Bundle/BundleRef"
 	Name   string
 	Args   types.List
+}
+
+func (tx Tx) Bundle(noms types.ValueReader) types.Blob {
+	if tx.Code.IsZeroValue() {
+		return types.Blob{}
+	}
+	return tx.Code.TargetValue(noms).(types.Blob)
 }
 
 type Reorder struct {
@@ -31,6 +37,7 @@ type Reject struct {
 type Commit struct {
 	Parents []types.Ref `noms:",set"`
 	Meta    struct {
+		Origin string
 		// TODO: Date should maybe become part of tx, since date of reorder/reject is server-node specific.
 		Date datetime.DateTime
 		// TODO: Maybe change to "source"? "invoke"? "run"?
@@ -39,8 +46,8 @@ type Commit struct {
 		Reject  Reject  `noms:",omitempty"`
 	}
 	Value struct {
-		Data types.Ref `noms:",omitempty"`
 		Code types.Ref `noms:",omitempty"`
+		Data types.Ref `noms:",omitempty"`  // TODO: Rename "Bundle"
 	}
 	Original types.Struct `noms:",original"`
 
@@ -94,6 +101,17 @@ func (c Commit) Target() types.Ref {
 	return types.Ref{}
 }
 
+func (c Commit) FinalReorderTarget(noms types.ValueReader) (Commit, error) {
+	switch c.Type() {
+	case CommitTypeTx:
+		return c, nil
+	case CommitTypeReorder:
+		return c.FinalReorderTarget(noms)
+	default:
+		return Commit{}, fmt.Errorf("Unexpected reorder target of type %s: %s", c.Type(), types.EncodedValue(c.Original))
+	}
+}
+
 func (c Commit) TargetValue(noms types.ValueReadWriter) types.Value {
 	t := c.Target()
 	if t.IsZeroValue() {
@@ -112,7 +130,7 @@ func (c Commit) TargetCommit(noms types.ValueReadWriter) (Commit, error) {
 	return r, err
 }
 
-func (c Commit) Basis() types.Ref {
+func (c Commit) BasisRef() types.Ref {
 	switch len(c.Parents) {
 	case 0:
 		return types.Ref{}
@@ -132,6 +150,23 @@ func (c Commit) Basis() types.Ref {
 	}
 	chk.Fail("Unexpected number of parents (%d) for commit with hash: %s", len(c.Parents), c.Original.Hash().String())
 	return types.Ref{}
+}
+
+func (c Commit) BasisValue(noms types.ValueReader) types.Value {
+	r := c.BasisRef()
+	if r.IsZeroValue() {
+		return nil
+	}
+	return r.TargetValue(noms)
+}
+
+func (c Commit) Basis(noms types.ValueReader) (Commit, error) {
+	var r Commit
+	err := marshal.Unmarshal(c.BasisValue(noms), &r)
+	if err != nil {
+		return Commit{}, err
+	}
+	return r, nil
 }
 
 func (c Commit) MarshalNoms(vrw types.ValueReadWriter) (val types.Value, err error) {
@@ -184,4 +219,52 @@ type internal Commit
 
 func (_ internal) MarshalNomsStructName() string {
 	return "Commit"
+}
+
+func makeGenesis(noms types.ValueReadWriter) Commit {
+	c := Commit{}
+	c.Value.Data = noms.WriteValue(types.NewMap(noms))
+	c.Value.Code = noms.WriteValue(types.NewBlob(noms))
+	c.Original = marshal.MustMarshal(noms, c).(types.Struct)
+	noms.WriteValue(c.Original)
+	return c
+}
+
+func makeTx(noms types.ValueReadWriter, basis types.Ref, origin string, d datetime.DateTime, bundle types.Ref, f string, args types.List, newBundle, newData types.Ref) Commit {
+	c := Commit{}
+	c.Parents = []types.Ref{basis}
+	c.Meta.Origin = origin
+	c.Meta.Date = d
+	c.Meta.Tx.Code = bundle
+	c.Meta.Tx.Name = f
+	c.Meta.Tx.Args = args
+	c.Value.Code = newBundle
+	c.Value.Data = newData
+	c.Original = marshal.MustMarshal(noms, c).(types.Struct)
+	return c
+}
+
+func makeReorder(noms types.ValueReadWriter, basis types.Ref, origin string, d datetime.DateTime, subject, newBundle, newData types.Ref) Commit {
+	c := Commit{}
+	c.Parents = []types.Ref{basis, subject}
+	c.Meta.Origin = origin
+	c.Meta.Date = d
+	c.Meta.Reorder.Subject = subject
+	c.Value.Code = newBundle
+	c.Value.Data = newData
+	c.Original = marshal.MustMarshal(noms, c).(types.Struct)
+	return c
+}
+
+func makeReject(noms types.ValueReadWriter, basis types.Ref, origin string, d datetime.DateTime, subject types.Ref, reason string, newBundle, newData types.Ref) Commit {
+	c := Commit{}
+	c.Parents = []types.Ref{basis, subject}
+	c.Meta.Origin = origin
+	c.Meta.Date = d
+	c.Meta.Reject.Subject = subject
+	c.Meta.Reject.Reason = reason
+	c.Value.Code = newBundle
+	c.Value.Data = newData
+	c.Original = marshal.MustMarshal(noms, c).(types.Struct)
+	return c
 }
