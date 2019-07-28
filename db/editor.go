@@ -18,7 +18,11 @@ func (ed editor) Has(id string) (bool, error) {
 }
 
 func (ed editor) Get(id string) (types.Value, error) {
-	return ed.data.Get(types.String(id)).Value(), nil
+	vv := ed.data.Get(types.String(id))
+	if vv == nil {
+		return nil, nil
+	}
+	return vv.Value(), nil
 }
 
 // This interface has to be in terms of values because sync is going to call it with values.

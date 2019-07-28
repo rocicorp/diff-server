@@ -43,7 +43,7 @@ func rebase(db *DB, onto types.Ref, commit Commit) (rebased Commit, err error) {
 		}
 
     default:
-		return Commit{}, fmt.Errorf("Cannot rebase commit of type %s: %s: %s", commit.Type(), commit.Original.Hash(), types.EncodedValue(commit.Original))
+		return Commit{}, fmt.Errorf("Cannot rebase commit of type %v: %s: %s", commit.Type(), commit.Original.Hash(), types.EncodedValue(commit.Original))
 	}
 
 	newCommit := makeReorder(db.noms, types.NewRef(newBasis.Original), db.origin, d, types.NewRef(commit.Original), newBundle, newData)

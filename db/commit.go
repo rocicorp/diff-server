@@ -5,17 +5,47 @@ import (
 	"fmt"
 
 	"github.com/attic-labs/noms/go/marshal"
+	"github.com/attic-labs/noms/go/nomdl"
 	"github.com/attic-labs/noms/go/types"
 	"github.com/attic-labs/noms/go/util/datetime"
 
 	"github.com/aboodman/replicant/util/chk"
 )
 
+var (
+	schema = nomdl.MustParseType(`
+Struct Commit {
+	parents: Set<Ref<Cycle<Commit>>>,
+	meta: Struct {
+		origin?: String,			// omitted for genesis commit
+		date?: Struct DateTime {	// omitted for genesis commit
+			secSinceEpoch: Number,
+		},
+		op?: Struct Tx {			// omitted for genesis commit
+			code?: Ref<Blob>,		// omitted for system functions
+			name: String,
+			args: List<Value>,
+		} |
+		Struct Reorder {
+			subject: Ref<Cycle<Commit>>,
+		} |
+		Struct Reject {
+			subject: Ref<Cycle<Commit>>,
+			reason: Value
+		},
+	},
+	value: Struct {
+		code: Ref<Blob>,
+		data: Ref<Map<String, Value>>,
+	},
+}`)
+)
+
 // TODO: These types should be private
 type Tx struct {
-	Code   types.Ref `noms:",omitempty"`  // TODO: rename: "Bundle/BundleRef"
-	Name   string
-	Args   types.List
+	Code types.Ref `noms:",omitempty"` // TODO: rename: "Bundle/BundleRef"
+	Name string
+	Args types.List
 }
 
 func (tx Tx) Bundle(noms types.ValueReader) types.Blob {
@@ -37,22 +67,17 @@ type Reject struct {
 type Commit struct {
 	Parents []types.Ref `noms:",set"`
 	Meta    struct {
-		Origin string
-		// TODO: Date should maybe become part of tx, since date of reorder/reject is server-node specific.
-		Date datetime.DateTime
-		// TODO: Maybe change to "source"? "invoke"? "run"?
-		Tx      Tx      `noms:",omitempty"`
-		Reorder Reorder `noms:",omitempty"`
-		Reject  Reject  `noms:",omitempty"`
+		Origin  string            `noms:",omitempty"`
+		Date    datetime.DateTime `noms:",omitempty"`
+		Tx      Tx                `noms:",omitempty"`
+		Reorder Reorder           `noms:",omitempty"`
+		Reject  Reject            `noms:",omitempty"`
 	}
 	Value struct {
 		Code types.Ref `noms:",omitempty"`
-		Data types.Ref `noms:",omitempty"`  // TODO: Rename "Bundle"
+		Data types.Ref `noms:",omitempty"` // TODO: Rename "Bundle"
 	}
 	Original types.Struct `noms:",original"`
-
-	data   types.Map  `noms:"-"`
-	bundle types.Blob `noms:"-"`
 }
 
 type CommitType uint8
@@ -65,17 +90,11 @@ const (
 )
 
 func (c Commit) Data(noms types.ValueReadWriter) types.Map {
-	if c.data == (types.Map{}) {
-		c.data = c.Value.Data.TargetValue(noms).(types.Map)
-	}
-	return c.data
+	return c.Value.Data.TargetValue(noms).(types.Map)
 }
 
 func (c Commit) Bundle(noms types.ValueReadWriter) types.Blob {
-	if c.bundle == (types.Blob{}) {
-		c.bundle = c.Value.Code.TargetValue(noms).(types.Blob)
-	}
-	return c.bundle
+	return c.Value.Code.TargetValue(noms).(types.Blob)
 }
 
 func (c Commit) Type() CommitType {
@@ -108,7 +127,7 @@ func (c Commit) FinalReorderTarget(noms types.ValueReader) (Commit, error) {
 	case CommitTypeReorder:
 		return c.FinalReorderTarget(noms)
 	default:
-		return Commit{}, fmt.Errorf("Unexpected reorder target of type %s: %s", c.Type(), types.EncodedValue(c.Original))
+		return Commit{}, fmt.Errorf("Unexpected reorder target of type %v: %s", c.Type(), types.EncodedValue(c.Original))
 	}
 }
 
@@ -194,24 +213,17 @@ func (c *Commit) UnmarshalNoms(v types.Value) error {
 	if err != nil {
 		return err
 	}
-	op, ok := c.Original.Get("meta").(types.Struct).MaybeGet("op")
-	if !ok {
-		return nil
-	}
-	ops, ok := op.(types.Struct)
-	if !ok {
-		return errors.New("Field 'op' must be a struct")
-	}
-	switch ops.Name() {
+	meta := c.Original.Get("meta").(types.Struct)
+	op := meta.Get("op").(types.Struct)
+	switch op.Name() {
 	case "Tx":
 		return marshal.Unmarshal(op, &c.Meta.Tx)
 	case "Reorder":
 		return marshal.Unmarshal(op, &c.Meta.Reorder)
 	case "Reject":
 		return marshal.Unmarshal(op, &c.Meta.Reject)
-	default:
-		return fmt.Errorf("Invalid op type: %s", ops.Name())
 	}
+	chk.Fail("Unexpected op name: %s", op.Name())
 	return nil
 }
 

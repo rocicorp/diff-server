@@ -7,7 +7,6 @@ import (
 
 	"github.com/attic-labs/noms/go/datas"
 	"github.com/attic-labs/noms/go/marshal"
-	"github.com/attic-labs/noms/go/nomdl"
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/attic-labs/noms/go/types"
 	"github.com/attic-labs/noms/go/util/datetime"
@@ -18,35 +17,6 @@ import (
 const (
 	local_dataset  = "local"
 	remote_dataset = "remote"
-)
-
-var (
-	schema = nomdl.MustParseType(`
-Struct Commit {
-	parents: Set<Ref<Cycle<Commit>>>,
-	meta: Struct {
-		origin: String,
-		date: Struct DateTime {
-			secSinceEpoch: Number,
-		},
-		op?: Struct Tx {  // op omitted for genesis commit
-			code?: Ref<Blob>,  // code omitted for system functions
-			name: String,
-			args: List<Value>,
-		} |
-		Struct Reorder {
-			Target: Ref<Cycle<Commit>>,
-		} |
-		Struct Reject {
-			Target: Ref<Cycle<Commit>>,
-			Detail: Value
-		},
-	},
-	value: Struct {
-		code: Ref<Blob>,
-		data: Ref<Map<String, Value>>,
-	},
-}`)
 )
 
 type DB struct {
@@ -120,7 +90,7 @@ func (db *DB) Exec(function string, args types.List) error {
 	return db.execInternal(db.head.Bundle(db.noms), function, args)
 }
 
-func (db *DB) execInternal(bundle types.Blob, function string, args types.List) (error) {
+func (db *DB) execInternal(bundle types.Blob, function string, args types.List) error {
 	basis := types.NewRef(db.head.Original)
 	newBundle, newData, err := db.execImpl(basis, bundle, function, args)
 	if err != nil {
@@ -147,30 +117,30 @@ func (db *DB) execInternal(bundle types.Blob, function string, args types.List) 
 
 // TODO: add date and random source to this so that sync can set it up correctly when replaying.
 func (db *DB) execImpl(basis types.Ref, bundle types.Blob, function string, args types.List) (newBundleRef types.Ref, newDataRef types.Ref, err error) {
-	oldBundle := bundle
-	newBundle := bundle
-	oldData := db.head.Data(db.noms)
-	ed := editor{db.noms, oldData.Edit()}
+	newBundle := db.head.Value.Code
+	newData := db.head.Value.Data
 
 	if strings.HasPrefix(function, ".") {
 		switch function {
 		case ".putValue":
 			k := args.Get(uint64(0))
 			v := args.Get(uint64(1))
+			ed := editor{db.noms, db.head.Data(db.noms).Edit()}
 			ed.Put(string(k.(types.String)), v)
+			newData = db.noms.WriteValue(ed.Finalize())
 			break
 		case ".putBundle":
-			newBundle = args.Get(uint64(0)).(types.Blob)
+			newBundle = db.noms.WriteValue(args.Get(uint64(0)).(types.Blob))
 			break
 		}
 	} else {
-		err := exec.Run(ed, oldBundle.Reader(), function, args)
+		ed := editor{db.noms, db.head.Data(db.noms).Edit()}
+		err := exec.Run(ed, bundle.Reader(), function, args)
 		if err != nil {
 			return types.Ref{}, types.Ref{}, err
 		}
+		newData = db.noms.WriteValue(ed.Finalize())
 	}
 
-	newData := ed.Finalize()
-
-	return db.noms.WriteValue(newBundle), db.noms.WriteValue(newData), nil
+	return newBundle, newData, nil
 }
