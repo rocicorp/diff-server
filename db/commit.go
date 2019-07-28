@@ -214,7 +214,11 @@ func (c *Commit) UnmarshalNoms(v types.Value) error {
 		return err
 	}
 	meta := c.Original.Get("meta").(types.Struct)
-	op := meta.Get("op").(types.Struct)
+	opv, ok := meta.MaybeGet("op")
+	if !ok {
+		return nil
+	}
+	op := opv.(types.Struct)
 	switch op.Name() {
 	case "Tx":
 		return marshal.Unmarshal(op, &c.Meta.Tx)

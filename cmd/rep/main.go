@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -44,15 +43,14 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 		return nil
 	})
 
-	code := app.Command("code", "Interact with code.")
-	getBundle(code, &rdb, out)
-	putBundle(code, &rdb, sp, in)
-	exec(code, &rdb, sp)
+	has(app, &rdb, out)
+	get(app, &rdb, out)
+	put(app, &rdb, sp, in)
+	exec(app, &rdb, sp)
 
-	data := app.Command("data", "Interact with data.")
-	has(data, &rdb, out)
-	get(data, &rdb, out)
-	put(data, &rdb, sp, in)
+	bundle := app.Command("bundle", "Manage the currently registered bundle.")
+	getBundle(bundle, &rdb, out)
+	putBundle(bundle, &rdb, sp, in)
 
 	_, err := app.Parse(args)
 	if err != nil {
@@ -79,8 +77,8 @@ func putBundle(parent *kingpin.CmdClause, db *db.DB, sp *spec.Spec, in io.Reader
 	})
 }
 
-func exec(parent *kingpin.CmdClause, db *db.DB, sp *spec.Spec) {
-	kc := parent.Command("run", "Execute a transaction.")
+func exec(parent *kingpin.Application, db *db.DB, sp *spec.Spec) {
+	kc := parent.Command("exec", "Execute a function.")
 
 	name := kc.Arg("name", "Name of function from current transaction bundle to execute.").Required().String()
 	raw := kc.Arg("args", "JSON-formatted arguments to the function. For convenience, bare strings are also supported.").Strings()
@@ -116,7 +114,7 @@ func exec(parent *kingpin.CmdClause, db *db.DB, sp *spec.Spec) {
 	})
 }
 
-func has(parent *kingpin.CmdClause, db *db.DB, out io.Writer) {
+func has(parent *kingpin.Application, db *db.DB, out io.Writer) {
 	kc := parent.Command("has", "Check whether a value exists in the database.")
 	id := kc.Arg("id", "id of the value to check for").Required().String()
 	kc.Action(func(_ *kingpin.ParseContext) error {
@@ -133,7 +131,7 @@ func has(parent *kingpin.CmdClause, db *db.DB, out io.Writer) {
 	})
 }
 
-func get(parent *kingpin.CmdClause, db *db.DB, out io.Writer) {
+func get(parent *kingpin.Application, db *db.DB, out io.Writer) {
 	kc := parent.Command("get", "Reads a value from the database.")
 	id := kc.Arg("id", "id of the value to get").Required().String()
 	kc.Action(func(_ *kingpin.ParseContext) error {
@@ -142,13 +140,13 @@ func get(parent *kingpin.CmdClause, db *db.DB, out io.Writer) {
 			return err
 		}
 		if v == nil {
-			return errors.New("not found")
+			return nil
 		}
 		return jn.ToJSON(v, out, jn.ToOptions{Lists: true, Maps: true, Indent: "  "})
 	})
 }
 
-func put(parent *kingpin.CmdClause, db *db.DB, sp *spec.Spec, in io.Reader) {
+func put(parent *kingpin.Application, db *db.DB, sp *spec.Spec, in io.Reader) {
 	kc := parent.Command("put", "Reads a JSON-formated value from stdin and puts it into the database.")
 	id := kc.Arg("id", "id of the value to put").Required().String()
 	kc.Action(func(_ *kingpin.ParseContext) error {

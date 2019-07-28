@@ -124,14 +124,12 @@ func TestMarshal(t *testing.T) {
 		assert.NoError(err, "test case: %d", i)
 		assert.True(t.exp.Equals(act), "test case: %d - %s", i, nomsdiff.Diff(t.exp, act))
 
-		//fmt.Println(types.EncodedValue(act))
+		var roundtrip Commit
+		err = marshal.Unmarshal(act, &roundtrip)
+		assert.NoError(err)
 
-		/*
-			TODO: why does this crash?
-			var roundtrip Commit
-			err = marshal.Unmarshal(act, &roundtrip)
-			assert.NoError(err)
-			assert.Equal(t.in, roundtrip)
-		*/
+		remarshalled, err := marshal.Marshal(noms, roundtrip)
+		assert.NoError(err)
+		assert.True(act.Equals(remarshalled))
 	}
 }
