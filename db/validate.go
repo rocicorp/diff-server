@@ -48,7 +48,11 @@ func validate(db *DB, reachable *reachable.Set, commit Commit) error {
 		replayed = makeReorder(db.noms, commit.BasisRef(), commit.Meta.Reorder.Origin, commit.Meta.Reorder.Date, types.NewRef(target.Original), newBundle, newData)
 
 	case CommitTypeReject:
-		replayed = makeReject(db.noms, commit.BasisRef(), commit.Meta.Reject.Origin, commit.Meta.Reject.Date, commit.Meta.Reject.Subject, commit.Meta.Reject.Reason, commit.Value.Code, commit.Value.Data)
+		b, err := commit.Basis(db.noms)
+		if err != nil {
+			return err
+		}
+		replayed = makeReject(db.noms, commit.BasisRef(), commit.Meta.Reject.Origin, commit.Meta.Reject.Date, commit.Meta.Reject.Subject, commit.Meta.Reject.Reason, b.Value.Code, b.Value.Data)
 
 	case CommitTypeGenesis:
 		replayed = makeGenesis(db.noms)

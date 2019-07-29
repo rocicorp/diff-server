@@ -142,7 +142,12 @@ func (c Commit) FinalReorderTarget(noms types.ValueReader) (Commit, error) {
 	case CommitTypeTx:
 		return c, nil
 	case CommitTypeReorder:
-		return c.FinalReorderTarget(noms)
+		var t Commit
+		err := marshal.Unmarshal(c.Target().TargetValue(noms), &t)
+		if err != nil {
+			return Commit{}, err
+		}
+		return t.FinalReorderTarget(noms)
 	default:
 		return Commit{}, fmt.Errorf("Unexpected reorder target of type %v: %s", c.Type(), types.EncodedValue(c.Original))
 	}
