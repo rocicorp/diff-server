@@ -10,7 +10,7 @@ import (
 	"github.com/attic-labs/noms/go/util/datetime"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/aboodman/replicant/util/nomsdiff"
+	"github.com/aboodman/replicant/util/noms/diff"
 )
 
 func TestMarshal(t *testing.T) {
@@ -51,9 +51,9 @@ func TestMarshal(t *testing.T) {
 				"meta": types.NewStruct("Tx", types.StructData{
 					"origin": types.String("o1"),
 					"date":   marshal.MustMarshal(noms, d),
-					"code": emptyBlob,
-					"name": types.String("func"),
-					"args": args,
+					"code":   emptyBlob,
+					"name":   types.String("func"),
+					"args":   args,
 				}),
 				"value": types.NewStruct("", types.StructData{
 					"code": br,
@@ -68,9 +68,9 @@ func TestMarshal(t *testing.T) {
 				"meta": types.NewStruct("Tx", types.StructData{
 					"origin": types.String("o1"),
 					"date":   marshal.MustMarshal(noms, d),
-					"code": br,
-					"name": types.String("func"),
-					"args": args,
+					"code":   br,
+					"name":   types.String("func"),
+					"args":   args,
 				}),
 				"value": types.NewStruct("", types.StructData{
 					"code": emptyBlob,
@@ -83,8 +83,8 @@ func TestMarshal(t *testing.T) {
 			types.NewStruct("Commit", types.StructData{
 				"parents": types.NewSet(noms, types.NewRef(g.Original), types.NewRef(tx.Original)),
 				"meta": types.NewStruct("Reorder", types.StructData{
-					"origin": types.String("o1"),
-					"date":   marshal.MustMarshal(noms, d),
+					"origin":  types.String("o1"),
+					"date":    marshal.MustMarshal(noms, d),
 					"subject": types.NewRef(tx.Original),
 				}),
 				"value": types.NewStruct("", types.StructData{
@@ -98,8 +98,8 @@ func TestMarshal(t *testing.T) {
 			types.NewStruct("Commit", types.StructData{
 				"parents": types.NewSet(noms, types.NewRef(g.Original), types.NewRef(tx.Original)),
 				"meta": types.NewStruct("Reject", types.StructData{
-					"origin": types.String("o1"),
-					"date":   marshal.MustMarshal(noms, d),
+					"origin":  types.String("o1"),
+					"date":    marshal.MustMarshal(noms, d),
 					"subject": types.NewRef(tx.Original),
 					"reason":  types.String("didn't feel like it"),
 				}),
@@ -114,7 +114,7 @@ func TestMarshal(t *testing.T) {
 	for i, t := range tc {
 		act, err := marshal.Marshal(noms, t.in)
 		assert.NoError(err, "test case: %d", i)
-		assert.True(t.exp.Equals(act), "test case: %d - %s", i, nomsdiff.Diff(t.exp, act))
+		assert.True(t.exp.Equals(act), "test case: %d - %s", i, diff.Diff(t.exp, act))
 
 		var roundtrip Commit
 		err = marshal.Unmarshal(act, &roundtrip)

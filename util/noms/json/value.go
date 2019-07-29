@@ -1,10 +1,10 @@
-package jsoms
+package json
 
 import (
 	"bytes"
 
 	"github.com/attic-labs/noms/go/types"
-	json "github.com/attic-labs/noms/go/util/json"
+	nj "github.com/attic-labs/noms/go/util/json"
 
 	"github.com/aboodman/replicant/util/chk"
 )
@@ -16,7 +16,7 @@ type Value struct {
 
 func (v Value) MarshalJSON() ([]byte, error) {
 	buf := &bytes.Buffer{}
-	json.ToJSON(v.Value, buf, json.ToOptions{
+	nj.ToJSON(v.Value, buf, nj.ToOptions{
 		Lists: true,
 		Maps:  true,
 	})
@@ -25,7 +25,7 @@ func (v Value) MarshalJSON() ([]byte, error) {
 
 func (v *Value) UnmarshalJSON(data []byte) error {
 	chk.NotNil(v.Noms, "Need to set Noms field to unmarshal from JSON")
-	r, err := json.FromJSON(bytes.NewReader(data), v.Noms, json.FromOptions{})
+	r, err := nj.FromJSON(bytes.NewReader(data), v.Noms, nj.FromOptions{})
 	if err != nil {
 		return err
 	}

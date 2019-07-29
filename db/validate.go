@@ -3,13 +3,13 @@ package db
 import (
 	"fmt"
 
-	"github.com/aboodman/replicant/util/history"
+	"github.com/aboodman/replicant/util/noms/reachable"
 	"github.com/attic-labs/noms/go/marshal"
 	"github.com/attic-labs/noms/go/types"
 )
 
-func validate(db *DB, knownValid *history.Cache, commit Commit) error {
-	if knownValid.Has(commit.Original.Hash()) {
+func validate(db *DB, reachable *reachable.Set, commit Commit) error {
+	if reachable.Has(commit.Original.Hash()) {
 		return nil
 	}
 
@@ -19,7 +19,7 @@ func validate(db *DB, knownValid *history.Cache, commit Commit) error {
 		if err != nil {
 			return err
 		}
-		err = validate(db, knownValid, p)
+		err = validate(db, reachable, p)
 		if err != nil {
 			return err
 		}

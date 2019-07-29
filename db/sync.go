@@ -7,7 +7,7 @@ import (
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/attic-labs/noms/go/types"
 
-	"github.com/aboodman/replicant/util/history"
+	"github.com/aboodman/replicant/util/noms/reachable"
 )
 
 func (db *DB) Sync(remote spec.Spec) error {
@@ -52,9 +52,15 @@ func (db *DB) Sync(remote spec.Spec) error {
 }
 
 func (db *DB) handleSync(commit Commit) (newHead Commit, err error) {
-	// TODO: this probably wants to be global and updated on each sync?
-	cache := history.NewCache(db.noms)
-	err = validate(db, cache, commit)
+	// TODO: This needs to be done differently.
+
+	// Noms already tracks exactly which chunks have been "flushed" to the chunkstore.
+	// The difference is that there is no guarantee that those chunks are reachable from
+	// a particular head.
+	// Alternately it probably needs to be global and kept updated.
+	// Or alternate-alternately, it could be implemented so that it is crawled incrementally
+	reachable := reachable.New(db.noms)
+	err = validate(db, reachable, commit)
 	if err != nil {
 		return Commit{}, err
 	}

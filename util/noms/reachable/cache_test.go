@@ -1,4 +1,4 @@
-package history
+package reachable
 
 import (
 	"fmt"
@@ -36,33 +36,33 @@ func TestBasic(t *testing.T) {
 
 	c0 := makeCommit()
 
-	cache := NewCache(noms)
-	assert.False(cache.Has(c0.Hash()))
+	set := New(noms)
+	assert.False(set.Has(c0.Hash()))
 
-	err := cache.Populate(c0.Hash())
+	err := set.Populate(c0.Hash())
 	assert.NoError(err)
-	assert.True(cache.Has(c0.Hash()))
+	assert.True(set.Has(c0.Hash()))
 
-	err = cache.Populate(c0.Hash())
+	err = set.Populate(c0.Hash())
 	assert.NoError(err)
-	assert.True(cache.Has(c0.Hash()))
+	assert.True(set.Has(c0.Hash()))
 
 	c1 := makeCommit(c0)
 	c2 := makeCommit(c1)
 
-	err = cache.Populate(c2.Hash())
+	err = set.Populate(c2.Hash())
 	assert.NoError(err)
-	assert.True(cache.Has(c1.Hash()))
-	assert.True(cache.Has(c2.Hash()))
+	assert.True(set.Has(c1.Hash()))
+	assert.True(set.Has(c2.Hash()))
 
 	c3 := makeCommit(c2)
 	c3b := makeCommit(c2)
 	c4 := makeCommit(c3)
 	c5 := makeCommit(c3b, c4)
-	err = cache.Populate(c5.Hash())
+	err = set.Populate(c5.Hash())
 	assert.NoError(err)
-	assert.True(cache.Has(c3.Hash()))
-	assert.True(cache.Has(c3b.Hash()))
-	assert.True(cache.Has(c4.Hash()))
-	assert.True(cache.Has(c5.Hash()))
+	assert.True(set.Has(c3.Hash()))
+	assert.True(set.Has(c3b.Hash()))
+	assert.True(set.Has(c4.Hash()))
+	assert.True(set.Has(c5.Hash()))
 }

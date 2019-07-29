@@ -2,7 +2,7 @@
 package repm
 
 import (
-	"encoding/json"
+	ej "encoding/json"
 	"io"
 	"reflect"
 
@@ -12,7 +12,7 @@ import (
 	"github.com/aboodman/replicant/exec"
 	"github.com/aboodman/replicant/util/chk"
 	"github.com/aboodman/replicant/util/cmd"
-	"github.com/aboodman/replicant/util/jsoms"
+	"github.com/aboodman/replicant/util/noms/json"
 )
 
 var (
@@ -41,7 +41,7 @@ func (conn *Connection) Exec(name string, cs []byte) (*Command, error) {
 	in := val.FieldByName("In").Addr().Interface()
 
 	if len(cs) > 0 {
-		err := json.Unmarshal(cs, in)
+		err := ej.Unmarshal(cs, in)
 		if err != nil {
 			return nil, err
 		}
@@ -104,7 +104,7 @@ func (c *Command) Done() ([]byte, error) {
 	var r []byte
 	if outVal.NumField() > 0 {
 		var err error
-		r, err = json.Marshal(outVal.Interface())
+		r, err = ej.Marshal(outVal.Interface())
 		chk.NoError(err)
 	}
 
@@ -121,8 +121,8 @@ func getCmd(name string, d *db.DB) cmd.Command {
 		currentCode, err := d.GetCode()
 		chk.NoError(err)
 		r := &exec.CodeExec{}
-		r.In.Code = jsoms.Hash{currentCode.Hash()}
-		r.In.Args = jsoms.Value{Noms: d.Noms()}
+		r.In.Code = json.Hash{currentCode.Hash()}
+		r.In.Args = json.Value{Noms: d.Noms()}
 		return r
 	case "data/has":
 		return &db.DataHas{}

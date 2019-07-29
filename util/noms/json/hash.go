@@ -1,7 +1,7 @@
-package jsoms
+package json
 
 import (
-	"encoding/json"
+	ej "encoding/json"
 	"errors"
 
 	"github.com/attic-labs/noms/go/hash"
@@ -17,7 +17,7 @@ func (h Hash) MarshalJSON() ([]byte, error) {
 
 func (h *Hash) UnmarshalJSON(data []byte) (err error) {
 	var str string
-	err = json.Unmarshal(data, &str)
+	err = ej.Unmarshal(data, &str)
 	if err != nil {
 		return err
 	}

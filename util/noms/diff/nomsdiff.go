@@ -1,4 +1,4 @@
-package nomsdiff
+package diff
 
 import (
 	"bytes"

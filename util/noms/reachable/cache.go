@@ -1,4 +1,4 @@
-package history
+package reachable
 
 import (
 	"github.com/attic-labs/noms/go/hash"
@@ -8,7 +8,7 @@ import (
 	"github.com/aboodman/replicant/util/chk"
 )
 
-type Cache struct {
+type Set struct {
 	heads hash.HashSet
 	noms  types.ValueReadWriter
 
@@ -16,26 +16,26 @@ type Cache struct {
 	// This requires a change to schema to have a date that is set by the server.
 }
 
-func NewCache(noms types.ValueReadWriter) *Cache {
-	return &Cache{
+func New(noms types.ValueReadWriter) *Set {
+	return &Set{
 		heads: hash.NewHashSet(),
 		noms:  noms,
 	}
 }
 
-func (kv *Cache) Has(h hash.Hash) bool {
-	return kv.heads.Has(h)
+func (s *Set) Has(h hash.Hash) bool {
+	return s.heads.Has(h)
 }
 
-func (kv *Cache) Populate(h hash.Hash) error {
-	if kv.Has(h) {
+func (s *Set) Populate(h hash.Hash) error {
+	if s.Has(h) {
 		return nil
 	}
 
-	v := kv.noms.ReadValue(h)
+	v := s.noms.ReadValue(h)
 	chk.NotNil(v, "Populate called with hash not known to Noms")
 
-	kv.heads.Insert(h)
+	s.heads.Insert(h)
 
 	var c struct {
 		Parents []types.Ref
@@ -46,7 +46,7 @@ func (kv *Cache) Populate(h hash.Hash) error {
 	}
 
 	for _, p := range c.Parents {
-		err = kv.Populate(p.TargetHash())
+		err = s.Populate(p.TargetHash())
 		if err != nil {
 			return err
 		}
