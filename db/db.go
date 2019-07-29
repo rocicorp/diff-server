@@ -117,15 +117,21 @@ func (db *DB) execInternal(bundle types.Blob, function string, args types.List) 
 
 // TODO: add date and random source to this so that sync can set it up correctly when replaying.
 func (db *DB) execImpl(basis types.Ref, bundle types.Blob, function string, args types.List) (newBundleRef types.Ref, newDataRef types.Ref, err error) {
-	newBundle := db.head.Value.Code
-	newData := db.head.Value.Data
+	var basisCommit Commit
+	err = marshal.Unmarshal(basis.TargetValue(db.noms), &basisCommit)
+	if err != nil {
+		return types.Ref{}, types.Ref{}, err
+	}
+
+	newBundle := basisCommit.Value.Code
+	newData := basisCommit.Value.Data
 
 	if strings.HasPrefix(function, ".") {
 		switch function {
 		case ".putValue":
 			k := args.Get(uint64(0))
 			v := args.Get(uint64(1))
-			ed := editor{db.noms, db.head.Data(db.noms).Edit()}
+			ed := editor{db.noms, basisCommit.Data(db.noms).Edit()}
 			ed.Put(string(k.(types.String)), v)
 			newData = db.noms.WriteValue(ed.Finalize())
 			break
@@ -134,7 +140,7 @@ func (db *DB) execImpl(basis types.Ref, bundle types.Blob, function string, args
 			break
 		}
 	} else {
-		ed := editor{db.noms, db.head.Data(db.noms).Edit()}
+		ed := editor{db.noms, basisCommit.Data(db.noms).Edit()}
 		err := exec.Run(ed, bundle.Reader(), function, args)
 		if err != nil {
 			return types.Ref{}, types.Ref{}, err

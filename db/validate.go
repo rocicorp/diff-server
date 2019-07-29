@@ -3,6 +3,7 @@ package db
 import (
 	"fmt"
 
+	"github.com/aboodman/replicant/util/noms/diff"
 	"github.com/aboodman/replicant/util/noms/reachable"
 	"github.com/attic-labs/noms/go/marshal"
 	"github.com/attic-labs/noms/go/types"
@@ -54,7 +55,7 @@ func validate(db *DB, reachable *reachable.Set, commit Commit) error {
 	}
 
 	if !replayed.Original.Equals(commit.Original) {
-		return fmt.Errorf("Invalid commit %s: %s - should be %s: %s", commit.Original.Hash(), types.EncodedValue(commit.Original), replayed.Original.Hash(), types.EncodedValue(replayed.Original))
+		return fmt.Errorf("Invalid commit %s: diff: %s", replayed.Original.Hash(), diff.Diff(commit.Original, replayed.Original))
 	}
 
 	return nil
