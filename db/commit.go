@@ -16,23 +16,33 @@ var (
 	schema = nomdl.MustParseType(`
 Struct Commit {
 	parents: Set<Ref<Cycle<Commit>>>,
-	meta: Struct {
-		origin?: String,			// omitted for genesis commit
-		date?: Struct DateTime {	// omitted for genesis commit
+	// TODO: It would be cool to call this field "op" or something, but Noms requires a "meta"
+	// top-level field.
+	meta: Struct Genesis {
+	} |
+	Struct Tx {
+		origin: String,
+		date:   Struct DateTime {
 			secSinceEpoch: Number,
 		},
-		op?: Struct Tx {			// omitted for genesis commit
-			code?: Ref<Blob>,		// omitted for system functions
-			name: String,
-			args: List<Value>,
-		} |
-		Struct Reorder {
-			subject: Ref<Cycle<Commit>>,
-		} |
-		Struct Reject {
-			subject: Ref<Cycle<Commit>>,
-			reason: Value
+		code?: Ref<Blob>,	// omitted for system functions
+		name: String,
+		args: List<Value>,
+	} |
+	Struct Reorder {
+		origin: String,
+		date:   Struct DateTime {
+			secSinceEpoch: Number,
 		},
+		subject: Ref<Cycle<Commit>>,
+	} |
+	Struct Reject {
+		origin: String,
+		date:   Struct DateTime {
+			secSinceEpoch: Number,
+		},
+		subject: Ref<Cycle<Commit>>,
+		reason: Value
 	},
 	value: Struct {
 		code: Ref<Blob>,
@@ -42,10 +52,14 @@ Struct Commit {
 )
 
 // TODO: These types should be private
+type Genesis struct{}
+
 type Tx struct {
-	Code types.Ref `noms:",omitempty"` // TODO: rename: "Bundle/BundleRef"
-	Name string
-	Args types.List
+	Origin string
+	Date   datetime.DateTime
+	Code   types.Ref `noms:",omitempty"` // TODO: rename: "Bundle/BundleRef"
+	Name   string
+	Args   types.List
 }
 
 func (tx Tx) Bundle(noms types.ValueReader) types.Blob {
@@ -56,10 +70,14 @@ func (tx Tx) Bundle(noms types.ValueReader) types.Blob {
 }
 
 type Reorder struct {
+	Origin  string
+	Date    datetime.DateTime
 	Subject types.Ref
 }
 
 type Reject struct {
+	Origin  string
+	Date    datetime.DateTime
 	Subject types.Ref
 	Reason  string
 }
@@ -67,11 +85,10 @@ type Reject struct {
 type Commit struct {
 	Parents []types.Ref `noms:",set"`
 	Meta    struct {
-		Origin  string            `noms:",omitempty"`
-		Date    datetime.DateTime `noms:",omitempty"`
-		Tx      Tx                `noms:",omitempty"`
-		Reorder Reorder           `noms:",omitempty"`
-		Reject  Reject            `noms:",omitempty"`
+		// At most one of these will be set. If none are set, then the commit is the genesis commit.
+		Tx      Tx      `noms:",omitempty"`
+		Reorder Reorder `noms:",omitempty"`
+		Reject  Reject  `noms:",omitempty"`
 	}
 	Value struct {
 		Code types.Ref `noms:",omitempty"`
@@ -195,17 +212,20 @@ func (c Commit) MarshalNoms(vrw types.ValueReadWriter) (val types.Value, err err
 	}
 	rs := r.(types.Struct)
 	meta := rs.Get("meta").(types.Struct)
-	var found = false
+	var found types.Value
 	for _, f := range []string{"tx", "reorder", "reject"} {
 		if v, ok := meta.MaybeGet(f); ok {
-			if found {
-				return nil, errors.New("Only one of meta.{tx, reorder, reject} may be set")
+			if found != nil {
+				return nil, errors.New("Only one of meta.{genesis, tx, reorder, reject} may be set")
 			}
-			meta = meta.Set("op", v.(types.Struct)).Delete(f)
-			found = true
+			found = v
 		}
 	}
-	return rs.Set("meta", meta), nil
+	if found != nil {
+		return rs.Set("meta", found), nil
+	} else {
+		return rs.Set("meta", types.NewStruct("Genesis", types.StructData{})), nil
+	}
 }
 
 func (c *Commit) UnmarshalNoms(v types.Value) error {
@@ -214,20 +234,17 @@ func (c *Commit) UnmarshalNoms(v types.Value) error {
 		return err
 	}
 	meta := c.Original.Get("meta").(types.Struct)
-	opv, ok := meta.MaybeGet("op")
-	if !ok {
+	switch meta.Name() {
+	case "Genesis":
 		return nil
-	}
-	op := opv.(types.Struct)
-	switch op.Name() {
 	case "Tx":
-		return marshal.Unmarshal(op, &c.Meta.Tx)
+		return marshal.Unmarshal(meta, &c.Meta.Tx)
 	case "Reorder":
-		return marshal.Unmarshal(op, &c.Meta.Reorder)
+		return marshal.Unmarshal(meta, &c.Meta.Reorder)
 	case "Reject":
-		return marshal.Unmarshal(op, &c.Meta.Reject)
+		return marshal.Unmarshal(meta, &c.Meta.Reject)
 	}
-	chk.Fail("Unexpected op name: %s", op.Name())
+	chk.Fail("Unexpected op name: %s", meta.Name())
 	return nil
 }
 
@@ -249,8 +266,8 @@ func makeGenesis(noms types.ValueReadWriter) Commit {
 func makeTx(noms types.ValueReadWriter, basis types.Ref, origin string, d datetime.DateTime, bundle types.Ref, f string, args types.List, newBundle, newData types.Ref) Commit {
 	c := Commit{}
 	c.Parents = []types.Ref{basis}
-	c.Meta.Origin = origin
-	c.Meta.Date = d
+	c.Meta.Tx.Origin = origin
+	c.Meta.Tx.Date = d
 	c.Meta.Tx.Code = bundle
 	c.Meta.Tx.Name = f
 	c.Meta.Tx.Args = args
@@ -263,8 +280,8 @@ func makeTx(noms types.ValueReadWriter, basis types.Ref, origin string, d dateti
 func makeReorder(noms types.ValueReadWriter, basis types.Ref, origin string, d datetime.DateTime, subject, newBundle, newData types.Ref) Commit {
 	c := Commit{}
 	c.Parents = []types.Ref{basis, subject}
-	c.Meta.Origin = origin
-	c.Meta.Date = d
+	c.Meta.Reorder.Origin = origin
+	c.Meta.Reorder.Date = d
 	c.Meta.Reorder.Subject = subject
 	c.Value.Code = newBundle
 	c.Value.Data = newData
@@ -275,8 +292,8 @@ func makeReorder(noms types.ValueReadWriter, basis types.Ref, origin string, d d
 func makeReject(noms types.ValueReadWriter, basis types.Ref, origin string, d datetime.DateTime, subject types.Ref, reason string, newBundle, newData types.Ref) Commit {
 	c := Commit{}
 	c.Parents = []types.Ref{basis, subject}
-	c.Meta.Origin = origin
-	c.Meta.Date = d
+	c.Meta.Reject.Origin = origin
+	c.Meta.Reject.Date = d
 	c.Meta.Reject.Subject = subject
 	c.Meta.Reject.Reason = reason
 	c.Value.Code = newBundle

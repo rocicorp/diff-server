@@ -3,12 +3,12 @@ package db
 import (
 	"fmt"
 
+	"github.com/aboodman/replicant/util/history"
 	"github.com/attic-labs/noms/go/marshal"
 	"github.com/attic-labs/noms/go/types"
-	"github.com/aboodman/replicant/util/history"
 )
 
-func validate(db *DB, knownValid *history.Cache, commit Commit) (error) {
+func validate(db *DB, knownValid *history.Cache, commit Commit) error {
 	if knownValid.Has(commit.Original.Hash()) {
 		return nil
 	}
@@ -32,7 +32,7 @@ func validate(db *DB, knownValid *history.Cache, commit Commit) (error) {
 		if err != nil {
 			return err
 		}
-		replayed = makeTx(db.noms, commit.BasisRef(), commit.Meta.Origin, commit.Meta.Date, commit.Meta.Tx.Code, commit.Meta.Tx.Name, commit.Meta.Tx.Args, newBundle, newData)
+		replayed = makeTx(db.noms, commit.BasisRef(), commit.Meta.Tx.Origin, commit.Meta.Tx.Date, commit.Meta.Tx.Code, commit.Meta.Tx.Name, commit.Meta.Tx.Args, newBundle, newData)
 		break
 
 	case CommitTypeReorder:
@@ -44,10 +44,10 @@ func validate(db *DB, knownValid *history.Cache, commit Commit) (error) {
 		if err != nil {
 			return err
 		}
-		replayed = makeReorder(db.noms, commit.BasisRef(), commit.Meta.Origin, commit.Meta.Date, types.NewRef(target.Original), newBundle, newData)
+		replayed = makeReorder(db.noms, commit.BasisRef(), commit.Meta.Reorder.Origin, commit.Meta.Reorder.Date, types.NewRef(target.Original), newBundle, newData)
 
 	case CommitTypeReject:
-		replayed = makeReject(db.noms, commit.BasisRef(), commit.Meta.Origin, commit.Meta.Date, commit.Meta.Reject.Subject, commit.Meta.Reject.Reason, commit.Value.Code, commit.Value.Data)
+		replayed = makeReject(db.noms, commit.BasisRef(), commit.Meta.Reject.Origin, commit.Meta.Reject.Date, commit.Meta.Reject.Subject, commit.Meta.Reject.Reason, commit.Value.Code, commit.Value.Data)
 
 	case CommitTypeGenesis:
 		replayed = makeGenesis(db.noms)

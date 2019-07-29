@@ -36,7 +36,7 @@ func TestMarshal(t *testing.T) {
 		{
 			makeGenesis(noms),
 			types.NewStruct("Commit", types.StructData{
-				"meta":    types.NewStruct("", types.StructData{}),
+				"meta":    types.NewStruct("Genesis", types.StructData{}),
 				"parents": types.NewSet(noms),
 				"value": types.NewStruct("", types.StructData{
 					"code": emptyBlob,
@@ -48,14 +48,12 @@ func TestMarshal(t *testing.T) {
 			tx,
 			types.NewStruct("Commit", types.StructData{
 				"parents": types.NewSet(noms, types.NewRef(g.Original)),
-				"meta": types.NewStruct("", types.StructData{
+				"meta": types.NewStruct("Tx", types.StructData{
 					"origin": types.String("o1"),
 					"date":   marshal.MustMarshal(noms, d),
-					"op": types.NewStruct("Tx", types.StructData{
-						"code": emptyBlob,
-						"name": types.String("func"),
-						"args": args,
-					}),
+					"code": emptyBlob,
+					"name": types.String("func"),
+					"args": args,
 				}),
 				"value": types.NewStruct("", types.StructData{
 					"code": br,
@@ -67,14 +65,12 @@ func TestMarshal(t *testing.T) {
 			makeTx(noms, types.NewRef(g.Original), "o1", d, br, "func", args, emptyBlob, dr),
 			types.NewStruct("Commit", types.StructData{
 				"parents": types.NewSet(noms, types.NewRef(g.Original)),
-				"meta": types.NewStruct("", types.StructData{
+				"meta": types.NewStruct("Tx", types.StructData{
 					"origin": types.String("o1"),
 					"date":   marshal.MustMarshal(noms, d),
-					"op": types.NewStruct("Tx", types.StructData{
-						"code": br,
-						"name": types.String("func"),
-						"args": args,
-					}),
+					"code": br,
+					"name": types.String("func"),
+					"args": args,
 				}),
 				"value": types.NewStruct("", types.StructData{
 					"code": emptyBlob,
@@ -86,12 +82,10 @@ func TestMarshal(t *testing.T) {
 			makeReorder(noms, types.NewRef(g.Original), "o1", d, types.NewRef(tx.Original), br, dr),
 			types.NewStruct("Commit", types.StructData{
 				"parents": types.NewSet(noms, types.NewRef(g.Original), types.NewRef(tx.Original)),
-				"meta": types.NewStruct("", types.StructData{
+				"meta": types.NewStruct("Reorder", types.StructData{
 					"origin": types.String("o1"),
 					"date":   marshal.MustMarshal(noms, d),
-					"op": types.NewStruct("Reorder", types.StructData{
-						"subject": types.NewRef(tx.Original),
-					}),
+					"subject": types.NewRef(tx.Original),
 				}),
 				"value": types.NewStruct("", types.StructData{
 					"code": br,
@@ -103,13 +97,11 @@ func TestMarshal(t *testing.T) {
 			makeReject(noms, types.NewRef(g.Original), "o1", d, types.NewRef(tx.Original), "didn't feel like it", br, dr),
 			types.NewStruct("Commit", types.StructData{
 				"parents": types.NewSet(noms, types.NewRef(g.Original), types.NewRef(tx.Original)),
-				"meta": types.NewStruct("", types.StructData{
+				"meta": types.NewStruct("Reject", types.StructData{
 					"origin": types.String("o1"),
 					"date":   marshal.MustMarshal(noms, d),
-					"op": types.NewStruct("Reject", types.StructData{
-						"subject": types.NewRef(tx.Original),
-						"reason":  types.String("didn't feel like it"),
-					}),
+					"subject": types.NewRef(tx.Original),
+					"reason":  types.String("didn't feel like it"),
 				}),
 				"value": types.NewStruct("", types.StructData{
 					"code": br,
