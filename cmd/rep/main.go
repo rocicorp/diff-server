@@ -47,6 +47,7 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 	get(app, &rdb, out)
 	put(app, &rdb, sp, in)
 	exec(app, &rdb, sp)
+	sync(app, &rdb, sp)
 
 	bundle := app.Command("bundle", "Manage the currently registered bundle.")
 	getBundle(bundle, &rdb, out)
@@ -155,5 +156,15 @@ func put(parent *kingpin.Application, db *db.DB, sp *spec.Spec, in io.Reader) {
 			return err
 		}
 		return db.Put(*id, v)
+	})
+}
+
+func sync(parent *kingpin.Application, db *db.DB, sp *spec.Spec) {
+	kc := parent.Command("sync", "Sync with a replicant server.")
+	remoteSpec := kp.DatabaseSpec(kc.Arg("remote", "Server to sync with. See https://github.com/attic-labs/noms/blob/master/doc/spelling.md#spelling-databases.").Required())
+
+	kc.Action(func(_ *kingpin.ParseContext) error {
+		// TODO: progress
+		return db.Sync(*remoteSpec)
 	})
 }
