@@ -35,13 +35,16 @@ func (db *DB) Sync(remote spec.Spec) error {
 		return err
 	}
 
-	// 3: Save the new remote state - primarily to avoid re-downloading it in the future and for debugging purposes.
+	// 3: Pull remote head to client
+	datas.Pull(remoteDB.noms, db.noms, types.NewRef(rebased.Original), progress)
+
+	// 4: Save the new remote state - primarily to avoid re-downloading it in the future and for debugging purposes.
 	_, err = db.noms.SetHead(db.noms.GetDataset(remote_dataset), types.NewRef(rebased.Original))
 	if err != nil {
 		return err
 	}
 
-	// 4: Rebase any new local changes from between 1 and 3.
+	// 5: Rebase any new local changes from between 1 and 3.
 	reachable := reachable.New(db.noms)
 	reachable.Populate(db.head.Original.Hash())
 	rebased, err = rebase(db, reachable, types.NewRef(rebased.Original), datetime.Now(), db.head)
@@ -49,19 +52,18 @@ func (db *DB) Sync(remote spec.Spec) error {
 		return err
 	}
 
-	// 5: Commit new local head.
+	// 6: Commit new local head.
 	_, err = db.noms.FastForward(db.noms.GetDataset(local_dataset), db.noms.WriteValue(rebased.Original))
-	return err
+	if err != nil {
+		return err
+	}
+
+	return db.load()
 }
 
 func (db *DB) handleSync(commit Commit) (newHead Commit, err error) {
 	// TODO: This needs to be done differently.
-
-	// Noms already tracks exactly which chunks have been "flushed" to the chunkstore.
-	// The difference is that there is no guarantee that those chunks are reachable from
-	// a particular head.
-	// Alternately it probably needs to be global and kept updated.
-	// Or alternate-alternately, it could be implemented so that it is crawled incrementally
+	// See: https://github.com/aboodman/replicant/issues/11
 	reachable := reachable.New(db.noms)
 	reachable.Populate(db.head.Original.Hash())
 
@@ -74,6 +76,10 @@ func (db *DB) handleSync(commit Commit) (newHead Commit, err error) {
 		return Commit{}, err
 	}
 	_, err = db.noms.FastForward(db.noms.GetDataset(local_dataset), db.noms.WriteValue(rebased.Original))
+	if err != nil {
+		return Commit{}, err
+	}
+	err = db.load()
 	if err != nil {
 		return Commit{}, err
 	}
