@@ -13,7 +13,7 @@ func reloadDB(assert *assert.Assertions, dir string) (db *DB) {
 	sp, err := spec.ForDatabase(dir)
 	assert.NoError(err)
 
-	db, err = Load(sp, "o1")
+	db, err = Load(sp, "test")
 	assert.NoError(err)
 
 	return db

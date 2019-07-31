@@ -29,38 +29,46 @@ func Load(sp spec.Spec, origin string) (*DB, error) {
 	if !sp.Path.IsEmpty() {
 		return nil, errors.New("Invalid spec - must not specify a path")
 	}
-	noms := sp.GetDatabase()
-	ds := noms.GetDataset(local_dataset)
 
+	noms := sp.GetDatabase()
 	r := DB{
 		noms:   noms,
 		origin: origin,
 	}
-
-	if !ds.HasHead() {
-		genesis := makeGenesis(noms)
-		genRef := noms.WriteValue(genesis.Original)
-		_, err := noms.FastForward(ds, genRef)
-		if err != nil {
-			return nil, err
-		}
-		r.head = genesis
-	} else {
-		headType := types.TypeOf(ds.Head())
-		if !types.IsSubtype(schema, headType) {
-			return nil, fmt.Errorf("Cannot load database. Specified head has non-Replicant data of type: %s", headType.Describe())
-		}
-
-		var head Commit
-		err := marshal.Unmarshal(ds.Head(), &head)
-		if err != nil {
-			return nil, err
-		}
-
-		r.head = head
+	err := r.load()
+	if err != nil {
+		return nil, err
 	}
 
 	return &r, nil
+}
+
+func (db *DB) load() error {
+	ds := db.noms.GetDataset(local_dataset)
+	if !ds.HasHead() {
+		genesis := makeGenesis(db.noms)
+		genRef := db.noms.WriteValue(genesis.Original)
+		_, err := db.noms.FastForward(ds, genRef)
+		if err != nil {
+			return err
+		}
+		db.head = genesis
+		return nil
+	}
+
+	headType := types.TypeOf(ds.Head())
+	if !types.IsSubtype(schema, headType) {
+		return fmt.Errorf("Cannot load database. Specified head has non-Replicant data of type: %s", headType.Describe())
+	}
+
+	var head Commit
+	err := marshal.Unmarshal(ds.Head(), &head)
+	if err != nil {
+		return err
+	}
+
+	db.head = head
+	return nil
 }
 
 func (db *DB) Has(id string) (bool, error) {
@@ -88,6 +96,11 @@ func (db *DB) Exec(function string, args types.List) error {
 		return fmt.Errorf("Cannot call system function: %s", function)
 	}
 	return db.execInternal(db.head.Bundle(db.noms), function, args)
+}
+
+func (db *DB) Reload() error {
+	db.noms.Rebase()
+	return db.load()
 }
 
 func (db *DB) execInternal(bundle types.Blob, function string, args types.List) error {

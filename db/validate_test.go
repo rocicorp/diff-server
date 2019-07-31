@@ -191,17 +191,4 @@ func TestValidate(t *testing.T) {
 			assert.EqualError(err, t.err, "test case %d", i)
 		}
 	}
-
-	// cases:
-	// tx
-	// - true one with parents
-	// - false one false because of self
-	// - false because of parents
-	//
-	// reorder
-	// - true one
-	// - false because of self
-	// - false because of parents
-	//
-	//
 }

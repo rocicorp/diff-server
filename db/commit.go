@@ -106,6 +106,25 @@ const (
 	CommitTypeReject
 )
 
+func (t CommitType) String() string {
+	switch t {
+	case CommitTypeGenesis:
+		return "CommitTypeGenesis"
+	case CommitTypeTx:
+		return "CommitTypeTx"
+	case CommitTypeReorder:
+		return "CommitTypeReorder"
+	case CommitTypeReject:
+		return "CommitTypeReject"
+	}
+	chk.Fail("NOTREACHED")
+	return ""
+}
+
+func (c Commit) Ref() types.Ref {
+	return types.NewRef(c.Original)
+}
+
 func (c Commit) Data(noms types.ValueReadWriter) types.Map {
 	return c.Value.Data.TargetValue(noms).(types.Map)
 }
