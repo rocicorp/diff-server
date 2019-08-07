@@ -7,7 +7,11 @@
         { "src": "serve/serve.go", "use": "@now/go" }
     ],
     "routes": [
-        { "src": "/serve/*", "dest": "/serve/serve.go" },
+        { "src": "/serve/.*", "dest": "/serve/serve.go" },
         { "src": "/(.*)", "dest": "/landing/$1" }
-    ]
+    ],
+    "env": {
+        "REPLICANT_AWS_ACCESS_KEY_ID": "@aws_access_key_id",
+        "REPLICANT_AWS_SECRET_ACCESS_KEY": "@aws_secret_access_key"
+    }
 }

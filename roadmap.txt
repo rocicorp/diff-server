@@ -20,6 +20,8 @@ later
 =====
 - server-side sync
 - actual execution environment
+- sandboxing
+- correctly queuing sync calls
 - versioning / migration
 - fix noms sync with long commit chains
 - gc
