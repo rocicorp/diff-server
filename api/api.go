@@ -63,6 +63,13 @@ type ExecRequest struct {
 type ExecResponse struct {
 }
 
+type SyncRequest struct {
+	Remote jsnoms.Spec `json:"remote"`
+}
+
+type SyncResponse struct {
+}
+
 type API struct {
 	db *db.DB
 }
@@ -85,6 +92,8 @@ func (api *API) Dispatch(name string, req []byte) ([]byte, error) {
 		return api.dispatchPutBundle(req)
 	case "exec":
 		return api.dispatchExec(req)
+	case "sync":
+		return api.dispatchSync(req)
 	}
 	chk.Fail("Unsupported rpc name: %s", name)
 	return nil, nil
@@ -192,6 +201,21 @@ func (api *API) dispatchExec(reqBytes []byte) ([]byte, error) {
 		return nil, err
 	}
 	err = api.db.Exec(req.Name, req.Args.List())
+	if err != nil {
+		return nil, err
+	}
+	res := ExecResponse{}
+	return mustMarshal(res), nil
+}
+
+func (api *API) dispatchSync(reqBytes []byte) ([]byte, error) {
+	var req SyncRequest
+	err := json.Unmarshal(reqBytes, &req)
+	if err != nil {
+		return nil, err
+	}
+
+	err = api.db.Sync(req.Remote.Spec)
 	if err != nil {
 		return nil, err
 	}

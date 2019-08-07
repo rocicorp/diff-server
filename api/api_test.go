@@ -11,13 +11,15 @@ import (
 
 func TestBasics(t *testing.T) {
 	assert := assert.New(t)
-	db, dir := db.LoadTempDB(assert)
+	local, dir := db.LoadTempDB(assert)
 	fmt.Println(dir)
-	api := New(db)
+	api := New(local)
 
 	const invalidRequest = ""
 	const invalidRequestError = "unexpected end of JSON input"
 	const code = `function add(key, d) { var v = db.get(key) || 0; db.put(key, v + d); }`
+
+	_, remoteDir := db.LoadTempDB(assert)
 
 	tc := []struct {
 		rpc              string
@@ -57,16 +59,20 @@ func TestBasics(t *testing.T) {
 		{"exec", invalidRequest, ``, invalidRequestError},
 		{"exec", `{"name": "add", "args": ["bar", 2]}`, `{}`, ""},
 		{"get", `{"key": "bar"}`, `{"has":true,"data":2}`, ""},
+
+		// sync
+		{"sync", invalidRequest, ``, invalidRequestError},
+		{"sync", fmt.Sprintf(`{"remote":"%s"}`, remoteDir), `{}`, ""},
 	}
 
 	for _, t := range tc {
 		res, err := api.Dispatch(t.rpc, []byte(t.req))
 		if t.expectedError != "" {
-			assert.Nil(res, "test case %s: %s", t.rpc, t.req)
+			assert.Nil(res, "test case %s: %s", t.rpc, t.req, "test case %s: %s", t.rpc, t.req)
 			assert.EqualError(err, t.expectedError, "test case %s: %s", t.rpc, t.req)
 		} else {
 			assert.Equal([]byte(t.expectedResponse), res, "test case %s: %s", t.rpc, t.req)
-			assert.NoError(err, "test case %s: %s", t.rpc, t.req)
+			assert.NoError(err, "test case %s: %s", t.rpc, t.req, "test case %s: %s", t.rpc, t.req)
 		}
 	}
 }
