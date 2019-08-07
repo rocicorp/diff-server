@@ -1,22 +1,26 @@
 mvp
 ===
-- hook up continuous testing to now
 - hello world that embeds api
-  - android
+  x android
   - ios
   x tx reg and execution apis (1-2 wk)
   x run js code (v8? otto?)
   x expose api via js bindings
   x js library to make it minimally easy to use
-- notif api (2 days)
 x sync (1 wk)
   x local-side sync
   - server-side sync
-- server -> store data where? (several weeks)
+- hook up continuous testing to now
+- server
+  - spin up a noms server on now storing data in s3
+  - just allow client to specify database name and store everything
+- notif api (2 days)
 - blocking notifs
 
 later
 =====
+- actual execution environment
+- versioning / migration
 - fix noms sync with long commit chains
 - gc
   - collapse commit chains beyond some window
