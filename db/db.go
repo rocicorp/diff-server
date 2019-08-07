@@ -71,6 +71,10 @@ func (db *DB) load() error {
 	return nil
 }
 
+func (db *DB) Noms() types.ValueReadWriter {
+	return db.noms
+}
+
 func (db *DB) Has(id string) (bool, error) {
 	return db.head.Data(db.noms).Has(types.String(id)), nil
 }

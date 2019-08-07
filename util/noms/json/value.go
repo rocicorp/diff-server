@@ -14,6 +14,18 @@ type Value struct {
 	Noms types.ValueReadWriter
 }
 
+func New(noms types.ValueReadWriter, v types.Value) *Value {
+	r := Make(noms, v)
+	return &r
+}
+
+func Make(noms types.ValueReadWriter, v types.Value) Value {
+	return Value{
+		Noms:  noms,
+		Value: v,
+	}
+}
+
 func (v Value) MarshalJSON() ([]byte, error) {
 	buf := &bytes.Buffer{}
 	nj.ToJSON(v.Value, buf, nj.ToOptions{
