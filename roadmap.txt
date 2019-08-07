@@ -9,7 +9,6 @@ mvp
   x js library to make it minimally easy to use
 x sync (1 wk)
   x local-side sync
-  - server-side sync
 - hook up continuous testing to now
 - server
   - spin up a noms server on now storing data in s3
@@ -19,6 +18,7 @@ x sync (1 wk)
 
 later
 =====
+- server-side sync
 - actual execution environment
 - versioning / migration
 - fix noms sync with long commit chains
