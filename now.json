@@ -3,9 +3,11 @@
     "name": "replicant",
     "alias": "replicate.to",
     "builds": [
-        { "src": "landing/**", "use": "@now/static" }
+        { "src": "landing/**", "use": "@now/static" },
+        { "src": "serve/serve.go", "use": "@now/go" }
     ],
     "routes": [
+        { "src": "/serve/*", "dest": "/serve/serve.go" },
         { "src": "/(.*)", "dest": "/landing/$1" }
     ]
 }

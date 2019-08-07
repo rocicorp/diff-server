@@ -1,0 +1,15 @@
+.vscode
+
+# stuff from demo
+db1
+db2
+ops.json
+
+# build artifacts
+rep
+repm/repm-sources.jar
+repm/repm.aar
+vendor
+
+# stuff in here was changing constantly, don't feel like debugging
+examples/hello-replicant-android-java
