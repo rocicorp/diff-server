@@ -1,6 +1,6 @@
 This is a simple mobile API to Replicant using [Gomobile](https://godoc.org/golang.org/x/mobile/cmd/gomobile).
 
-Ideally we would use straight C for the API, [but](../repc/MOBILE_COMPLE_ARGH.md).
+Ideally we would use straight C for the API, but that turned out to be super difficult and I gave up.
 
 Build (from Replicant source dir in non-GOPATH):
 

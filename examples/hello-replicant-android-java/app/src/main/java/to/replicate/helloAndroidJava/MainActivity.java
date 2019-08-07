@@ -6,6 +6,7 @@ import android.app.AlertDialog;
 import android.os.Bundle;
 import android.util.Log;
 
+import org.json.JSONObject;
 import org.json.JSONTokener;
 
 import java.io.File;
@@ -24,19 +25,12 @@ public class MainActivity extends AppCompatActivity {
 
         String message = "Error";
         try {
-            File f = this.getFileStreamPath("db2");
-            repm.Connection conn = repm.Repm.open(f.getAbsolutePath());
-            repm.Command cmd = conn.exec("code/put", null);
-            cmd.write("function setGreeting(greet) { db.put('greet', greet); }".getBytes());
-            cmd.done();
-
-            cmd = conn.exec("code/run", "{\"Name\": \"setGreeting\", \"Args\": [\"Aloha\"]}".getBytes());
-            cmd.done();
-
-            cmd = conn.exec("data/get", "{\"ID\": \"greet\"}".getBytes());
-            byte[] buf = new byte[1024];
-            long n = cmd.read(buf);
-            message = (String)new JSONTokener(new String(buf, 0, (int)n)).nextValue() + ", Replicant!";
+            File f = this.getFileStreamPath("db3");
+            repm.Connection conn = repm.Repm.open(f.getAbsolutePath(), "client1");
+            conn.dispatch("putBundle", "{\"code\": \"function setGreeting(greet) { db.put('greet', greet); }\"}".getBytes());
+            conn.dispatch("exec", "{\"name\": \"setGreeting\", \"args\": [\"Aloha\"]}".getBytes());
+            byte[] result = conn.dispatch("get", "{\"key\": \"greet\"}".getBytes());
+            message = ((JSONObject)new JSONTokener(new String(result)).nextValue()).getString("data") + ", Replicant!";
         } catch (Exception e) {
             Log.e("blech", e.toString());
         }
