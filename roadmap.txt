@@ -11,8 +11,8 @@ x sync (1 wk)
   x local-side sync
 - hook up continuous testing to now
 - server
-  - spin up a noms server on now storing data in s3
-  - just allow client to specify database name and store everything
+  - get noms running locally against aws again
+  - wrap that into a now-compatible binary - no auth, client specifies db name and server just accepts
 - notif api (2 days)
 - blocking notifs
 
