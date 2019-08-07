@@ -3,8 +3,8 @@ module github.com/aboodman/replicant
 go 1.12
 
 require (
-	github.com/attic-labs/noms v0.0.0-20190623060218-889dc5547cf3
-	github.com/aws/aws-sdk-go v1.19.28 // indirect
+	github.com/attic-labs/noms v0.0.0-20190807195940-ebf8f3ca9671
+	github.com/aws/aws-sdk-go v1.19.28
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/golang/protobuf v1.3.1 // indirect
 	github.com/onsi/ginkgo v1.8.0 // indirect
