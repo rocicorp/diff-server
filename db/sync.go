@@ -12,7 +12,7 @@ import (
 )
 
 func (db *DB) Sync(remote spec.Spec) error {
-	remoteDB, err := Load(remote, "") // TODO: do something about empty origin
+	remoteDB, err := Load(remote, fmt.Sprintf("%s/remote", db.origin))
 	if err != nil {
 		return err
 	}
