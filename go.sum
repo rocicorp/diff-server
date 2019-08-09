@@ -2,6 +2,7 @@ cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMT
 cloud.google.com/go v0.34.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
 github.com/BurntSushi/toml v0.3.1 h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
+github.com/alecthomas/kingpin v2.2.6+incompatible/go.mod h1:59OFYbFVLKQKq+mqrL6Rw5bR0c3ACQaawgXx0QYndlE=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc h1:cAKDfWh5VpdgMhJosfJnn5/FoN2SRZ4p7fJNX58YPaU=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
 github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf h1:qet1QNfXsQxTZqLG4oE62mJzwPIB8+Tee4RNCL9ulrY=
@@ -16,6 +17,8 @@ github.com/attic-labs/noms v0.0.0-20190623060218-889dc5547cf3 h1:bYIs27zLnBlLKkQ
 github.com/attic-labs/noms v0.0.0-20190623060218-889dc5547cf3/go.mod h1:1a5gpKOs8RN45+kajGg58gpDiQI+6RxJCRkZECSpp2Y=
 github.com/attic-labs/noms v0.0.0-20190807195940-ebf8f3ca9671 h1:nawRJgCRzNo4BCvx3JovOe0eLx1vrXmJtQvkbiupaFA=
 github.com/attic-labs/noms v0.0.0-20190807195940-ebf8f3ca9671/go.mod h1:1a5gpKOs8RN45+kajGg58gpDiQI+6RxJCRkZECSpp2Y=
+github.com/attic-labs/noms v0.0.0-20190809205041-12b5d4e21b39 h1:h29Ai/upf3HqWcLd7+vMjPdoiSDFnBNvtd90zCrjWWU=
+github.com/attic-labs/noms v0.0.0-20190809205041-12b5d4e21b39/go.mod h1:E9bTn8aHN2+DL4LqBbsYMaR+kSg2UZ+/4ucHMdpsf2Y=
 github.com/aws/aws-sdk-go v1.19.26 h1:GavKlzJDfYQGoS4jn2F+KYYZlR8QEhrLPfpf8+oJhS4=
 github.com/aws/aws-sdk-go v1.19.26/go.mod h1:KmX6BPdI08NWTb3/sm4ZGu5ShLoqVDhKgpiN924inxo=
 github.com/aws/aws-sdk-go v1.19.28 h1:u0KMC+Qv0YVyz8YR6mREEtslSPkdUMzXgDJFD5196O8=
