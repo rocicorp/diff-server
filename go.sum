@@ -19,6 +19,8 @@ github.com/attic-labs/noms v0.0.0-20190807195940-ebf8f3ca9671 h1:nawRJgCRzNo4BCv
 github.com/attic-labs/noms v0.0.0-20190807195940-ebf8f3ca9671/go.mod h1:1a5gpKOs8RN45+kajGg58gpDiQI+6RxJCRkZECSpp2Y=
 github.com/attic-labs/noms v0.0.0-20190809205041-12b5d4e21b39 h1:h29Ai/upf3HqWcLd7+vMjPdoiSDFnBNvtd90zCrjWWU=
 github.com/attic-labs/noms v0.0.0-20190809205041-12b5d4e21b39/go.mod h1:E9bTn8aHN2+DL4LqBbsYMaR+kSg2UZ+/4ucHMdpsf2Y=
+github.com/attic-labs/noms v0.0.0-20190809205829-e52d0dd55dfe h1:64SHbIrhvU1qPci/wTblptt/DBS6XJQfJn3n+yUIZas=
+github.com/attic-labs/noms v0.0.0-20190809205829-e52d0dd55dfe/go.mod h1:E9bTn8aHN2+DL4LqBbsYMaR+kSg2UZ+/4ucHMdpsf2Y=
 github.com/aws/aws-sdk-go v1.19.26 h1:GavKlzJDfYQGoS4jn2F+KYYZlR8QEhrLPfpf8+oJhS4=
 github.com/aws/aws-sdk-go v1.19.26/go.mod h1:KmX6BPdI08NWTb3/sm4ZGu5ShLoqVDhKgpiN924inxo=
 github.com/aws/aws-sdk-go v1.19.28 h1:u0KMC+Qv0YVyz8YR6mREEtslSPkdUMzXgDJFD5196O8=
