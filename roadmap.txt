@@ -1,8 +1,11 @@
 mvp
 ===
 - hello world that embeds api
-  x android
-  - ios
+  - android/compose
+    x super basic android/java example
+    - more useful compose example
+  - ios/swiftui
+  - flutter
   x tx reg and execution apis (1-2 wk)
   x run js code (v8? otto?)
   x expose api via js bindings
@@ -10,14 +13,14 @@ mvp
 x sync (1 wk)
   x local-side sync
 - hook up continuous testing to now
-- server
-  - get noms running locally against aws again
-  - wrap that into a now-compatible binary - no auth, client specifies db name and server just accepts
-- notif api (2 days)
-- blocking notifs
+x server
+  x get noms running locally against aws again
+  x wrap that into a now-compatible binary - no auth, client specifies db name and server just accepts
 
 later
 =====
+- detailed sync tests
+  - need to invest some little format for describing histories to easily test different ones
 - server-side sync
 - actual execution environment
 - sandboxing
@@ -29,3 +32,5 @@ later
   - gc unreachable slabs in nbs
 - indexes
 - queries
+- notif api (2 days)
+- blocking notifs
