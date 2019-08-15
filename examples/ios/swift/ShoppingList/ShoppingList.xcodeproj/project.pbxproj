@@ -7,36 +7,33 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		003A203D23062260000C2109 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 003A203C23062260000C2109 /* README.md */; };
+		0048FF662303B5E5002786A2 /* Repm.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0048FF652303B5E5002786A2 /* Repm.framework */; };
+		0048FF6B230415BF002786A2 /* ReplicantFunctions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0048FF6A230415BF002786A2 /* ReplicantFunctions.swift */; };
 		68722F0422FC904700F00B6C /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68722F0322FC904700F00B6C /* App.swift */; };
 		68722F0622FC904700F00B6C /* Scene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68722F0522FC904700F00B6C /* Scene.swift */; };
-		68722F0922FC904700F00B6C /* ShoppingList.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 68722F0722FC904700F00B6C /* ShoppingList.xcdatamodeld */; };
 		68722F0B22FC904700F00B6C /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68722F0A22FC904700F00B6C /* ContentView.swift */; };
 		68722F0D22FC904900F00B6C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 68722F0C22FC904900F00B6C /* Assets.xcassets */; };
 		68722F1022FC904900F00B6C /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 68722F0F22FC904900F00B6C /* Preview Assets.xcassets */; };
 		68722F1322FC904900F00B6C /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 68722F1122FC904900F00B6C /* LaunchScreen.storyboard */; };
-		68722F1B22FCAE8C00F00B6C /* FetchedResults.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68722F1A22FCAE8C00F00B6C /* FetchedResults.swift */; };
-		68722F2322FCB2AA00F00B6C /* Item.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68722F2222FCB2AA00F00B6C /* Item.swift */; };
-		68722F2522FCB2D700F00B6C /* ListManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68722F2422FCB2D700F00B6C /* ListManager.swift */; };
 		68722F2722FCB32100F00B6C /* Cell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68722F2622FCB32100F00B6C /* Cell.swift */; };
-		68722F2922FCB76A00F00B6C /* View.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68722F2822FCB76A00F00B6C /* View.swift */; };
 		68722F2B22FCB88E00F00B6C /* AddButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68722F2A22FCB88E00F00B6C /* AddButton.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		003A203C23062260000C2109 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		0048FF652303B5E5002786A2 /* Repm.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Repm.framework; sourceTree = "<group>"; };
+		0048FF672303B897002786A2 /* ShoppingList-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ShoppingList-Bridging-Header.h"; sourceTree = "<group>"; };
+		0048FF6A230415BF002786A2 /* ReplicantFunctions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReplicantFunctions.swift; sourceTree = "<group>"; };
 		68722F0022FC904700F00B6C /* ShoppingList.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ShoppingList.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		68722F0322FC904700F00B6C /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
 		68722F0522FC904700F00B6C /* Scene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Scene.swift; sourceTree = "<group>"; };
-		68722F0822FC904700F00B6C /* ShoppingList.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = ShoppingList.xcdatamodel; sourceTree = "<group>"; };
 		68722F0A22FC904700F00B6C /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		68722F0C22FC904900F00B6C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		68722F0F22FC904900F00B6C /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		68722F1222FC904900F00B6C /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		68722F1422FC904900F00B6C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		68722F1A22FCAE8C00F00B6C /* FetchedResults.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FetchedResults.swift; sourceTree = "<group>"; };
-		68722F2222FCB2AA00F00B6C /* Item.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Item.swift; sourceTree = "<group>"; };
-		68722F2422FCB2D700F00B6C /* ListManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListManager.swift; sourceTree = "<group>"; };
 		68722F2622FCB32100F00B6C /* Cell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Cell.swift; sourceTree = "<group>"; };
-		68722F2822FCB76A00F00B6C /* View.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = View.swift; sourceTree = "<group>"; };
 		68722F2A22FCB88E00F00B6C /* AddButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddButton.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -45,6 +42,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0048FF662303B5E5002786A2 /* Repm.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -54,8 +52,10 @@
 		68722EF722FC904700F00B6C = {
 			isa = PBXGroup;
 			children = (
+				003A203C23062260000C2109 /* README.md */,
 				68722F0222FC904700F00B6C /* ShoppingList */,
 				68722F0122FC904700F00B6C /* Products */,
+				0048FF652303B5E5002786A2 /* Repm.framework */,
 			);
 			sourceTree = "<group>";
 		};
@@ -72,10 +72,10 @@
 			children = (
 				68722F2122FCB22800F00B6C /* App Launch */,
 				68722F1E22FCB1EC00F00B6C /* Delegates */,
-				68722F1C22FCB1BF00F00B6C /* Extensions */,
-				68722F1F22FCB20500F00B6C /* Models */,
 				68722F2022FCB21E00F00B6C /* Resources */,
 				68722F1D22FCB1E300F00B6C /* Views */,
+				0048FF672303B897002786A2 /* ShoppingList-Bridging-Header.h */,
+				0048FF6A230415BF002786A2 /* ReplicantFunctions.swift */,
 			);
 			path = ShoppingList;
 			sourceTree = "<group>";
@@ -86,16 +86,6 @@
 				68722F0F22FC904900F00B6C /* Preview Assets.xcassets */,
 			);
 			path = "Preview Content";
-			sourceTree = "<group>";
-		};
-		68722F1C22FCB1BF00F00B6C /* Extensions */ = {
-			isa = PBXGroup;
-			children = (
-				68722F1A22FCAE8C00F00B6C /* FetchedResults.swift */,
-				68722F2222FCB2AA00F00B6C /* Item.swift */,
-				68722F2822FCB76A00F00B6C /* View.swift */,
-			);
-			path = Extensions;
 			sourceTree = "<group>";
 		};
 		68722F1D22FCB1E300F00B6C /* Views */ = {
@@ -115,15 +105,6 @@
 				68722F0522FC904700F00B6C /* Scene.swift */,
 			);
 			path = Delegates;
-			sourceTree = "<group>";
-		};
-		68722F1F22FCB20500F00B6C /* Models */ = {
-			isa = PBXGroup;
-			children = (
-				68722F2422FCB2D700F00B6C /* ListManager.swift */,
-				68722F0722FC904700F00B6C /* ShoppingList.xcdatamodeld */,
-			);
-			path = Models;
 			sourceTree = "<group>";
 		};
 		68722F2022FCB21E00F00B6C /* Resources */ = {
@@ -176,6 +157,7 @@
 				TargetAttributes = {
 					68722EFF22FC904700F00B6C = {
 						CreatedOnToolsVersion = 11.0;
+						LastSwiftMigration = 1100;
 					};
 				};
 			};
@@ -204,6 +186,7 @@
 			files = (
 				68722F1322FC904900F00B6C /* LaunchScreen.storyboard in Resources */,
 				68722F1022FC904900F00B6C /* Preview Assets.xcassets in Resources */,
+				003A203D23062260000C2109 /* README.md in Resources */,
 				68722F0D22FC904900F00B6C /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -215,15 +198,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				68722F0922FC904700F00B6C /* ShoppingList.xcdatamodeld in Sources */,
-				68722F1B22FCAE8C00F00B6C /* FetchedResults.swift in Sources */,
 				68722F0422FC904700F00B6C /* App.swift in Sources */,
 				68722F2B22FCB88E00F00B6C /* AddButton.swift in Sources */,
-				68722F2522FCB2D700F00B6C /* ListManager.swift in Sources */,
 				68722F0B22FC904700F00B6C /* ContentView.swift in Sources */,
-				68722F2922FCB76A00F00B6C /* View.swift in Sources */,
 				68722F2722FCB32100F00B6C /* Cell.swift in Sources */,
-				68722F2322FCB2AA00F00B6C /* Item.swift in Sources */,
+				0048FF6B230415BF002786A2 /* ReplicantFunctions.swift in Sources */,
 				68722F0622FC904700F00B6C /* Scene.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -360,10 +339,15 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_ASSET_PATHS = "ShoppingList/Resources/Preview\\ Content";
 				DEVELOPMENT_TEAM = F9PGNEMEHU;
 				ENABLE_PREVIEWS = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)",
+				);
 				INFOPLIST_FILE = "ShoppingList/App Launch/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -371,6 +355,8 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = ericlewis.ShoppingList;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_BRIDGING_HEADER = "ShoppingList/ShoppingList-Bridging-Header.h";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -380,10 +366,15 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_ASSET_PATHS = "ShoppingList/Resources/Preview\\ Content";
 				DEVELOPMENT_TEAM = F9PGNEMEHU;
 				ENABLE_PREVIEWS = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)",
+				);
 				INFOPLIST_FILE = "ShoppingList/App Launch/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -391,6 +382,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = ericlewis.ShoppingList;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_BRIDGING_HEADER = "ShoppingList/ShoppingList-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -418,19 +410,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCVersionGroup section */
-		68722F0722FC904700F00B6C /* ShoppingList.xcdatamodeld */ = {
-			isa = XCVersionGroup;
-			children = (
-				68722F0822FC904700F00B6C /* ShoppingList.xcdatamodel */,
-			);
-			currentVersion = 68722F0822FC904700F00B6C /* ShoppingList.xcdatamodel */;
-			path = ShoppingList.xcdatamodeld;
-			sourceTree = "<group>";
-			versionGroupType = wrapper.xcdatamodel;
-		};
-/* End XCVersionGroup section */
 	};
 	rootObject = 68722EF822FC904700F00B6C /* Project object */;
 }

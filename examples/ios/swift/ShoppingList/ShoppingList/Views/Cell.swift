@@ -2,27 +2,23 @@ import SwiftUI
 
 struct Cell: View {
     
-    // MARK: Environment properties
+    var title: String = "Coffee"
     
-    @EnvironmentObject var manager: ListManager
+    var notes: String = "Medium roast, unground"
     
-    // MARK: Observed objects
-    
-    @ObservedObject var item: Item
+    var completed: Bool = false
 
-    // MARK: Render
-    
     var body: some View {
-        Button(action: manager.toggleComplete(item)) {
+        Button(action: {}) {
             HStack {
-                Image(systemName: item.checkbox)
-                    .foregroundColor(item.checkboxColor)
-                VStack(alignment: .leading) {
-                    Text(item.title ?? "")
+                Image(systemName: completed ? "checkmark.square.fill" : "square")
+                    .foregroundColor(completed ? .green : .secondary)
+                VStack(alignment: HorizontalAlignment.leading) {
+                    Text(title)
                         .font(.headline)
                         .foregroundColor(.primary)
-                    if item.notes != nil {
-                        Text(item.notes ?? "")
+                    if self.notes != "" {
+                        Text(notes)
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
@@ -32,12 +28,10 @@ struct Cell: View {
     }
 }
 
-// MARK: Preview
-
 #if DEBUG
 struct Cell_Previews: PreviewProvider {
     static var previews: some View {
-        Cell(item: Item())
+        Cell(title:"foo", notes:"bar")
     }
 }
 #endif

@@ -1,8 +1,9 @@
-# ShoppingList
-An example of using SwiftUI + CoreData
+# Hello, Replicant (iOS/Swift)
 
-## Screenshots
-|<img src="https://i.imgur.com/jkzri5G.png" width="300">|<img src="https://i.imgur.com/bCMEAaG.png" width="300">|
+This example demonstrates using Replicant in an iOS/Swift/SwiftUI app.
 
-## Running
-Must use the latest Xcode 11 beta, and be running some sort of beta software probably. This tries to use CloudKit, but haven't tested if it actually works.
+To build:
+
+1. Build the Replicant mobile bindings, by following the instructions at [repm/README.md](../../../../repm/repm/README.md)
+2. Open this project in XCode (11.0b5+)
+3. Run the project

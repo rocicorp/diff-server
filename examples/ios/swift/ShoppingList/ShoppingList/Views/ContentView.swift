@@ -1,16 +1,12 @@
 import SwiftUI
 import CoreData
+import Foundation
+import Repm
 
 struct ContentView: View {
     
-    // MARK: Environment properties
-    
-    @Environment(\.managedObjectContext) var managedObjectContext
-    
-    @EnvironmentObject var manager: ListManager
-    
-    // MARK: State properties
-    
+    var replicant: RepmConnection!
+        
     @State private var text = ""
     
     @State private var notes = ""
@@ -24,10 +20,6 @@ struct ContentView: View {
         }
     }
     
-    // MARK: CoreData properties
-
-    @FetchRequest(fetchRequest: listFetchRequest) var items: FetchedResults<Item>
-    
     // MARK: Private methods
 
     private func toggleAdding() {
@@ -35,7 +27,9 @@ struct ContentView: View {
     }
     
     private func save() {
-        manager.add(text, count: items.count, notes: notes.isEmpty ? nil : notes)
+        let req = ["name": "addItem", "args": [text, notes]] as [String : Any]
+        let data = try! JSONSerialization.data(withJSONObject: req)
+        try! replicant.dispatch("exec", data: data)
         isAdding = false
     }
 
@@ -45,24 +39,39 @@ struct ContentView: View {
         NavigationView {
             Form {
                 if isAdding {
+                    /*
+                     TODO: gar
                     Section(header: Text("Add an Item")) {
                         TextField("Title", text: $text, onCommit: save)
                         TextField("Notes", text: $notes, onCommit: save)
                     }
+                    */
                 }
                 Section {
-                    ForEach(items, id: \.objectID) {
-                        Cell(item: $0)
+                    let items = self.getItems()
+                    ForEach(0..<getItems().count) {
+                        Cell(item: items[$0])
                     }
-                    .onDelete(perform: items.delete(managedObjectContext))
-                    .onMove(perform: items.move(managedObjectContext))
+                    // TODO
+                    //.onDelete(perform: )
+                    //.onMove(perform: )
                 }
             }
-            .navigationBarTitle("My List")
+            .navigationBarTitle("Shopping List")
             .navigationBarItems(leading: EditButton(),
                                 trailing: AddButton(isAdding,
                                                     action: toggleAdding))
         }
+    }
+    
+    func getItems() -> [[String:String]] {
+        // TODO: We want to use a function here to isolate schema knowledge inside replicant code.
+        // Thus need to implement return values from Replicant.
+        let req = ["key": "items"]
+        let data = try! replicant.dispatch("get", data: JSONEncoder().encode(req))
+        let resp = try! JSONSerialization.jsonObject(with: data)
+        print(resp)
+        return []
     }
 }
 
@@ -71,7 +80,7 @@ struct ContentView: View {
 #if DEBUG
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
-        ContentView()
+        ContentView(replicant: nil)
     }
 }
 #endif
