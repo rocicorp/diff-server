@@ -96,6 +96,11 @@ func (db *DB) Put(path string, v types.Value) error {
 	return err
 }
 
+func (db *DB) Del(path string) (ok bool, err error) {
+	v, err := db.execInternal(types.Blob{}, ".delValue", types.NewList(db.noms, types.String(path)))
+	return bool(v.(types.Bool)), err
+}
+
 func (db *DB) Bundle() (types.Blob, error) {
 	return db.head.Bundle(db.noms), nil
 }
@@ -165,8 +170,23 @@ func (db *DB) execImpl(basis types.Ref, bundle types.Blob, function string, args
 			v := args.Get(uint64(1))
 			ed := editor{noms: db.noms, data: basisCommit.Data(db.noms).Edit()}
 			isWrite = true
-			ed.Put(string(k.(types.String)), v)
+			err = ed.Put(string(k.(types.String)), v)
+			if err != nil {
+				return
+			}
 			newData = db.noms.WriteValue(ed.Finalize())
+			break
+		case ".delValue":
+			k := args.Get(uint64(0))
+			ed := editor{noms: db.noms, data: basisCommit.Data(db.noms).Edit()}
+			isWrite = true
+			var ok bool
+			ok, err = ed.Del(string(k.(types.String)))
+			if err != nil {
+				return
+			}
+			newData = db.noms.WriteValue(ed.Finalize())
+			output = types.Bool(ok)
 			break
 		case ".putBundle":
 			newBundle = db.noms.WriteValue(args.Get(uint64(0)).(types.Blob))

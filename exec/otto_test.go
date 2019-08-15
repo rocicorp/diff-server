@@ -1,6 +1,7 @@
 package exec
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -31,6 +32,14 @@ func (d db) Has(id string) (ok bool, err error) {
 func (d db) Get(id string) (v types.Value, err error) {
 	v = d.data[id]
 	return
+}
+
+func (d db) Del(id string) (ok bool, err error) {
+	if _, ok := d.data[id]; ok {
+		delete(d.data, id)
+		return ok, nil
+	}
+	return false, nil
 }
 
 func TestArgsToJSToStorage(t *testing.T) {
@@ -118,52 +127,52 @@ func TestOutput(t *testing.T) {
 	assert.Nil(out)
 }
 
-func TestInvalidBundle(t *testing.T) {
+func TestErrors(t *testing.T) {
 	assert := assert.New(t)
 	sp, err := spec.ForDatabase("mem")
 	assert.NoError(err)
 	noms := sp.GetDatabase()
 	d := db{noms, map[string]types.Value{}}
-	args := types.NewList(noms)
-	out, err := Run(d, strings.NewReader("!!not valid javascript!!!"), "bonk", args)
-	assert.EqualError(err, "bundle.js: Line 1:7 Unexpected identifier (and 2 more errors)")
-	assert.Nil(out)
+	args := types.NewList(d.noms)
+
+	tc := []struct {
+		bundle string
+		fn     string
+		err    string
+	}{
+		{"!!not valid javascript!!!", "", "bundle.js: Line 1:7 Unexpected identifier (and 2 more errors)"},
+		{"throw new Error('bonk')", "", "Error: bonk\n    at bundle.js:1:11\n"},
+		{"function bonk() { throw new Error('bonk'); }", "bonk", "Error: bonk\n    at bonk (bundle.js:1:29)\n    at apply (<native code>)\n    at recv (bootstrap.js:58:12)\n"},
+		{"", "bonk", "Unknown function: bonk"},
+	}
+
+	for i, t := range tc {
+		msg := fmt.Sprintf("test case %d,: code: %s, fn: %s", i, t.bundle, t.fn)
+		out, err := Run(d, strings.NewReader(t.bundle), t.fn, args)
+		assert.EqualError(err, t.err, msg)
+		assert.Nil(out, msg)
+	}
 }
 
-func TestParseTimeError(t *testing.T) {
+func TestDelete(t *testing.T) {
 	assert := assert.New(t)
 	sp, err := spec.ForDatabase("mem")
 	assert.NoError(err)
 	noms := sp.GetDatabase()
 	d := db{noms, map[string]types.Value{}}
-	args := types.NewList(noms)
-	out, err := Run(d, strings.NewReader("throw new Error('bonk')"), "bonk", args)
-	assert.EqualError(err, "Error: bonk\n    at bundle.js:1:11\n")
-	assert.Nil(out)
-}
+	d.data["foo"] = types.String("bar")
+	assert.NotEmpty(d.data)
 
-func TestExecTimeError(t *testing.T) {
-	assert := assert.New(t)
-	sp, err := spec.ForDatabase("mem")
+	bundle := "function del(id) { return db.del(id); }"
+	result, err := Run(d, strings.NewReader(bundle), "del", types.NewList(d.noms, types.String("foo")))
 	assert.NoError(err)
-	noms := sp.GetDatabase()
-	d := db{noms, map[string]types.Value{}}
-	args := types.NewList(noms)
-	out, err := Run(d, strings.NewReader("function bonk() { throw new Error('bonk'); }"), "bonk", args)
-	assert.EqualError(err, "Error: bonk\n    at bonk (bundle.js:1:29)\n    at apply (<native code>)\n    at recv (bootstrap.js:51:12)\n")
-	assert.Nil(out)
-}
+	assert.Empty(d.data)
+	assert.True(types.Bool(true).Equals(result))
 
-func TestUnknownFunction(t *testing.T) {
-	assert := assert.New(t)
-	sp, err := spec.ForDatabase("mem")
+	result, err = Run(d, strings.NewReader(bundle), "del", types.NewList(d.noms, types.String("foo")))
 	assert.NoError(err)
-	noms := sp.GetDatabase()
-	d := db{noms, map[string]types.Value{}}
-	args := types.NewList(noms)
-	out, err := Run(d, strings.NewReader(""), "bonk", args)
-	assert.EqualError(err, "Unknown function: bonk")
-	assert.Nil(out)
+	assert.Empty(d.data)
+	assert.True(types.Bool(false).Equals(result))
 }
 
 // TODO : so much more to test

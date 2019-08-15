@@ -61,6 +61,7 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 	has(app, &rdb, out)
 	get(app, &rdb, out)
 	put(app, &rdb, sp, in)
+	del(app, &rdb, sp, out)
 	exec(app, &rdb, sp, out)
 	sync(app, &rdb, sp)
 
@@ -175,6 +176,21 @@ func put(parent *kingpin.Application, db *db.DB, sp *spec.Spec, in io.Reader) {
 			return err
 		}
 		return db.Put(*id, v)
+	})
+}
+
+func del(parent *kingpin.Application, db *db.DB, sp *spec.Spec, out io.Writer) {
+	kc := parent.Command("del", "Deletes an item from the database.")
+	id := kc.Arg("id", "id of the value to delete").Required().String()
+	kc.Action(func(_ *kingpin.ParseContext) error {
+		ok, err := db.Del(*id)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			out.Write([]byte("No such id.\n"))
+		}
+		return nil
 	})
 }
 

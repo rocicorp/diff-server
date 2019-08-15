@@ -63,6 +63,33 @@ func TestData(t *testing.T) {
 	}
 }
 
+func TestDel(t *testing.T) {
+	assert := assert.New(t)
+	sp, err := spec.ForDatabase("mem")
+	assert.NoError(err)
+	db, err := Load(sp, "test")
+	assert.NoError(err)
+
+	err = db.Put("foo", types.String("bar"))
+	assert.NoError(err)
+
+	ok, err := db.Has("foo")
+	assert.NoError(err)
+	assert.True(ok)
+
+	ok, err = db.Del("foo")
+	assert.NoError(err)
+	assert.True(ok)
+
+	ok, err = db.Has("foo")
+	assert.NoError(err)
+	assert.False(ok)
+
+	ok, err = db.Del("foo")
+	assert.NoError(err)
+	assert.False(ok)
+}
+
 func TestBundle(t *testing.T) {
 	assert := assert.New(t)
 	db, dir := LoadTempDB(assert)

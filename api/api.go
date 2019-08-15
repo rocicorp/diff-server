@@ -41,6 +41,14 @@ type PutRequest struct {
 type PutResponse struct {
 }
 
+type DelRequest struct {
+	Key string `json:"key"`
+}
+
+type DelResponse struct {
+	Ok bool `json:"ok"`
+}
+
 type GetBundleRequest struct {
 }
 
@@ -87,6 +95,8 @@ func (api *API) Dispatch(name string, req []byte) ([]byte, error) {
 		return api.dispatchGet(req)
 	case "put":
 		return api.dispatchPut(req)
+	case "del":
+		return api.dispatchDel(req)
 	case "getBundle":
 		return api.dispatchGetBundle(req)
 	case "putBundle":
@@ -152,6 +162,22 @@ func (api *API) dispatchPut(reqBytes []byte) ([]byte, error) {
 		return nil, err
 	}
 	res := PutResponse{}
+	return mustMarshal(res), nil
+}
+
+func (api *API) dispatchDel(reqBytes []byte) ([]byte, error) {
+	req := DelRequest{}
+	err := json.Unmarshal(reqBytes, &req)
+	if err != nil {
+		return nil, err
+	}
+	ok, err := api.db.Del(req.Key)
+	if err != nil {
+		return nil, err
+	}
+	res := DelResponse{
+		Ok: ok,
+	}
 	return mustMarshal(res), nil
 }
 

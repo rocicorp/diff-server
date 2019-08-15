@@ -18,6 +18,7 @@ const (
 	cmdPut int = iota
 	cmdHas
 	cmdGet
+	cmdDel
 )
 
 type Database interface {
@@ -25,6 +26,7 @@ type Database interface {
 	Put(id string, value types.Value) error
 	Has(id string) (ok bool, err error)
 	Get(id string) (types.Value, error)
+	Del(id string) (ok bool, err error)
 }
 
 func Run(db Database, source io.Reader, fn string, args types.List) (types.Value, error) {
@@ -91,6 +93,14 @@ func Run(db Database, source io.Reader, fn string, args types.List) (types.Value
 			}
 			res.Set("ok", true)
 			res.Set("data", sb.String())
+
+		case cmdDel:
+			ok, err := db.Del(args[1].String())
+			if err != nil {
+				res.Set("error", err.Error())
+				break
+			}
+			res.Set("ok", ok)
 		}
 		return res.Value()
 	})

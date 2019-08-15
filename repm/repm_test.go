@@ -19,6 +19,8 @@ func TestBasic(t *testing.T) {
 	assert.NoError(err)
 	resp, err = conn.Dispatch("get", []byte(`{"key": "foo"}`))
 	assert.Equal([]byte(`{"has":true,"data":"bar"}`), resp)
+	resp, err = conn.Dispatch("del", []byte(`{"key": "foo"}`))
+	assert.Equal([]byte(`{"ok":true}`), resp)
 	testFile, err := ioutil.TempFile(dir, "")
 	assert.NoError(err)
 
