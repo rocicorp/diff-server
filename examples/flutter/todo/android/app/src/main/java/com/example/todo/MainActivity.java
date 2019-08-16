@@ -14,7 +14,7 @@ import android.util.Log;
 public class MainActivity extends FlutterActivity {
   private static final String CHANNEL = "replicant.dev/examples/todo";
 
-  private repm.Connection conn;
+  private static repm.Connection conn;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -39,9 +39,9 @@ public class MainActivity extends FlutterActivity {
   }
 
   private repm.Connection getConnection() throws Exception {
-    if (this.conn == null) {
+    if (MainActivity.conn == null) {
       File f = this.getFileStreamPath("db3");
-      this.conn = repm.Repm.open(f.getAbsolutePath(), "client1");
+      MainActivity.conn = repm.Repm.open(f.getAbsolutePath(), "client1");
 
       // TODO: Only do this on first run, and really only when version changes.
       // TODO: Why doesn't parse error (no trailing curly) register anywhere?
@@ -49,6 +49,6 @@ public class MainActivity extends FlutterActivity {
         "{\"code\": \"function add(key, incr) { var val = db.get(key) || 0; db.put(key, val + incr); }\" }".getBytes());
       System.out.println("Replicant bundle registered");
     }
-    return this.conn;
+    return MainActivity.conn;
   }
 }
