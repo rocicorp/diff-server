@@ -51,10 +51,15 @@ class _MyHomePageState extends State<MyHomePage> {
   static const platform = const MethodChannel('replicant.dev/examples/todo');
 
   _MyHomePageState() {
-    _refreshCounter();
+    _init();
   }
 
   int _counter = 0;
+
+  Future<void> _init() async {
+    await _registerBundle();
+    await _refreshCounter();
+  }
 
   Future<void> _incrementCounter() async {
     await platform.invokeMethod('exec', jsonEncode({'name': 'add', 'args': ['counter', 1]}));
@@ -66,6 +71,15 @@ class _MyHomePageState extends State<MyHomePage> {
       setState(() {
         _counter = resp['data'];
       });
+  }
+
+  Future<void> _registerBundle() async {
+      // TODO: Only do this on first run, and really only when version changes.
+      // TODO: Why doesn't parse error (no trailing curly) register anywhere?
+      platform.invokeMethod("putBundle", jsonEncode({
+        'code': 'function add(key, incr) { var val = db.get(key) || 0; db.put(key, val + incr); }',
+      }));
+      print("Replicant: Bundle registered");
   }
 
   @override

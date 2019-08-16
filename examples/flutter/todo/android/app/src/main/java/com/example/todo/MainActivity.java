@@ -42,12 +42,6 @@ public class MainActivity extends FlutterActivity {
     if (MainActivity.conn == null) {
       File f = this.getFileStreamPath("db3");
       MainActivity.conn = repm.Repm.open(f.getAbsolutePath(), "client1");
-
-      // TODO: Only do this on first run, and really only when version changes.
-      // TODO: Why doesn't parse error (no trailing curly) register anywhere?
-      conn.dispatch("putBundle",
-        "{\"code\": \"function add(key, incr) { var val = db.get(key) || 0; db.put(key, val + incr); }\" }".getBytes());
-      System.out.println("Replicant bundle registered");
     }
     return MainActivity.conn;
   }
