@@ -29,7 +29,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	sess := session.Must(session.NewSession(aws.NewConfig().WithRegion("us-west-2").WithCredentials(
 		credentials.NewStaticCredentials(os.Getenv("REPLICANT_AWS_ACCESS_KEY_ID"), os.Getenv("REPLICANT_AWS_SECRET_ACCESS_KEY"), ""))))
-	cs := nbs.NewAWSStore("replicant", dbName, "aa-replicant", s3.New(sess), dynamodb.New(sess), 1<<28)
+	cs := nbs.NewAWSStore("replicant", dbName, "aa-replicant2", s3.New(sess), dynamodb.New(sess), 1<<28)
 	router := datas.Router(cs, "/serve/"+dbName)
 	router.ServeHTTP(w, r)
 }
