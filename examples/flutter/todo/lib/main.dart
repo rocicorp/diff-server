@@ -1,4 +1,8 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 void main() => runApp(MyApp());
 
@@ -44,17 +48,21 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  static const platform = const MethodChannel('replicant.dev/examples/todo');
+
   int _counter = 0;
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+  Future<void> _incrementCounter() async {
+    try {
+      await platform.invokeMethod('exec', jsonEncode({'name': 'add', 'args': ['counter', 1]}));
+      Map<String, dynamic> resp = jsonDecode(await platform.invokeMethod('get', jsonEncode({'key': 'counter'})));
+      setState(() {
+        _counter = resp['data'];
+      });
+    } on PlatformException catch (e) {
+      print("exception");
+      print(e);
+    }
   }
 
   @override
