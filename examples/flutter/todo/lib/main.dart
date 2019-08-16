@@ -82,6 +82,15 @@ class _MyHomePageState extends State<MyHomePage> {
       print("Replicant: Bundle registered");
   }
 
+  Future<void> _sync() async {
+      print("Syncing...");
+      await platform.invokeMethod("sync", jsonEncode({
+        'remote': 'https://replicate.to/serve/aa-counter',
+      }));
+      await _refreshCounter();
+      print("Done");
+  }
+
   @override
   Widget build(BuildContext context) {
     // This method is rerun every time setState is called, for instance as done
@@ -116,20 +125,20 @@ class _MyHomePageState extends State<MyHomePage> {
           // horizontal).
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.display1,
-            ),
+            RaisedButton(
+              onPressed: _incrementCounter,
+              child: Text(
+                'You have pushed the button\n$_counter times.',
+                style: TextStyle(fontSize: 20),
+              ),
+            )
           ],
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
+        onPressed: _sync,
         tooltip: 'Increment',
-        child: Icon(Icons.add),
+        child: Icon(Icons.sync),
       ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
