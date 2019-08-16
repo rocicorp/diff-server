@@ -50,19 +50,22 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   static const platform = const MethodChannel('replicant.dev/examples/todo');
 
+  _MyHomePageState() {
+    _refreshCounter();
+  }
+
   int _counter = 0;
 
   Future<void> _incrementCounter() async {
-    try {
-      await platform.invokeMethod('exec', jsonEncode({'name': 'add', 'args': ['counter', 1]}));
+    await platform.invokeMethod('exec', jsonEncode({'name': 'add', 'args': ['counter', 1]}));
+    await _refreshCounter();
+  }
+
+  Future<void> _refreshCounter() async {
       Map<String, dynamic> resp = jsonDecode(await platform.invokeMethod('get', jsonEncode({'key': 'counter'})));
       setState(() {
         _counter = resp['data'];
       });
-    } on PlatformException catch (e) {
-      print("exception");
-      print(e);
-    }
   }
 
   @override
