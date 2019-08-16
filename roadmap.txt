@@ -1,21 +1,21 @@
 mvp
 ===
-- hello world that embeds api
-  - android/compose
-    x super basic android/java example
-    - more useful compose example
-  - ios/swiftui
-  - flutter
-  x tx reg and execution apis (1-2 wk)
-  x run js code (v8? otto?)
-  x expose api via js bindings
-  x js library to make it minimally easy to use
-x sync (1 wk)
-  x local-side sync
-- hook up continuous testing to now
-x server
-  x get noms running locally against aws again
-  x wrap that into a now-compatible binary - no auth, client specifies db name and server just accepts
+- bugs:
+  - why does first commit in flutter todo app create merge commits? expect fast-forward
+  - sync hella slow
+  - sync crash on android - permissions error creating temp dir
+- todo list samples on {ios/swift, android/java, flutter, and rn} that share a schema and can sync w/ each other
+  - core
+    x tx reg and execution apis (1-2 wk)
+    x run js code (v8? otto?)
+    x expose api via js bindings
+    x js library to make it minimally easy to use
+  x sync (1 wk)
+    x local-side sync
+  - hook up continuous testing to now
+  x server
+    x get noms running locally against aws again
+    x wrap that into a now-compatible binary - no auth, client specifies db name and server just accepts
 
 later
 =====
