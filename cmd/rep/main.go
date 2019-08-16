@@ -46,7 +46,7 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 	has(app, &rdb, out)
 	get(app, &rdb, out)
 	put(app, &rdb, sp, in)
-	exec(app, &rdb, sp)
+	exec(app, &rdb, sp, out)
 	sync(app, &rdb, sp)
 
 	bundle := app.Command("bundle", "Manage the currently registered bundle.")
@@ -78,7 +78,7 @@ func putBundle(parent *kingpin.CmdClause, db *db.DB, sp *spec.Spec, in io.Reader
 	})
 }
 
-func exec(parent *kingpin.Application, db *db.DB, sp *spec.Spec) {
+func exec(parent *kingpin.Application, db *db.DB, sp *spec.Spec, out io.Writer) {
 	kc := parent.Command("exec", "Execute a function.")
 
 	name := kc.Arg("name", "Name of function from current transaction bundle to execute.").Required().String()
@@ -111,7 +111,11 @@ func exec(parent *kingpin.Application, db *db.DB, sp *spec.Spec) {
 			}
 			args = append(args, v)
 		}
-		return db.Exec(*name, types.NewList(sp.GetDatabase(), args...))
+		output, err := db.Exec(*name, types.NewList(sp.GetDatabase(), args...))
+		if output != nil {
+			types.WriteEncodedValue(out, output)
+		}
+		return err
 	})
 }
 

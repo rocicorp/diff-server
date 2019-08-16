@@ -38,7 +38,7 @@ func rebase(db *DB, reachable *reachable.Set, onto types.Ref, date datetime.Date
 
 	switch commit.Type() {
 	case CommitTypeTx:
-		newBundle, newData, err = db.execImpl(types.NewRef(newBasis.Original), commit.Meta.Tx.Bundle(db.noms), commit.Meta.Tx.Name, commit.Meta.Tx.Args)
+		newBundle, newData, _, _, err = db.execImpl(types.NewRef(newBasis.Original), commit.Meta.Tx.Bundle(db.noms), commit.Meta.Tx.Name, commit.Meta.Tx.Args)
 		if err != nil {
 			return Commit{}, err
 		}
@@ -49,7 +49,7 @@ func rebase(db *DB, reachable *reachable.Set, onto types.Ref, date datetime.Date
 		if err != nil {
 			return Commit{}, err
 		}
-		newBundle, newData, err = db.execImpl(types.NewRef(newBasis.Original), target.Meta.Tx.Bundle(db.noms), target.Meta.Tx.Name, target.Meta.Tx.Args)
+		newBundle, newData, _, _, err = db.execImpl(types.NewRef(newBasis.Original), target.Meta.Tx.Bundle(db.noms), target.Meta.Tx.Name, target.Meta.Tx.Args)
 		if err != nil {
 			return Commit{}, err
 		}

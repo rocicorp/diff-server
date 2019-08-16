@@ -22,7 +22,7 @@ func TestCommands(t *testing.T) {
 	}{
 		{
 			"bundle put good",
-			"function futz(k, v){ db.put(k, v) }",
+			"function futz(k, v){ db.put(k, v) }; function echo(v) { return v; };",
 			"bundle put",
 			0,
 			"",
@@ -33,7 +33,7 @@ func TestCommands(t *testing.T) {
 			"",
 			"bundle get",
 			0,
-			"function futz(k, v){ db.put(k, v) }",
+			"function futz(k, v){ db.put(k, v) }; function echo(v) { return v; };",
 			"",
 		},
 		{
@@ -66,6 +66,14 @@ func TestCommands(t *testing.T) {
 			"exec futz foo bar",
 			0,
 			"",
+			"",
+		},
+		{
+			"exec echo",
+			"",
+			"exec echo monkey",
+			0,
+			`"monkey"`,
 			"",
 		},
 		{

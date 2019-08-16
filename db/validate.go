@@ -29,7 +29,7 @@ func validate(db *DB, reachable *reachable.Set, commit Commit) error {
 	var replayed Commit
 	switch commit.Type() {
 	case CommitTypeTx:
-		newBundle, newData, err := db.execImpl(commit.BasisRef(), commit.Meta.Tx.Bundle(db.noms), commit.Meta.Tx.Name, commit.Meta.Tx.Args)
+		newBundle, newData, _, _, err := db.execImpl(commit.BasisRef(), commit.Meta.Tx.Bundle(db.noms), commit.Meta.Tx.Name, commit.Meta.Tx.Args)
 		if err != nil {
 			return err
 		}
@@ -41,7 +41,7 @@ func validate(db *DB, reachable *reachable.Set, commit Commit) error {
 		if err != nil {
 			return err
 		}
-		newBundle, newData, err := db.execImpl(commit.BasisRef(), target.Meta.Tx.Bundle(db.noms), target.Meta.Tx.Name, target.Meta.Tx.Args)
+		newBundle, newData, _, _, err := db.execImpl(commit.BasisRef(), target.Meta.Tx.Bundle(db.noms), target.Meta.Tx.Name, target.Meta.Tx.Args)
 		if err != nil {
 			return err
 		}

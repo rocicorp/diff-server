@@ -17,7 +17,7 @@ func TestBasics(t *testing.T) {
 
 	const invalidRequest = ""
 	const invalidRequestError = "unexpected end of JSON input"
-	const code = `function add(key, d) { var v = db.get(key) || 0; db.put(key, v + d); }`
+	const code = `function add(key, d) { var v = db.get(key) || 0; v += d; db.put(key, v); return v; }`
 
 	_, remoteDir := db.LoadTempDB(assert)
 
@@ -57,7 +57,7 @@ func TestBasics(t *testing.T) {
 
 		// exec
 		{"exec", invalidRequest, ``, invalidRequestError},
-		{"exec", `{"name": "add", "args": ["bar", 2]}`, `{}`, ""},
+		{"exec", `{"name": "add", "args": ["bar", 2]}`, `{"result":2}`, ""},
 		{"get", `{"key": "bar"}`, `{"has":true,"data":2}`, ""},
 
 		// sync

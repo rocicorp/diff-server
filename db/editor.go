@@ -7,6 +7,10 @@ import (
 type editor struct {
 	noms types.ValueReadWriter
 	data *types.MapEditor
+
+	// True if the instance has ever received a mutating call.
+	// Note this is true even if the mutating call didn't succeed.
+	receivedMutAttempt bool
 }
 
 func (ed editor) Noms() types.ValueReadWriter {
@@ -26,12 +30,17 @@ func (ed editor) Get(id string) (types.Value, error) {
 }
 
 // This interface has to be in terms of values because sync is going to call it with values.
-func (ed editor) Put(id string, v types.Value) error {
+func (ed *editor) Put(id string, v types.Value) error {
+	ed.receivedMutAttempt = true
 	ed.data.Set(types.String(id), v)
 	return nil
 }
 
-func (ed editor) Del(id string) (bool, error) {
+func (ed *editor) Del(id string) (bool, error) {
+	// We are specifically tracking whether the user attempted to write, not whether any
+	// changed happened (if we only wanted to know the latter we could just compare the
+	// resulting end state).
+	ed.receivedMutAttempt = true
 	if !ed.data.Has(types.String(id)) {
 		return false, nil
 	}

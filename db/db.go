@@ -84,7 +84,8 @@ func (db *DB) Get(id string) (types.Value, error) {
 }
 
 func (db *DB) Put(path string, v types.Value) error {
-	return db.execInternal(types.Blob{}, ".putValue", types.NewList(db.noms, types.String(path), v))
+	_, err := db.execInternal(types.Blob{}, ".putValue", types.NewList(db.noms, types.String(path), v))
+	return err
 }
 
 func (db *DB) Bundle() (types.Blob, error) {
@@ -92,12 +93,13 @@ func (db *DB) Bundle() (types.Blob, error) {
 }
 
 func (db *DB) PutBundle(b types.Blob) error {
-	return db.execInternal(types.Blob{}, ".putBundle", types.NewList(db.noms, b))
+	_, err := db.execInternal(types.Blob{}, ".putBundle", types.NewList(db.noms, b))
+	return err
 }
 
-func (db *DB) Exec(function string, args types.List) error {
+func (db *DB) Exec(function string, args types.List) (types.Value, error) {
 	if strings.HasPrefix(function, ".") {
-		return fmt.Errorf("Cannot call system function: %s", function)
+		return nil, fmt.Errorf("Cannot call system function: %s", function)
 	}
 	return db.execInternal(db.head.Bundle(db.noms), function, args)
 }
@@ -107,11 +109,16 @@ func (db *DB) Reload() error {
 	return db.load()
 }
 
-func (db *DB) execInternal(bundle types.Blob, function string, args types.List) error {
+func (db *DB) execInternal(bundle types.Blob, function string, args types.List) (types.Value, error) {
 	basis := types.NewRef(db.head.Original)
-	newBundle, newData, err := db.execImpl(basis, bundle, function, args)
+	newBundle, newData, output, isWrite, err := db.execImpl(basis, bundle, function, args)
 	if err != nil {
-		return err
+		return nil, err
+	}
+
+	// Do not add commits for read-only transactions.
+	if !isWrite {
+		return output, nil
 	}
 
 	var bundleRef types.Ref
@@ -126,18 +133,18 @@ func (db *DB) execInternal(bundle types.Blob, function string, args types.List) 
 	// fast-forwarding outside of Noms, but it's a nice sanity check.
 	_, err = db.noms.FastForward(db.noms.GetDataset(local_dataset), commitRef)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	db.head = commit
-	return nil
+	return output, nil
 }
 
 // TODO: add date and random source to this so that sync can set it up correctly when replaying.
-func (db *DB) execImpl(basis types.Ref, bundle types.Blob, function string, args types.List) (newBundleRef types.Ref, newDataRef types.Ref, err error) {
+func (db *DB) execImpl(basis types.Ref, bundle types.Blob, function string, args types.List) (newBundleRef types.Ref, newDataRef types.Ref, output types.Value, isWrite bool, err error) {
 	var basisCommit Commit
 	err = marshal.Unmarshal(basis.TargetValue(db.noms), &basisCommit)
 	if err != nil {
-		return types.Ref{}, types.Ref{}, err
+		return types.Ref{}, types.Ref{}, nil, false, err
 	}
 
 	newBundle := basisCommit.Value.Code
@@ -148,22 +155,26 @@ func (db *DB) execImpl(basis types.Ref, bundle types.Blob, function string, args
 		case ".putValue":
 			k := args.Get(uint64(0))
 			v := args.Get(uint64(1))
-			ed := editor{db.noms, basisCommit.Data(db.noms).Edit()}
+			ed := editor{noms: db.noms, data: basisCommit.Data(db.noms).Edit()}
+			isWrite = true
 			ed.Put(string(k.(types.String)), v)
 			newData = db.noms.WriteValue(ed.Finalize())
 			break
 		case ".putBundle":
 			newBundle = db.noms.WriteValue(args.Get(uint64(0)).(types.Blob))
+			isWrite = true
 			break
 		}
 	} else {
-		ed := editor{db.noms, basisCommit.Data(db.noms).Edit()}
-		err := exec.Run(ed, bundle.Reader(), function, args)
+		ed := &editor{noms: db.noms, data: basisCommit.Data(db.noms).Edit()}
+		o, err := exec.Run(ed, bundle.Reader(), function, args)
 		if err != nil {
-			return types.Ref{}, types.Ref{}, err
+			return types.Ref{}, types.Ref{}, nil, false, err
 		}
+		isWrite = ed.receivedMutAttempt
 		newData = db.noms.WriteValue(ed.Finalize())
+		output = o
 	}
 
-	return newBundle, newData, nil
+	return newBundle, newData, output, isWrite, nil
 }

@@ -50,6 +50,7 @@ function recv(fn, args) {
 		throw new Error('Unknown function: ' + fn);
 	}
 	var parsed = JSON.parse(args);
-	f.apply(null, parsed);
+	var res = f.apply(null, parsed);
+	return res === undefined ? res : JSON.stringify(res);
 }
 `

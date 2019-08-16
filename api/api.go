@@ -61,6 +61,7 @@ type ExecRequest struct {
 }
 
 type ExecResponse struct {
+	Result *jsnoms.Value `json:"result,omitempty"`
 }
 
 type SyncRequest struct {
@@ -200,11 +201,14 @@ func (api *API) dispatchExec(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = api.db.Exec(req.Name, req.Args.List())
+	output, err := api.db.Exec(req.Name, req.Args.List())
 	if err != nil {
 		return nil, err
 	}
 	res := ExecResponse{}
+	if output != nil {
+		res.Result = jsnoms.New(api.db.Noms(), output)
+	}
 	return mustMarshal(res), nil
 }
 

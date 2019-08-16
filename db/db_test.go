@@ -93,10 +93,12 @@ func TestExec(t *testing.T) {
 
 	db.PutBundle(types.NewBlob(db.noms, strings.NewReader(code)))
 
-	err := db.Exec("append", types.NewList(db.noms, types.String("log"), types.String("foo")))
+	out, err := db.Exec("append", types.NewList(db.noms, types.String("log"), types.String("foo")))
 	assert.NoError(err)
-	err = db.Exec("append", types.NewList(db.noms, types.String("log"), types.String("bar")))
+	assert.Nil(out)
+	out, err = db.Exec("append", types.NewList(db.noms, types.String("log"), types.String("bar")))
 	assert.NoError(err)
+	assert.Nil(out)
 
 	dbs := []*DB{db, reloadDB(assert, dir)}
 	for _, d := range dbs {
@@ -104,4 +106,25 @@ func TestExec(t *testing.T) {
 		assert.NoError(err)
 		assert.True(types.NewList(d.noms, types.String("foo"), types.String("bar")).Equals(act))
 	}
+}
+
+func TestReadTransaction(t *testing.T) {
+	assert := assert.New(t)
+	db, _ := LoadTempDB(assert)
+
+	code := `function write(v) { db.put("foo", v) } function read() { return db.get("foo") }`
+
+	db.PutBundle(types.NewBlob(db.noms, strings.NewReader(code)))
+
+	out, err := db.Exec("write", types.NewList(db.noms, types.String("bar")))
+	assert.NoError(err)
+	assert.Nil(out)
+	h := db.head.Original
+
+	out, err = db.Exec("read", types.NewList(db.noms))
+	assert.NoError(err)
+	assert.Equal("bar", string(out.(types.String)))
+
+	// Read-only transactions shouldn't add a commit
+	assert.True(h.Equals(db.head.Original))
 }

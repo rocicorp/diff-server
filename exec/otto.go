@@ -26,7 +26,7 @@ type Database interface {
 	Get(id string) (types.Value, error)
 }
 
-func Run(db Database, source io.Reader, fn string, args types.List) error {
+func Run(db Database, source io.Reader, fn string, args types.List) (types.Value, error) {
 	vm := o.New()
 
 	_, err := vm.Run(bootstrap)
@@ -34,7 +34,7 @@ func Run(db Database, source io.Reader, fn string, args types.List) error {
 
 	_, err = vm.Run(source)
 	if err != nil {
-		return fmt.Errorf("Error loading code bundle: %s", err.Error())
+		return nil, fmt.Errorf("Error loading code bundle: %s", err.Error())
 	}
 
 	vm.Set("send", func(call o.FunctionCall) o.Value {
@@ -97,9 +97,17 @@ func Run(db Database, source io.Reader, fn string, args types.List) error {
 		Maps:  true,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	_, err = f.Call(o.NullValue(), fn, string(buf.Bytes()))
-	return err
+	ov, err := f.Call(o.NullValue(), fn, string(buf.Bytes()))
+	if err != nil {
+		return nil, err
+	}
+	if ov == o.UndefinedValue() {
+		return nil, nil
+	}
+	r, err := jn.FromJSON(strings.NewReader(ov.String()), db.Noms(), jn.FromOptions{})
+	chk.NoError(err)
+	return r, nil
 }

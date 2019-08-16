@@ -55,7 +55,7 @@ func TestRebase(t *testing.T) {
 	// onto: g - a
 	// head: g - a - b
 	// rslt: g - a - b
-	err = db.Exec("log", list("foo", "bar"))
+	_, err = db.Exec("log", list("foo", "bar"))
 	assert.NoError(err)
 	aCommit := db.head
 	aCommitRef := aCommit.Ref()
@@ -127,7 +127,7 @@ func TestRebase(t *testing.T) {
 	_, err = noms.SetHead(noms.GetDataset(local_dataset), aCommitRef)
 	assert.NoError(err)
 	db.Reload()
-	err = db.Exec("log", list("foo", "baz"))
+	_, err = db.Exec("log", list("foo", "baz"))
 	assert.NoError(err)
 	rs = reachable.New(noms)
 	rs.Populate(db.head.Original.Hash())
