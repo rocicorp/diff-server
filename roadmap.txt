@@ -6,6 +6,7 @@ mvp
     - more useful compose example
   - ios/swiftui
   - flutter
+  - react native
   x tx reg and execution apis (1-2 wk)
   x run js code (v8? otto?)
   x expose api via js bindings
