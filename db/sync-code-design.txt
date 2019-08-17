@@ -62,12 +62,15 @@ validate(db, knownValid, commit) error
 // rebases `commit` onto `basis`
 // commits that are already at the correct basis are a no-op
 rebase(vrw, commit, basis) Commit:
-  if basis.Equals(commit.Basis()):
+  if basis.canReach(commit):
     return commit
   
   newBasis := rebase(vrw, commit.Basis(), basis)
   var newCommit Commit
   d := datetime.Now()
+
+  if newBasis.Equals(commit.Basis()):
+    return commit
 
   switch commit.Type():
     case Tx:

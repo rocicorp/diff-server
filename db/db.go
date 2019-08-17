@@ -9,9 +9,9 @@ import (
 	"github.com/attic-labs/noms/go/marshal"
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/attic-labs/noms/go/types"
-	"github.com/attic-labs/noms/go/util/datetime"
 
 	"github.com/aboodman/replicant/exec"
+	"github.com/aboodman/replicant/util/time"
 )
 
 const (
@@ -126,7 +126,7 @@ func (db *DB) execInternal(bundle types.Blob, function string, args types.List) 
 		bundleRef = types.NewRef(bundle)
 	}
 
-	commit := makeTx(db.noms, basis, db.origin, datetime.Now(), bundleRef, function, args, newBundle, newData)
+	commit := makeTx(db.noms, basis, db.origin, time.DateTime(), bundleRef, function, args, newBundle, newData)
 	commitRef := db.noms.WriteValue(commit.Original)
 
 	// FastForward not strictly needed here because we should have already ensured that we were

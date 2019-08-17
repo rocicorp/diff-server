@@ -6,9 +6,9 @@ import (
 	"github.com/attic-labs/noms/go/datas"
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/attic-labs/noms/go/types"
-	"github.com/attic-labs/noms/go/util/datetime"
 
 	"github.com/aboodman/replicant/util/noms/reachable"
+	"github.com/aboodman/replicant/util/time"
 )
 
 func (db *DB) Sync(remote spec.Spec) error {
@@ -47,7 +47,7 @@ func (db *DB) Sync(remote spec.Spec) error {
 	// 5: Rebase any new local changes from between 1 and 3.
 	reachable := reachable.New(db.noms)
 	reachable.Populate(db.head.Original.Hash())
-	rebased, err = rebase(db, reachable, types.NewRef(rebased.Original), datetime.Now(), db.head)
+	rebased, err = rebase(db, reachable, types.NewRef(rebased.Original), time.DateTime(), db.head)
 	if err != nil {
 		return err
 	}
@@ -71,7 +71,7 @@ func (db *DB) handleSync(commit Commit) (newHead Commit, err error) {
 	if err != nil {
 		return Commit{}, err
 	}
-	rebased, err := rebase(db, reachable, types.NewRef(db.head.Original), datetime.Now(), commit)
+	rebased, err := rebase(db, reachable, types.NewRef(db.head.Original), time.DateTime(), commit)
 	if err != nil {
 		return Commit{}, err
 	}
