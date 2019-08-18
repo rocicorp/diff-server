@@ -16,16 +16,19 @@ public class MainActivity extends FlutterActivity {
 
   private static repm.Connection conn;
 
+  private static File tmpDir;
+
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
+
     GeneratedPluginRegistrant.registerWith(this);
-    Log.d("Replicant", "hello");
 
     new MethodChannel(getFlutterView(), CHANNEL).setMethodCallHandler(
       new MethodCallHandler() {
           @Override
           public void onMethodCall(MethodCall call, Result result) {
+            initTempDir();
             try {
               // TODO: Can we send from dart as bytes instead?
               byte[] data = (byte[])(MainActivity.this.getConnection().dispatch(call.method, ((String)call.arguments).getBytes()));
@@ -41,8 +44,23 @@ public class MainActivity extends FlutterActivity {
   private repm.Connection getConnection() throws Exception {
     if (MainActivity.conn == null) {
       File f = this.getFileStreamPath("db3");
-      MainActivity.conn = repm.Repm.open(f.getAbsolutePath(), "client1");
+      MainActivity.conn = repm.Repm.open(f.getAbsolutePath(), "client1", tmpDir.getAbsolutePath());
     }
     return MainActivity.conn;
+  }
+
+  private void initTempDir() throws RuntimeException {
+    if (tmpDir != null) {
+      return;
+    }
+
+    tmpDir = new File(new File(getCacheDir(), "replicant"), "temp");
+    tmpDir.deleteOnExit();
+    if (tmpDir.exists()) {
+      tmpDir.delete();
+    }
+    if (!tmpDir.mkdirs()) {
+      throw new RuntimeException("Could not make temp dir!");
+    }
   }
 }

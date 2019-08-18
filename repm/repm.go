@@ -3,6 +3,7 @@ package repm
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/attic-labs/noms/go/spec"
 
@@ -14,7 +15,12 @@ type Connection struct {
 	api *api.API
 }
 
-func Open(dbSpec, origin string) (*Connection, error) {
+func Open(dbSpec, origin, tmpDir string) (*Connection, error) {
+	fmt.Printf("Opening Replicant database at: %s for origin: %s\n", dbSpec, origin)
+	if tmpDir != "" {
+		os.Setenv("TMPDIR", tmpDir)
+	}
+	fmt.Println("Using tempdir: ", os.TempDir())
 	sp, err := spec.ForDatabase(dbSpec)
 	if err != nil {
 		return nil, err

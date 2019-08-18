@@ -26,7 +26,7 @@
   NSError *err;
   // TODO: clientid needs to be device-unique
   // Need to generate and store one in user prefs or something.
-  RepmConnection *conn = RepmOpen(dir, @"ios/c1", &err);
+  RepmConnection *conn = RepmOpen(dir, @"ios/c1", @"", &err);
   if (err != nil) {
     NSLog(@"Replicant: Could not open database: %@", err);
     return FALSE;
