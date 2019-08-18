@@ -12,4 +12,4 @@ rm repm.aar
 rm -rf Repm.framework
 gomobile bind --target=ios
 gomobile bind --target=android
-zip -r Repm.framework.zip Remp.framework
+zip -r Repm.framework.zip Repm.framework
