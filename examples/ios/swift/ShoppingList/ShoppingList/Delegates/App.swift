@@ -20,7 +20,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
   
     lazy var replicant: RepmConnection = {
-        let appDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        let appDir = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first!
         let url = appDir.appendingPathComponent("replicant")
         var error: NSError?
         return RepmOpen(url.path, "c1", &error)!
