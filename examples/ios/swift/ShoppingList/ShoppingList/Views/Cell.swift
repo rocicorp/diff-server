@@ -9,7 +9,12 @@ struct Cell: View {
     var completed: Bool = false
     
     init(item: [String:String]) {
-        // TODO: Implement this
+        if let title = item["id"] {
+            self.title = title
+        }
+        if let notes = item["text"] {
+            self.notes = notes
+        }
     }
     init(title: String, notes: String) {
         self.title = title
