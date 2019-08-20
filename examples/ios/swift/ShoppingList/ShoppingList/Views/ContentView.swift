@@ -48,9 +48,8 @@ struct ContentView: View {
                     */
                 }
                 Section {
-                    let items = self.getItems()
-                    ForEach(0..<getItems().count) {
-                        Cell(item: items[$0])
+                    ForEach(self.getItems(), id: \.self) { item in
+                        Cell(item: item)
                     }
                     // TODO
                     //.onDelete(perform: )
