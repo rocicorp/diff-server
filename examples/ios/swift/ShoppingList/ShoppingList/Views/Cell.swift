@@ -7,6 +7,19 @@ struct Cell: View {
     var notes: String = "Medium roast, unground"
     
     var completed: Bool = false
+    
+    init(item: [String:String]) {
+        if let title = item["id"] {
+            self.title = title
+        }
+        if let notes = item["text"] {
+            self.notes = notes
+        }
+    }
+    init(title: String, notes: String) {
+        self.title = title
+        self.notes = notes
+    }
 
     var body: some View {
         Button(action: {}) {

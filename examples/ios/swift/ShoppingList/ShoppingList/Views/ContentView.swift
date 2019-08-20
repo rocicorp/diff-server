@@ -39,18 +39,14 @@ struct ContentView: View {
         NavigationView {
             Form {
                 if isAdding {
-                    /*
-                     TODO: gar
                     Section(header: Text("Add an Item")) {
                         TextField("Title", text: $text, onCommit: save)
                         TextField("Notes", text: $notes, onCommit: save)
                     }
-                    */
                 }
                 Section {
-                    let items = self.getItems()
-                    ForEach(0..<getItems().count) {
-                        Cell(item: items[$0])
+                    ForEach(self.getItems(), id: \.self) { item in
+                        Cell(item: item)
                     }
                     // TODO
                     //.onDelete(perform: )
@@ -71,7 +67,7 @@ struct ContentView: View {
         let data = try! replicant.dispatch("get", data: JSONEncoder().encode(req))
         let resp = try! JSONSerialization.jsonObject(with: data)
         print(resp)
-        return []
+        return (resp as! [String:Any])["data"] as! [[String:String]]
     }
 }
 
