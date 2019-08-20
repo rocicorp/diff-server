@@ -12,16 +12,19 @@ import (
 )
 
 type Connection struct {
-	api *api.API
+	api    *api.API
+	dir    string
+	origin string
+	tmpDir string
 }
 
-func Open(dbSpec, origin, tmpDir string) (*Connection, error) {
-	fmt.Printf("Opening Replicant database at: %s for origin: %s\n", dbSpec, origin)
+func Open(dir, origin, tmpDir string) (*Connection, error) {
+	fmt.Printf("Opening Replicant database at: %s for origin: %s\n", dir, origin)
 	if tmpDir != "" {
 		os.Setenv("TMPDIR", tmpDir)
 	}
 	fmt.Println("Using tempdir: ", os.TempDir())
-	sp, err := spec.ForDatabase(dbSpec)
+	sp, err := spec.ForDatabase(dir)
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +33,7 @@ func Open(dbSpec, origin, tmpDir string) (*Connection, error) {
 		return nil, err
 	}
 
-	return &Connection{api: api.New(db)}, nil
+	return &Connection{api: api.New(db), dir: dir, origin: origin, tmpDir: tmpDir}, nil
 }
 
 func (conn *Connection) Dispatch(rpc string, data []byte) (ret []byte, err error) {
@@ -46,6 +49,24 @@ func (conn *Connection) Dispatch(rpc string, data []byte) (ret []byte, err error
 			err = fmt.Errorf("Replicant panicked with: %s", msg)
 		}
 	}()
-	ret, err = conn.api.Dispatch(rpc, data)
+	switch rpc {
+	case "dropDatabase":
+		ret, err = nil, conn.dropDatabase()
+	default:
+		ret, err = conn.api.Dispatch(rpc, data)
+	}
 	return
+}
+
+func (conn *Connection) dropDatabase() error {
+	err := os.RemoveAll(conn.dir)
+	if err != nil {
+		return err
+	}
+	newConn, err := Open(conn.dir, conn.origin, conn.tmpDir)
+	if err != nil {
+		return err
+	}
+	*conn = *newConn
+	return nil
 }

@@ -1,6 +1,8 @@
 package repm
 
 import (
+	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -8,11 +10,22 @@ import (
 
 func TestBasic(t *testing.T) {
 	assert := assert.New(t)
-	conn, err := Open("mem", "test")
+	dir, err := ioutil.TempDir("", "")
+	assert.NoError(err)
+	conn, err := Open(dir, "test", "")
 	assert.NoError(err)
 	resp, err := conn.Dispatch("put", []byte(`{"key": "foo", "data": "bar"}`))
 	assert.Equal([]byte(`{}`), resp)
 	assert.NoError(err)
 	resp, err = conn.Dispatch("get", []byte(`{"key": "foo"}`))
 	assert.Equal([]byte(`{"has":true,"data":"bar"}`), resp)
+	testFile, err := ioutil.TempFile(dir, "")
+	assert.NoError(err)
+
+	resp, err = conn.Dispatch("dropDatabase", nil)
+	assert.Nil(resp)
+	assert.NoError(err)
+	fi, err := os.Stat(testFile.Name())
+	assert.Equal(nil, fi)
+	assert.True(os.IsNotExist(err))
 }

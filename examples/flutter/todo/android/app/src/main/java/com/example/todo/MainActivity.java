@@ -29,13 +29,27 @@ public class MainActivity extends FlutterActivity {
           @Override
           public void onMethodCall(MethodCall call, Result result) {
             initTempDir();
+
+            // TODO: Avoid conversion here.
+            byte[] argData = new byte[0];
+            if (call.arguments != null) {
+              argData = ((String)call.arguments).getBytes();
+            }
+
+            byte[] data;
             try {
-              // TODO: Can we send from dart as bytes instead?
-              byte[] data = (byte[])(MainActivity.this.getConnection().dispatch(call.method, ((String)call.arguments).getBytes()));
-              result.success(new String(data));
+              data = MainActivity.this.getConnection().dispatch(call.method, argData);
             } catch (Exception e) {
               result.error("Bonk", e.toString(), null);
+              return;
             }
+
+            // TODO: Avoid conversion here.
+            String retStr = "";
+            if (data != null && data.length > 0) {
+              retStr = new String(data);
+            }
+            result.success(retStr);
           }
       }
     );
@@ -55,12 +69,11 @@ public class MainActivity extends FlutterActivity {
     }
 
     tmpDir = new File(new File(getCacheDir(), "replicant"), "temp");
+    if (!tmpDir.exists()) {
+      if (!tmpDir.mkdirs()) {
+        throw new RuntimeException("Could not make temp dir!");
+      }
+    }
     tmpDir.deleteOnExit();
-    if (tmpDir.exists()) {
-      tmpDir.delete();
-    }
-    if (!tmpDir.mkdirs()) {
-      throw new RuntimeException("Could not make temp dir!");
-    }
   }
 }

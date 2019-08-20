@@ -69,7 +69,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<void> _refreshCounter() async {
       Map<String, dynamic> resp = jsonDecode(await platform.invokeMethod('get', jsonEncode({'key': 'counter'})));
       setState(() {
-        _counter = resp['data'];
+        _counter = resp['data'] != null ? resp['data'] : 0;
       });
   }
 
@@ -91,6 +91,12 @@ class _MyHomePageState extends State<MyHomePage> {
       print("Done");
   }
 
+  Future <void> _dropDatabase() async {
+    await platform.invokeMethod("dropDatabase");
+    await _init();
+    Navigator.pop(context);
+  }
+
   @override
   Widget build(BuildContext context) {
     // This method is rerun every time setState is called, for instance as done
@@ -104,6 +110,22 @@ class _MyHomePageState extends State<MyHomePage> {
         // Here we take the value from the MyHomePage object that was created by
         // the App.build method, and use it to set our appbar title.
         title: Text(widget.title),
+      ),
+      drawer: Drawer(
+        child: ListView(
+          children: <Widget>[
+            DrawerHeader(
+              child: Text("Hello!"),
+               decoration: BoxDecoration(
+                color: Colors.blue,
+              ),
+            ),
+            ListTile(
+              title: Text('Delete local state'),
+              onTap: _dropDatabase,
+            ),
+          ],
+        ),
       ),
       body: Center(
         // Center is a layout widget. It takes a single child and positions it
