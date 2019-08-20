@@ -1,7 +1,5 @@
 import UIKit
-import CoreData
 import Repm
-import SwiftUI
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
