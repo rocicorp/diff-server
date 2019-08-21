@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime/trace"
 	"strconv"
 	"strings"
 
@@ -33,8 +34,17 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 
 	sp := kp.DatabaseSpec(app.Flag("db", "Database to connect to. See https://github.com/attic-labs/noms/blob/master/doc/spelling.md#spelling-databases.").Required().PlaceHolder("/path/to/db"))
 	origin := app.Flag("origin", "The unique name of the client to use as the origin of any write transactions.").Default("cli").String()
+	tf := app.Flag("trace", "Name of a file to write a trace to").OpenFile(os.O_RDWR|os.O_CREATE, 0644)
+
 	var rdb db.DB
 	app.Action(func(_ *kingpin.ParseContext) error {
+		if *tf != nil {
+			err := trace.Start(*tf)
+			if err != nil {
+				return err
+			}
+		}
+
 		r, err := db.Load(*sp, *origin)
 		if err != nil {
 			return err
@@ -42,6 +52,11 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 		rdb = *r
 		return nil
 	})
+	defer func() {
+		if *tf != nil {
+			trace.Stop()
+		}
+	}()
 
 	has(app, &rdb, out)
 	get(app, &rdb, out)
