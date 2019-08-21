@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/attic-labs/noms/go/datas"
+	"github.com/attic-labs/noms/go/hash"
 	"github.com/attic-labs/noms/go/marshal"
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/attic-labs/noms/go/types"
@@ -30,12 +31,15 @@ func Load(sp spec.Spec, origin string) (*DB, error) {
 		return nil, errors.New("Invalid spec - must not specify a path")
 	}
 
-	noms := sp.GetDatabase()
+	return New(sp.GetDatabase(), origin)
+}
+
+func New(noms datas.Database, origin string) (*DB, error) {
 	r := DB{
 		noms:   noms,
 		origin: origin,
 	}
-	err := r.load()
+	err := r.init()
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +47,7 @@ func Load(sp spec.Spec, origin string) (*DB, error) {
 	return &r, nil
 }
 
-func (db *DB) load() error {
+func (db *DB) init() error {
 	ds := db.noms.GetDataset(local_dataset)
 	if !ds.HasHead() {
 		genesis := makeGenesis(db.noms)
@@ -73,6 +77,10 @@ func (db *DB) load() error {
 
 func (db *DB) Noms() types.ValueReadWriter {
 	return db.noms
+}
+
+func (db *DB) Hash() hash.Hash {
+	return db.head.Original.Hash()
 }
 
 func (db *DB) Has(id string) (bool, error) {
@@ -106,7 +114,7 @@ func (db *DB) Exec(function string, args types.List) (types.Value, error) {
 
 func (db *DB) Reload() error {
 	db.noms.Rebase()
-	return db.load()
+	return db.init()
 }
 
 func (db *DB) execInternal(bundle types.Blob, function string, args types.List) (types.Value, error) {

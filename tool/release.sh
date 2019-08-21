@@ -9,6 +9,7 @@ mkdir -p github.com/aboodman
 ln -s $ROOT github.com/aboodman/replicant
 cd github.com/aboodman/replicant/repm
 rm repm.aar
+rm Repm.framework.zip
 rm -rf Repm.framework
 gomobile bind --target=ios
 gomobile bind --target=android
