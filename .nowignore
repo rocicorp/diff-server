@@ -11,5 +11,8 @@ repm/repm-sources.jar
 repm/repm.aar
 vendor
 
+# examples - I guess eventually we'll want to do something with these but they just make everything slow now
+examples
+
 # stuff in here was changing constantly, don't feel like debugging
 examples/hello-replicant-android-java
