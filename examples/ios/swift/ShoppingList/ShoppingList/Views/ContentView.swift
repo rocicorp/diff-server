@@ -67,7 +67,7 @@ struct ContentView: View {
         let data = try! replicant.dispatch("get", data: JSONEncoder().encode(req))
         let resp = try! JSONSerialization.jsonObject(with: data)
         print(resp)
-        return (resp as! [String:Any])["data"] as! [[String:String]]
+        return (resp as! [String:Any])["data"] as? [[String:String]] ?? []
     }
 }
 
