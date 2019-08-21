@@ -12,7 +12,7 @@ import java.io.File;
 import android.util.Log;
 
 public class MainActivity extends FlutterActivity {
-  private static final String CHANNEL = "replicant.dev/examples/todo";
+  private static final String CHANNEL = "replicant.dev/samples/todo";
 
   private static repm.Connection conn;
 

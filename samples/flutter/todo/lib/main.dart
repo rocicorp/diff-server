@@ -48,7 +48,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  static const platform = const MethodChannel('replicant.dev/examples/todo');
+  static const platform = const MethodChannel('replicant.dev/samples/todo');
 
   _MyHomePageState() {
     _init();

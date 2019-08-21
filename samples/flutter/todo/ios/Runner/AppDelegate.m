@@ -13,7 +13,7 @@
   FlutterViewController* controller = (FlutterViewController*)self.window.rootViewController;
   
   FlutterMethodChannel* channel = [FlutterMethodChannel
-                                   methodChannelWithName:@"replicant.dev/examples/todo"
+                                   methodChannelWithName:@"replicant.dev/samples/todo"
                                    binaryMessenger:controller];
 
   NSString* dir = [self replicantDir];
