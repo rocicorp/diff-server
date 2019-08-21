@@ -1,10 +1,5 @@
 .vscode
 
-# stuff from demo
-db1
-db2
-ops.json
-
 # build artifacts
 rep
 repm/repm-sources.jar

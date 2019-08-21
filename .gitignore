@@ -3,11 +3,6 @@
 .vscode
 rep
 
-# stuff from demo
-db1
-db2
-ops.json
-
 # build artifacts
 examples/hello-replicant-android-java/.idea
 examples/hello-replicant-android-java/repm/build/
