@@ -3,24 +3,32 @@ package db
 import (
 	"fmt"
 
-	"github.com/aboodman/replicant/util/noms/diff"
-	"github.com/aboodman/replicant/util/noms/reachable"
+	"github.com/attic-labs/noms/go/datas"
 	"github.com/attic-labs/noms/go/marshal"
 	"github.com/attic-labs/noms/go/types"
+
+	"github.com/aboodman/replicant/util/noms/diff"
 )
 
-func validate(db *DB, reachable *reachable.Set, commit Commit) error {
-	if reachable.Has(commit.Original.Hash()) {
+func validate(db *DB, commit Commit, forkPoint types.Ref) (err error) {
+	if forkPoint.IsZeroValue() {
+		forkPoint, err = commonAncestor(db.head.Ref(), commit.Ref(), db.Noms())
+		if err != nil {
+			return err
+		}
+	}
+
+	if commit.Ref().Equals(forkPoint) {
 		return nil
 	}
 
 	for _, c := range commit.Parents {
 		var p Commit
-		err := marshal.Unmarshal(c.TargetValue(db.noms), &p)
+		err = marshal.Unmarshal(c.TargetValue(db.noms), &p)
 		if err != nil {
 			return err
 		}
-		err = validate(db, reachable, p)
+		err = validate(db, p, forkPoint)
 		if err != nil {
 			return err
 		}
@@ -63,4 +71,12 @@ func validate(db *DB, reachable *reachable.Set, commit Commit) error {
 	}
 
 	return nil
+}
+
+func commonAncestor(r1, r2 types.Ref, noms types.ValueReader) (a types.Ref, err error) {
+	fp, ok := datas.FindCommonAncestor(r1, r2, noms)
+	if !ok {
+		return a, fmt.Errorf("No common ancestor between commits: %s and %s", r1.TargetHash(), r2.TargetHash())
+	}
+	return fp, nil
 }

@@ -6,8 +6,6 @@ import (
 	"github.com/attic-labs/noms/go/marshal"
 	"github.com/attic-labs/noms/go/types"
 	"github.com/attic-labs/noms/go/util/datetime"
-
-	"github.com/aboodman/replicant/util/noms/reachable"
 )
 
 // rebase transforms a forked commit history into a linear one by moving one side
@@ -19,10 +17,16 @@ import (
 // In Replicant, unlike e.g., Git, this is done such that the original forked
 // history is still preserved in the database (e.g. for later debugging). But the
 // effect on the data and from user's point of view is the same as `git rebase`.
-func rebase(db *DB, reachable *reachable.Set, onto types.Ref, date datetime.DateTime, commit Commit) (rebased Commit, err error) {
-	// If `commit` is reachable from `onto`, then we've found our fork point.
-	// Thus, by definition, `onto` is the result.
-	if reachable.Has(commit.Original.Hash()) {
+func rebase(db *DB, onto types.Ref, date datetime.DateTime, commit Commit, forkPoint types.Ref) (rebased Commit, err error) {
+	if forkPoint.IsZeroValue() {
+		forkPoint, err = commonAncestor(db.head.Ref(), commit.Ref(), db.Noms())
+		if err != nil {
+			return rebased, err
+		}
+	}
+
+	// If we've reached out forkpoint then by definition `onto` is the result.
+	if commit.Ref().Equals(forkPoint) {
 		var r Commit
 		err = marshal.Unmarshal(onto.TargetValue(db.noms), &r)
 		if err != nil {
@@ -36,7 +40,7 @@ func rebase(db *DB, reachable *reachable.Set, onto types.Ref, date datetime.Date
 	if err != nil {
 		return Commit{}, err
 	}
-	newBasis, err := rebase(db, reachable, onto, date, oldBasis)
+	newBasis, err := rebase(db, onto, date, oldBasis, forkPoint)
 	if err != nil {
 		return Commit{}, err
 	}

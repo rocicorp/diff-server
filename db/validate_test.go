@@ -5,7 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aboodman/replicant/util/noms/reachable"
 	"github.com/attic-labs/noms/go/types"
 	"github.com/attic-labs/noms/go/util/datetime"
 	"github.com/stretchr/testify/assert"
@@ -163,7 +162,7 @@ func TestValidate(t *testing.T) {
 		noms.WriteValue(eb),
 		noms.WriteValue(
 			types.NewMap(noms, types.String("foo"), list("bar"))))
-	noms.WriteValue(ro1c.Original)
+	noms.WriteValue(rj1c.Original)
 
 	tc := []struct {
 		in  Commit
@@ -183,7 +182,7 @@ func TestValidate(t *testing.T) {
 	}
 
 	for i, t := range tc {
-		err := validate(db, reachable.New(noms), t.in)
+		err := validate(db, t.in, types.Ref{})
 		db.noms.Flush()
 		if t.err == "" {
 			assert.NoError(err, "test case %d", i)

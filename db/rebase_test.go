@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/aboodman/replicant/util/noms/diff"
-	"github.com/aboodman/replicant/util/noms/reachable"
 	"github.com/attic-labs/noms/go/types"
 	"github.com/attic-labs/noms/go/util/datetime"
 	"github.com/stretchr/testify/assert"
@@ -59,11 +58,9 @@ func TestRebase(t *testing.T) {
 	assert.NoError(err)
 	aCommit := db.head
 	aCommitRef := aCommit.Ref()
-	rs := reachable.New(noms)
-	rs.Populate(db.head.Original.Hash())
 	bCommit := makeTx(noms, db.head.Ref(), "test", epoch, br, "log", list("foo", "baz"), br, write(data("bar", "baz")))
 	write(bCommit.Original)
-	actual, err := rebase(db, rs, db.head.Ref(), epoch, bCommit)
+	actual, err := rebase(db, db.head.Ref(), epoch, bCommit, types.Ref{})
 	assert.NoError(err)
 	assertEqual(bCommit, actual)
 
@@ -74,9 +71,8 @@ func TestRebase(t *testing.T) {
 	_, err = noms.SetHead(noms.GetDataset(local_dataset), bCommit.Ref())
 	assert.NoError(err)
 	db.Reload()
-	rs.Populate(db.head.Original.Hash())
-	actual, err = rebase(db, rs, db.head.Ref(), epoch, aCommit)
-	assert.NoError(err)
+	actual, err = rebase(db, db.head.Ref(), epoch, aCommit, types.Ref{})
+	assert.Nil(err)
 	assertEqual(bCommit, actual)
 
 	// simple reorder
@@ -87,12 +83,10 @@ func TestRebase(t *testing.T) {
 	_, err = noms.SetHead(noms.GetDataset(local_dataset), aCommitRef)
 	assert.NoError(err)
 	db.Reload()
-	rs = reachable.New(noms)
-	rs.Populate(db.head.Original.Hash())
 	bCommit = makeTx(noms, gCommit, "test", epoch, br, "log", list("foo", "baz"), br, write(data("baz")))
 	expected := makeReorder(noms, db.head.Ref(), "test", epoch, write(bCommit.Original), br, write(data("bar", "baz")))
 	noms.WriteValue(expected.Original)
-	actual, err = rebase(db, rs, db.head.Ref(), epoch, bCommit)
+	actual, err = rebase(db, db.head.Ref(), epoch, bCommit, types.Ref{})
 	assert.NoError(err)
 	assertEqual(expected, actual)
 
@@ -107,13 +101,11 @@ func TestRebase(t *testing.T) {
 	db.Reload()
 	cCommit := makeTx(noms, bCommit.Ref(), "test", epoch, br, "log", list("foo", "quux"), br, write(data("baz", "quux")))
 	noms.WriteValue(cCommit.Original)
-	rs = reachable.New(noms)
-	rs.Populate(db.head.Original.Hash())
 	bReorder := makeReorder(noms, db.head.Ref(), "test", epoch, write(bCommit.Original), br, write(data("bar", "baz")))
 	noms.WriteValue(bReorder.Original)
 	cReorder := makeReorder(noms, bReorder.Ref(), "test", epoch, cCommit.Ref(), br, write(data("bar", "baz", "quux")))
 	noms.WriteValue(cReorder.Original)
-	actual, err = rebase(db, rs, db.head.Ref(), epoch, cCommit)
+	actual, err = rebase(db, db.head.Ref(), epoch, cCommit, types.Ref{})
 	assert.NoError(err)
 	assertEqual(cReorder, actual)
 
@@ -129,8 +121,6 @@ func TestRebase(t *testing.T) {
 	db.Reload()
 	_, err = db.Exec("log", list("foo", "baz"))
 	assert.NoError(err)
-	rs = reachable.New(noms)
-	rs.Populate(db.head.Original.Hash())
 	bCommit = db.head
 	cCommit = makeTx(noms, gCommit, "test", epoch, br, "log", list("foo", "quux"), br, write(data("quux")))
 	noms.WriteValue(cCommit.Original)
@@ -138,7 +128,7 @@ func TestRebase(t *testing.T) {
 	noms.WriteValue(cReorder.Original)
 	cReReorder := makeReorder(noms, bCommit.Ref(), "test", epoch, cReorder.Ref(), br, write(data("bar", "baz", "quux")))
 	noms.WriteValue(cReReorder.Original)
-	actual, err = rebase(db, rs, bCommit.Ref(), epoch, cReorder)
+	actual, err = rebase(db, bCommit.Ref(), epoch, cReorder, types.Ref{})
 	assert.NoError(err)
 	assertEqual(cReReorder, actual)
 
@@ -150,13 +140,11 @@ func TestRebase(t *testing.T) {
 	_, err = noms.SetHead(noms.GetDataset(local_dataset), aCommitRef)
 	assert.NoError(err)
 	db.Reload()
-	rs = reachable.New(noms)
-	rs.Populate(db.head.Original.Hash())
 	bCommit = makeTx(noms, gCommit, "test", epoch, br, "log", list("foo", "baz"), br, write(data("baz")))
 	write(bCommit.Original)
 	bRjCommit := makeReject(noms, gCommit, "test", epoch, bCommit.Ref(), "r1", br, write(data()))
 	write(bRjCommit.Original)
-	actual, err = rebase(db, rs, aCommit.Ref(), epoch, bRjCommit)
+	actual, err = rebase(db, aCommit.Ref(), epoch, bRjCommit, types.Ref{})
 	assert.Error(err)
 	assert.True(strings.HasPrefix(err.Error(), "Cannot rebase commit of type CommitTypeReject:"))
 }

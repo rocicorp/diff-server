@@ -14,7 +14,6 @@ import (
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/attic-labs/noms/go/types"
 
-	"github.com/aboodman/replicant/util/noms/reachable"
 	"github.com/aboodman/replicant/util/time"
 )
 
@@ -56,9 +55,7 @@ func (db *DB) Sync(remote spec.Spec) error {
 	}
 
 	// 5: Rebase any new local changes from between 1 and 3.
-	reachable := reachable.New(db.noms)
-	reachable.Populate(db.head.Original.Hash())
-	rebased, err := rebase(db, reachable, remoteHead, time.DateTime(), db.head)
+	rebased, err := rebase(db, remoteHead, time.DateTime(), db.head, types.Ref{})
 	if err != nil {
 		return err
 	}
@@ -106,16 +103,11 @@ func remoteSync(remote spec.Spec, remoteDB *DB, commit Commit) (newHead types.Re
 // HandleSync implements the server-side of the sync protocol. It's not typical to call it
 // directly, and is exposed primarily so that the server implementation can call it.
 func HandleSync(dest *DB, commit Commit) (newHead types.Ref, err error) {
-	// TODO: This needs to be done differently.
-	// See: https://github.com/aboodman/replicant/issues/11
-	reachable := reachable.New(dest.noms)
-	reachable.Populate(dest.head.Original.Hash())
-
-	err = validate(dest, reachable, commit)
+	err = validate(dest, commit, types.Ref{})
 	if err != nil {
 		return newHead, err
 	}
-	rebased, err := rebase(dest, reachable, types.NewRef(dest.head.Original), time.DateTime(), commit)
+	rebased, err := rebase(dest, types.NewRef(dest.head.Original), time.DateTime(), commit, types.Ref{})
 	if err != nil {
 		return newHead, err
 	}
