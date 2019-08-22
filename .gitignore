@@ -8,4 +8,5 @@ samples/hello-replicant-android-java/.idea
 samples/hello-replicant-android-java/repm/build/
 repm/repm-sources.jar
 repm/repm.aar
+repm/Repm.framework
 vendor
