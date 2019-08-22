@@ -82,23 +82,18 @@ class _MyHomePageState extends State<MyHomePage> {
     }
 
     var storedVersion = 0;
-    /*
-    TODO:aa
     try {
-      String res = await platform.invokeMethod("exec", jsonEncode({"name": "codeVersion", "args": []}));
-      print(res);
+      storedVersion = jsonDecode(await platform.invokeMethod("exec", jsonEncode({"name": "codeVersion", "args": []})))["result"];
     } catch (e) {
       print("Error: " + e.toString());
     }
-    */
 
     if (storedVersion < int.parse(bundleVersion.group(1))) {
       platform.invokeMethod("putBundle", jsonEncode({
         'code': bundle,
       }));
+      print("Upgraded bundle version from ${storedVersion} to ${bundleVersion.group(1)}");
     }
-
-    print("Replicant: Bundle registered");
   }
 
   Future<void> _sync() async {
