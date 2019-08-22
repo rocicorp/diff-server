@@ -67,28 +67,47 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> _refreshCounter() async {
-      Map<String, dynamic> resp = jsonDecode(await platform.invokeMethod('get', jsonEncode({'key': 'counter'})));
-      setState(() {
-        _counter = resp['data'] != null ? resp['data'] : 0;
-      });
+    Map<String, dynamic> resp = jsonDecode(await platform.invokeMethod('get', jsonEncode({'key': 'counter'})));
+    setState(() {
+      _counter = resp['data'] != null ? resp['data'] : 0;
+    });
   }
 
   Future<void> _registerBundle() async {
-      // TODO: Only do this on first run, and really only when version changes.
-      // TODO: Why doesn't parse error (no trailing curly) register anywhere?
+    var bundle = await rootBundle.loadString('assets/bundle.js', cache: false);
+
+    var bundleVersion = new RegExp(r"function codeVersion\(\) {[\n\s]+return (\d+);", multiLine: true).firstMatch(bundle);
+    if (bundleVersion == null) {
+      throw new Exception("Could not find codeVersion from bundle.");
+    }
+
+    var storedVersion = 0;
+    /*
+    TODO:aa
+    try {
+      String res = await platform.invokeMethod("exec", jsonEncode({"name": "codeVersion", "args": []}));
+      print(res);
+    } catch (e) {
+      print("Error: " + e.toString());
+    }
+    */
+
+    if (storedVersion < int.parse(bundleVersion.group(1))) {
       platform.invokeMethod("putBundle", jsonEncode({
-        'code': 'function add(key, incr) { var val = db.get(key) || 0; db.put(key, val + incr); }',
+        'code': bundle,
       }));
-      print("Replicant: Bundle registered");
+    }
+
+    print("Replicant: Bundle registered");
   }
 
   Future<void> _sync() async {
-      print("Syncing...");
-      await platform.invokeMethod("sync", jsonEncode({
-        'remote': 'https://replicate.to/serve/aa-counter',
-      }));
-      await _refreshCounter();
-      print("Done");
+    print("Syncing...");
+    await platform.invokeMethod("sync", jsonEncode({
+      'remote': 'https://replicate.to/serve/susan-counter',
+    }));
+    await _refreshCounter();
+    print("Done");
   }
 
   Future <void> _dropDatabase() async {
@@ -97,71 +116,133 @@ class _MyHomePageState extends State<MyHomePage> {
     Navigator.pop(context);
   }
 
+  Widget _buildDrawer() {
+    return Drawer(
+      child: ListView(
+        children: <Widget>[
+          DrawerHeader(
+            child: Text("Hello!"),
+              decoration: BoxDecoration(
+              color: Colors.blue,
+            ),
+          ),
+          ListTile(
+            title: Text('Delete local state'),
+            onTap: _dropDatabase,
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+    return new Scaffold(
+      appBar: new AppBar(
+        title: new Text('Todo List')
       ),
-      drawer: Drawer(
-        child: ListView(
-          children: <Widget>[
-            DrawerHeader(
-              child: Text("Hello!"),
-               decoration: BoxDecoration(
-                color: Colors.blue,
-              ),
-            ),
-            ListTile(
-              title: Text('Delete local state'),
-              onTap: _dropDatabase,
-            ),
-          ],
-        ),
+      drawer: _buildDrawer(),
+      body: _buildTodoList(),
+      floatingActionButton: new FloatingActionButton(
+        onPressed: _pushAddTodoScreen,
+        tooltip: 'Add task',
+        child: new Icon(Icons.add)
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Invoke "debug painting" (press "p" in the console, choose the
-          // "Toggle Debug Paint" action from the Flutter Inspector in Android
-          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-          // to see the wireframe for each widget.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            RaisedButton(
-              onPressed: _incrementCounter,
-              child: Text(
-                'You have pushed the button\n$_counter times.',
-                style: TextStyle(fontSize: 20),
+    );
+  }
+
+  void _addTodoItem(String task) {
+    /*
+    // Only add the task if the user actually entered something
+    if(task.length > 0) {
+      // Putting our code inside "setState" tells the app that our state has changed, and
+      // it will automatically re-render the list
+      setState(() => _todoItems.add(task));
+    }
+    */
+  }
+
+  void _removeTodoItem(int index) {
+    //setState(() => _todoItems.removeAt(index));
+  }
+
+  void _promptRemoveTodoItem(int index) {
+    /*
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return new AlertDialog(
+          title: new Text('Mark "${_todoItems[index]}" as done?'),
+          actions: <Widget>[
+            new FlatButton(
+              child: new Text('CANCEL'),
+              // The alert is actually part of the navigation stack, so to close it, we
+              // need to pop it.
+              onPressed: () => Navigator.of(context).pop()
+            ),
+            new FlatButton(
+              child: new Text('MARK AS DONE'),
+              onPressed: () {
+                _removeTodoItem(index);
+                Navigator.of(context).pop();
+              }
+            )
+          ]
+        );
+      }
+    );
+    */
+  }
+
+  // Build the whole list of todo items
+  Widget _buildTodoList() {
+    /*
+    return new ListView.builder(
+      itemBuilder: (context, index) {
+        // itemBuilder will be automatically be called as many times as it takes for the
+        // list to fill up its available space, which is most likely more than the
+        // number of todo items we have. So, we need to check the index is OK.
+        if(index < _todoItems.length) {
+          return _buildTodoItem(_todoItems[index], index);
+        }
+      },
+    );
+    */
+  }
+
+  // Build a single todo item
+  Widget _buildTodoItem(String todoText, int index) {
+    return new ListTile(
+      title: new Text(todoText),
+      onTap: () => _promptRemoveTodoItem(index)
+    );
+  }
+
+  void _pushAddTodoScreen() {
+    // Push this page onto the stack
+    Navigator.of(context).push(
+      // MaterialPageRoute will automatically animate the screen entry, as well as adding
+      // a back button to close it
+      new MaterialPageRoute(
+        builder: (context) {
+          return new Scaffold(
+            appBar: new AppBar(
+              title: new Text('Add a new task')
+            ),
+            body: new TextField(
+              autofocus: true,
+              onSubmitted: (val) {
+                _addTodoItem(val);
+                Navigator.pop(context); // Close the add todo screen
+              },
+              decoration: new InputDecoration(
+                hintText: 'Enter something to do...',
+                contentPadding: const EdgeInsets.all(16.0)
               ),
             )
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _sync,
-        tooltip: 'Increment',
-        child: Icon(Icons.sync),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+          );
+        }
+      )
     );
   }
 }
