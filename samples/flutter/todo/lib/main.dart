@@ -1,8 +1,9 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
+import 'replicant.dart';
 
 void main() => runApp(MyApp());
 
@@ -48,7 +49,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  static const platform = const MethodChannel('replicant.dev/samples/todo');
+  static final _replicant = Replicant('replicant.dev/samples/todo');
 
   _MyHomePageState() {
     _init();
@@ -62,14 +63,14 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> _incrementCounter() async {
-    await platform.invokeMethod('exec', jsonEncode({'name': 'add', 'args': ['counter', 1]}));
+    await _replicant.exec('add', ['counter', 1]);
     await _refreshCounter();
   }
 
   Future<void> _refreshCounter() async {
-    Map<String, dynamic> resp = jsonDecode(await platform.invokeMethod('get', jsonEncode({'key': 'counter'})));
+    final res = await _replicant.get('counter');
     setState(() {
-      _counter = resp['data'] != null ? resp['data'] : 0;
+      _counter = res == null ? 0 : res;
     });
   }
 
@@ -83,30 +84,26 @@ class _MyHomePageState extends State<MyHomePage> {
 
     var storedVersion = 0;
     try {
-      storedVersion = jsonDecode(await platform.invokeMethod("exec", jsonEncode({"name": "codeVersion", "args": []})))["result"];
+      storedVersion = await _replicant.exec('codeVersion');
     } catch (e) {
       print("Error: " + e.toString());
     }
 
     if (storedVersion < int.parse(bundleVersion.group(1))) {
-      platform.invokeMethod("putBundle", jsonEncode({
-        'code': bundle,
-      }));
+      await _replicant.putBundle(bundle);
       print("Upgraded bundle version from ${storedVersion} to ${bundleVersion.group(1)}");
     }
   }
 
   Future<void> _sync() async {
     print("Syncing...");
-    await platform.invokeMethod("sync", jsonEncode({
-      'remote': 'https://replicate.to/serve/susan-counter',
-    }));
+    await _replicant.sync('https://replicate.to/serve/susan-counter');
     await _refreshCounter();
     print("Done");
   }
 
   Future <void> _dropDatabase() async {
-    await platform.invokeMethod("dropDatabase");
+    await _replicant.dropDatabase();
     await _init();
     Navigator.pop(context);
   }
