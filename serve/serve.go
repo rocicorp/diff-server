@@ -79,7 +79,7 @@ func getServer(name string) (*server, error) {
 					aws.NewConfig().WithRegion(aws_region).WithCredentials(
 						credentials.NewStaticCredentials(
 							os.Getenv(aws_access_key_id),
-							os.Getenv(aws_access_key_id), ""))))
+							os.Getenv(aws_secret_access_key), ""))))
 			}
 			const table = "replicant"
 			const bucket = "aa-replicant2"
