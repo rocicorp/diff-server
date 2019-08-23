@@ -33,7 +33,7 @@ func (d db) Get(id string) (v types.Value, err error) {
 	return
 }
 
-func TestPut(t *testing.T) {
+func TestArgsToJSToStorage(t *testing.T) {
 	assert := assert.New(t)
 	sp, err := spec.ForDatabase("mem")
 	assert.NoError(err)
@@ -67,7 +67,7 @@ func TestPut(t *testing.T) {
 	}
 }
 
-func TestRoundtrip(t *testing.T) {
+func TestPutHasGetRoundtrip(t *testing.T) {
 	assert := assert.New(t)
 	sp, err := spec.ForDatabase("mem")
 	assert.NoError(err)
@@ -118,9 +118,55 @@ func TestOutput(t *testing.T) {
 	assert.Nil(out)
 }
 
+func TestInvalidBundle(t *testing.T) {
+	assert := assert.New(t)
+	sp, err := spec.ForDatabase("mem")
+	assert.NoError(err)
+	noms := sp.GetDatabase()
+	d := db{noms, map[string]types.Value{}}
+	args := types.NewList(noms)
+	out, err := Run(d, strings.NewReader("!!not valid javascript!!!"), "bonk", args)
+	assert.EqualError(err, "bundle.js: Line 1:7 Unexpected identifier (and 2 more errors)")
+	assert.Nil(out)
+}
+
+func TestParseTimeError(t *testing.T) {
+	assert := assert.New(t)
+	sp, err := spec.ForDatabase("mem")
+	assert.NoError(err)
+	noms := sp.GetDatabase()
+	d := db{noms, map[string]types.Value{}}
+	args := types.NewList(noms)
+	out, err := Run(d, strings.NewReader("throw new Error('bonk')"), "bonk", args)
+	assert.EqualError(err, "Error: bonk\n    at bundle.js:1:11\n")
+	assert.Nil(out)
+}
+
+func TestExecTimeError(t *testing.T) {
+	assert := assert.New(t)
+	sp, err := spec.ForDatabase("mem")
+	assert.NoError(err)
+	noms := sp.GetDatabase()
+	d := db{noms, map[string]types.Value{}}
+	args := types.NewList(noms)
+	out, err := Run(d, strings.NewReader("function bonk() { throw new Error('bonk'); }"), "bonk", args)
+	assert.EqualError(err, "Error: bonk\n    at bonk (bundle.js:1:29)\n    at apply (<native code>)\n    at recv (bootstrap.js:51:12)\n")
+	assert.Nil(out)
+}
+
+func TestUnknownFunction(t *testing.T) {
+	assert := assert.New(t)
+	sp, err := spec.ForDatabase("mem")
+	assert.NoError(err)
+	noms := sp.GetDatabase()
+	d := db{noms, map[string]types.Value{}}
+	args := types.NewList(noms)
+	out, err := Run(d, strings.NewReader(""), "bonk", args)
+	assert.EqualError(err, "Unknown function: bonk")
+	assert.Nil(out)
+}
+
 // TODO : so much more to test
-// - scripts that don't parse
-// - functions that throw errors
 // - putting invalid / non-jsonable data / non-nomsable
 // - returning invalid / non-jsonable data / non-nomsable
 // - scripts that run forever

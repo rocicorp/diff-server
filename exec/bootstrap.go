@@ -47,10 +47,13 @@ var db = (function() {
 function recv(fn, args) {
 	var f = this[fn];
 	if (!f) {
-		throw new Error('Unknown function: ' + fn);
+		return {ok: false};
 	}
 	var parsed = JSON.parse(args);
 	var res = f.apply(null, parsed);
-	return res === undefined ? res : JSON.stringify(res);
+	return {
+		ok: true,
+		result: res === undefined ? res : JSON.stringify(res),
+	};
 }
 `

@@ -40,7 +40,7 @@
                            error: &err];
     if (err != nil) {
       result([FlutterError errorWithCode:@"UNAVAILABLE"
-                                 message:@"Error from Replicant"
+                                 message:@"Replicant error"
                                  details:err]);
     } else {
       result([[NSString alloc] initWithData:res

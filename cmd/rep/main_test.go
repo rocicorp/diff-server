@@ -42,7 +42,7 @@ func TestCommands(t *testing.T) {
 			"exec monkey",
 			1,
 			"",
-			"Error: Unknown function: monkey\n",
+			"Unknown function: monkey\n",
 		},
 		{
 			"exec missing-key",
@@ -50,7 +50,7 @@ func TestCommands(t *testing.T) {
 			"exec futz",
 			1,
 			"",
-			"Error: Invalid id\n",
+			"Error: Invalid id\n    at bootstrap.js:18:14\n    at bootstrap.js:24:4\n    at futz (bundle.js:1:22)\n    at apply (<native code>)\n    at recv (bootstrap.js:51:12)\n\n",
 		},
 		{
 			"exec missing-val",
@@ -58,7 +58,7 @@ func TestCommands(t *testing.T) {
 			"exec futz foo",
 			1,
 			"",
-			"Error: Invalid value\n",
+			"Error: Invalid value\n    at bootstrap.js:27:15\n    at futz (bundle.js:1:22)\n    at apply (<native code>)\n    at recv (bootstrap.js:51:12)\n\n",
 		},
 		{
 			"exec good",

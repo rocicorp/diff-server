@@ -40,7 +40,7 @@ public class MainActivity extends FlutterActivity {
             try {
               data = MainActivity.this.getConnection().dispatch(call.method, argData);
             } catch (Exception e) {
-              result.error("Bonk", e.toString(), null);
+              result.error("Replicant error", e.toString(), null);
               return;
             }
 

@@ -2,6 +2,7 @@ package exec
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -29,12 +30,19 @@ type Database interface {
 func Run(db Database, source io.Reader, fn string, args types.List) (types.Value, error) {
 	vm := o.New()
 
-	_, err := vm.Run(bootstrap)
+	s, err := vm.Compile("bootstrap.js", bootstrap)
+	chk.NoError(err)
+	_, err = vm.Run(s)
 	chk.NoError(err)
 
-	_, err = vm.Run(source)
+	s, err = vm.Compile("bundle.js", source)
 	if err != nil {
-		return nil, fmt.Errorf("Error loading code bundle: %s", err.Error())
+		return nil, errDetail(err)
+	}
+
+	_, err = vm.Run(s)
+	if err != nil {
+		return nil, errDetail(err)
 	}
 
 	vm.Set("send", func(call o.FunctionCall) o.Value {
@@ -102,12 +110,31 @@ func Run(db Database, source io.Reader, fn string, args types.List) (types.Value
 
 	ov, err := f.Call(o.NullValue(), fn, string(buf.Bytes()))
 	if err != nil {
-		return nil, err
+		return nil, errDetail(err)
 	}
-	if ov == o.UndefinedValue() {
+	obj := ov.Object()
+	okv, err := obj.Get("ok")
+	chk.NoError(err)
+	ok, err := okv.ToBoolean()
+	chk.NoError(err)
+	if !ok {
+		return nil, fmt.Errorf("Unknown function: %s", fn)
+	}
+
+	res, err := obj.Get("result")
+	chk.NoError(err)
+	if res == o.UndefinedValue() {
 		return nil, nil
 	}
-	r, err := jn.FromJSON(strings.NewReader(ov.String()), db.Noms(), jn.FromOptions{})
+	r, err := jn.FromJSON(strings.NewReader(res.String()), db.Noms(), jn.FromOptions{})
 	chk.NoError(err)
 	return r, nil
+}
+
+func errDetail(err error) error {
+	if oe, ok := err.(*o.Error); ok {
+		return errors.New(oe.String())
+	} else {
+		return err
+	}
 }
