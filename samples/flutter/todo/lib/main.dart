@@ -17,15 +17,6 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
         primarySwatch: Colors.blue,
       ),
       home: MyHomePage(title: 'ToDo List'),
@@ -59,7 +50,6 @@ class _MyHomePageState extends State<MyHomePage> {
     _init();
   }
 
-  int _counter = 0;
   List<dynamic> _todoItems = [];
 
   Future<void> _init() async {
@@ -68,23 +58,13 @@ class _MyHomePageState extends State<MyHomePage> {
     await _getTodos();
   }
 
-  Future<void> _incrementCounter() async {
-    await _replicant.exec('add', ['counter', 1]);
-    await _refreshCounter();
-  }
-
-  Future<void> _refreshCounter() async {
-    final res = await _replicant.get('counter');
-    setState(() {
-      _counter = res == null ? 0 : res;
-    });
-  }
-
   Future<void> _registerBundle() async {
+    /*
     var registeredVersion = 0;
     try {
       registeredVersion = await _replicant.exec('codeVersion');
-    } on Exception catch(e) {
+    } catch (e) {
+      print(e.toString());
       // https://github.com/aboodman/replicant/issues/25
       if (!e.toString().contains("Unknown function: codeVersion")) {
         throw e;
@@ -92,15 +72,15 @@ class _MyHomePageState extends State<MyHomePage> {
     }
 
     if (registeredVersion < bundleVersion) {
+      */
       await _replicant.putBundle(await rootBundle.loadString('assets/bundle.js', cache: false));
-      print("Upgraded bundle version from $registeredVersion to $bundleVersion");
-    }
+      //print("Upgraded bundle version from $registeredVersion to $bundleVersion");
+    //}
   }
 
   Future<void> _sync() async {
     print("Syncing...");
-    await _replicant.sync('https://replicate.to/serve/susan-counter');
-    await _refreshCounter();
+    await _replicant.sync('https://replicate.to/serve/boodman-todos');
     print("Done");
   }
 
@@ -115,10 +95,14 @@ class _MyHomePageState extends State<MyHomePage> {
       child: ListView(
         children: <Widget>[
           DrawerHeader(
-            child: Text("Hello!"),
+            child: Text(""),
               decoration: BoxDecoration(
               color: Colors.blue,
             ),
+          ),
+          ListTile(
+            title: Text('Sync'),
+            onTap: _sync,
           ),
           ListTile(
             title: Text('Delete local state'),
@@ -149,13 +133,6 @@ class _MyHomePageState extends State<MyHomePage> {
     var uuid = new Uuid();
     // Only add the task if the user actually entered something
     if(task.length > 0) {
-      // call addTodo function inside replicant here.
-      //await platform.invokeMethod('exec', jsonEncode({'name': 'add', 'args': ['counter', 1]}));
-      //await platform.invokeMethod('exec', jsonEncode({'name': 'addTodo', 'args': [uuid.v4(), task, 5]}));
-      // Putting our code inside "setState" tells the app that our state has changed, and
-      // it will automatically re-render the list
-      //setState(() => _todoItems.add(task));
-
       await _replicant.exec('addTodo', [uuid.v4(), task, 5]);
       await _getTodos();
     }
