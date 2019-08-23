@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 
 import 'replicant.dart';
 
+const bundleVersion = 1;
+
 void main() => runApp(MyApp());
 
 class MyApp extends StatelessWidget {
@@ -75,23 +77,19 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> _registerBundle() async {
-    var bundle = await rootBundle.loadString('assets/bundle.js', cache: false);
-
-    var bundleVersion = new RegExp(r"function codeVersion\(\) {[\n\s]+return (\d+);", multiLine: true).firstMatch(bundle);
-    if (bundleVersion == null) {
-      throw new Exception("Could not find codeVersion from bundle.");
-    }
-
-    var storedVersion = 0;
+    var registeredVersion = 0;
     try {
-      storedVersion = await _replicant.exec('codeVersion');
-    } catch (e) {
-      print("Error: " + e.toString());
+      registeredVersion = await _replicant.exec('codeVersion');
+    } on Exception catch(e) {
+      // https://github.com/aboodman/replicant/issues/25
+      if (!e.toString().contains("Unknown function: codeVersion")) {
+        throw e;
+      }
     }
 
-    if (storedVersion < int.parse(bundleVersion.group(1))) {
-      await _replicant.putBundle(bundle);
-      print("Upgraded bundle version from ${storedVersion} to ${bundleVersion.group(1)}");
+    if (registeredVersion < bundleVersion) {
+      await _replicant.putBundle(await rootBundle.loadString('assets/bundle.js', cache: false));
+      print("Upgraded bundle version from $registeredVersion to $bundleVersion");
     }
   }
 
