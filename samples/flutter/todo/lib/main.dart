@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:uuid/uuid.dart';
 
 import 'replicant.dart';
 
@@ -27,7 +28,8 @@ class MyApp extends StatelessWidget {
         // is not restarted.
         primarySwatch: Colors.blue,
       ),
-      home: MyHomePage(title: 'Flutter Demo Home Page'),
+      home: MyHomePage(title: 'ToDo List'),
+      
     );
   }
 }
@@ -58,10 +60,12 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   int _counter = 0;
+  List<dynamic> _todoItems = [];
 
   Future<void> _init() async {
     await _registerBundle();
-    await _refreshCounter();
+    await _replicant.exec('init', []);
+    await _getTodos();
   }
 
   Future<void> _incrementCounter() async {
@@ -129,7 +133,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return new Scaffold(
       appBar: new AppBar(
-        title: new Text('Todo List')
+         title: new Text('Todo List')
       ),
       drawer: _buildDrawer(),
       body: _buildTodoList(),
@@ -141,15 +145,20 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  void _addTodoItem(String task) {
-    /*
+  void _addTodoItem(String task) async {
+    var uuid = new Uuid();
     // Only add the task if the user actually entered something
     if(task.length > 0) {
+      // call addTodo function inside replicant here.
+      //await platform.invokeMethod('exec', jsonEncode({'name': 'add', 'args': ['counter', 1]}));
+      //await platform.invokeMethod('exec', jsonEncode({'name': 'addTodo', 'args': [uuid.v4(), task, 5]}));
       // Putting our code inside "setState" tells the app that our state has changed, and
       // it will automatically re-render the list
-      setState(() => _todoItems.add(task));
+      //setState(() => _todoItems.add(task));
+
+      await _replicant.exec('addTodo', [uuid.v4(), task, 5]);
+      await _getTodos();
     }
-    */
   }
 
   void _removeTodoItem(int index) {
@@ -186,9 +195,9 @@ class _MyHomePageState extends State<MyHomePage> {
 
   // Build the whole list of todo items
   Widget _buildTodoList() {
-    /*
-    return new ListView.builder(
-      itemBuilder: (context, index) {
+
+    return ListView.builder(
+      itemBuilder: (BuildContext _context, int index) {
         // itemBuilder will be automatically be called as many times as it takes for the
         // list to fill up its available space, which is most likely more than the
         // number of todo items we have. So, we need to check the index is OK.
@@ -197,15 +206,22 @@ class _MyHomePageState extends State<MyHomePage> {
         }
       },
     );
-    */
+  }
+
+  Future<void> _getTodos() async {
+    Map<String, dynamic> temp = await _replicant.exec('getTodos', []);
+    List<dynamic> todos = List.from(temp.entries.map((e) { e.value['id'] = e.key; return e.value;} ));
+    setState(() => _todoItems = todos);
   }
 
   // Build a single todo item
-  Widget _buildTodoItem(String todoText, int index) {
+  Widget _buildTodoItem(var todoItem, int index) {
     return new ListTile(
-      title: new Text(todoText),
+      title: new Text(todoItem["title"]),
       onTap: () => _promptRemoveTodoItem(index)
+      
     );
+    
   }
 
   void _pushAddTodoScreen() {
