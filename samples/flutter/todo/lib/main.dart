@@ -21,7 +21,6 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
       ),
       home: MyHomePage(),
-      
     );
   }
 }
@@ -37,6 +36,7 @@ class _MyHomePageState extends State<MyHomePage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
 
   List<Todo> _todos = [];
+  Timer _timer;
 
   _MyHomePageState() {
     _init();
@@ -61,8 +61,9 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> _init() async {
     await _registerBundle();
-    await _replicant.exec('init', []);
+    await _replicant.exec('init');
     await _load();
+    await _sync(force: true);
   }
 
   Future<void> _load() async {
@@ -92,11 +93,23 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  Future<void> _sync() async {
-    this._scaffoldKey.currentState.showSnackBar(SnackBar(content: Text('Syncing...'), duration: new Duration(seconds: 5)));
-    await _replicant.sync('https://replicate.to/serve/boodman-todos');
-    await _load();
-    this._scaffoldKey.currentState.hideCurrentSnackBar();
+  Future<void> _sync({force:false, status:false}) async {    
+    if (_timer == null) {
+      if (!force) {
+        // Another call stack is already inside _sync();
+        return;
+      }
+    } else {
+      _timer.cancel();
+    }
+    
+    try {
+      _timer = null;
+      await _replicant.sync('https://replicate.to/serve/boodman-todos-1');
+      await _load();
+    } finally {
+      _timer = new Timer(new Duration(seconds: 5), _sync);
+    }
   }
 
   Future <void> _dropDatabase() async {
@@ -111,7 +124,7 @@ class _MyHomePageState extends State<MyHomePage> {
     if(task.length > 0) {
       await _replicant.exec('addTodo', [uuid.v4(), task, _todos.length]);
       await _load();
-      await _sync();
+      await _sync(status: true);
     }
   }
 
@@ -201,7 +214,7 @@ class TodoList extends StatelessWidget {
 }
 
 class TodoDrawer extends StatelessWidget {
-  final Future<void> Function() _sync;
+  final Future<void> Function({bool force, bool status}) _sync;
   final Future<void> Function() _dropDatabase;
 
   TodoDrawer(this._sync, this._dropDatabase);
@@ -219,7 +232,7 @@ class TodoDrawer extends StatelessWidget {
           ),
           ListTile(
             title: Text('Sync'),
-            onTap: () => _sync(),
+            onTap: () => _sync(status: true),
           ),
           ListTile(
             title: Text('Delete local state'),
