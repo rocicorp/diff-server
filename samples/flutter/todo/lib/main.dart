@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'model.dart';
 import 'replicant.dart';
 
 const bundleVersion = 1;
@@ -57,22 +58,19 @@ class _MyHomePageState extends State<MyHomePage> {
     _init();
   }
 
-  int _counter = 0;
+  List<Todo> _todos;
 
   Future<void> _init() async {
     await _registerBundle();
-    await _refreshCounter();
+    await _load();
   }
 
-  Future<void> _incrementCounter() async {
-    await _replicant.exec('add', ['counter', 1]);
-    await _refreshCounter();
-  }
-
-  Future<void> _refreshCounter() async {
-    final res = await _replicant.get('counter');
+  Future<void> _load() async {
+    final Map<String, dynamic> res = await _replicant.exec('getTodos');
+    var todos = List.from(res.entries.map((e) => Todo.fromJson(e.key, e.value)));
+    todos.sort((t1, t2) => t1.order < t2.order ? -1 : t1.order == t2.order ? 0 : 1);
     setState(() {
-      _counter = res == null ? 0 : res;
+      _todos = todos;
     });
   }
 
@@ -96,7 +94,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<void> _sync() async {
     print("Syncing...");
     await _replicant.sync('https://replicate.to/serve/susan-counter');
-    await _refreshCounter();
+    await _load();
     print("Done");
   }
 
@@ -186,18 +184,16 @@ class _MyHomePageState extends State<MyHomePage> {
 
   // Build the whole list of todo items
   Widget _buildTodoList() {
-    /*
     return new ListView.builder(
       itemBuilder: (context, index) {
         // itemBuilder will be automatically be called as many times as it takes for the
         // list to fill up its available space, which is most likely more than the
         // number of todo items we have. So, we need to check the index is OK.
-        if(index < _todoItems.length) {
-          return _buildTodoItem(_todoItems[index], index);
+        if(index < _todos.length) {
+          return _buildTodoItem(_todos[index].title, index);
         }
       },
     );
-    */
   }
 
   // Build a single todo item
