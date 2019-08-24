@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:uuid/uuid.dart';
 
 import 'model.dart';
 import 'replicant.dart';
@@ -17,18 +18,10 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
         primarySwatch: Colors.blue,
       ),
-      home: MyHomePage(title: 'Flutter Demo Home Page'),
+      home: MyHomePage(title: 'ToDo List'),
+      
     );
   }
 }
@@ -58,16 +51,17 @@ class _MyHomePageState extends State<MyHomePage> {
     _init();
   }
 
-  List<Todo> _todos;
+  List<Todo> _todos = [];
 
   Future<void> _init() async {
     await _registerBundle();
+    await _replicant.exec('init', []);
     await _load();
   }
 
   Future<void> _load() async {
     final Map<String, dynamic> res = await _replicant.exec('getTodos');
-    var todos = List.from(res.entries.map((e) => Todo.fromJson(e.key, e.value)));
+    List<Todo> todos = List.from(res.entries.map((e) => Todo.fromJson(e.key, e.value)));
     todos.sort((t1, t2) => t1.order < t2.order ? -1 : t1.order == t2.order ? 0 : 1);
     setState(() {
       _todos = todos;
@@ -78,7 +72,8 @@ class _MyHomePageState extends State<MyHomePage> {
     var registeredVersion = 0;
     try {
       registeredVersion = await _replicant.exec('codeVersion');
-    } on Exception catch(e) {
+    } catch (e) {
+      print(e.toString());
       // https://github.com/aboodman/replicant/issues/25
       if (!e.toString().contains("Unknown function: codeVersion")) {
         throw e;
@@ -93,7 +88,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> _sync() async {
     print("Syncing...");
-    await _replicant.sync('https://replicate.to/serve/susan-counter');
+    await _replicant.sync('https://replicate.to/serve/boodman-todos');
     await _load();
     print("Done");
   }
@@ -109,10 +104,14 @@ class _MyHomePageState extends State<MyHomePage> {
       child: ListView(
         children: <Widget>[
           DrawerHeader(
-            child: Text("Hello!"),
+            child: Text(""),
               decoration: BoxDecoration(
               color: Colors.blue,
             ),
+          ),
+          ListTile(
+            title: Text('Sync'),
+            onTap: _sync,
           ),
           ListTile(
             title: Text('Delete local state'),
@@ -127,7 +126,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return new Scaffold(
       appBar: new AppBar(
-        title: new Text('Todo List')
+         title: new Text('Todo List')
       ),
       drawer: _buildDrawer(),
       body: _buildTodoList(),
@@ -139,15 +138,13 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  void _addTodoItem(String task) {
-    /*
+  void _addTodoItem(String task) async {
+    var uuid = new Uuid();
     // Only add the task if the user actually entered something
     if(task.length > 0) {
-      // Putting our code inside "setState" tells the app that our state has changed, and
-      // it will automatically re-render the list
-      setState(() => _todoItems.add(task));
+      await _replicant.exec('addTodo', [uuid.v4(), task, _todos.length]);
+      await _load();
     }
-    */
   }
 
   void _removeTodoItem(int index) {
@@ -184,24 +181,26 @@ class _MyHomePageState extends State<MyHomePage> {
 
   // Build the whole list of todo items
   Widget _buildTodoList() {
-    return new ListView.builder(
-      itemBuilder: (context, index) {
+    return ListView.builder(
+      itemBuilder: (BuildContext _context, int index) {
         // itemBuilder will be automatically be called as many times as it takes for the
         // list to fill up its available space, which is most likely more than the
         // number of todo items we have. So, we need to check the index is OK.
         if(index < _todos.length) {
-          return _buildTodoItem(_todos[index].title, index);
+          return _buildTodoItem(_todos[index], index);
         }
       },
     );
   }
 
   // Build a single todo item
-  Widget _buildTodoItem(String todoText, int index) {
+  Widget _buildTodoItem(Todo todo, int index) {
     return new ListTile(
-      title: new Text(todoText),
+      title: new Text(todo.title),
       onTap: () => _promptRemoveTodoItem(index)
+      
     );
+    
   }
 
   void _pushAddTodoScreen() {
