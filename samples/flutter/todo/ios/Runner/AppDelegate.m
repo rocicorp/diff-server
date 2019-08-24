@@ -40,8 +40,8 @@
                            error: &err];
     if (err != nil) {
       result([FlutterError errorWithCode:@"UNAVAILABLE"
-                                 message:@"Replicant error"
-                                 details:err]);
+                                 message:[err localizedDescription]
+                                 details:nil]);
     } else {
       result([[NSString alloc] initWithData:res
                                    encoding:NSUTF8StringEncoding]);
