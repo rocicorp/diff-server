@@ -16,30 +16,17 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Todo',
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: MyHomePage(title: 'ToDo List'),
+      home: MyHomePage(),
       
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  MyHomePage({Key key, this.title}) : super(key: key);
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
   @override
   _MyHomePageState createState() => _MyHomePageState();
 }
@@ -47,11 +34,30 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   static final _replicant = Replicant('replicant.dev/samples/todo');
 
+  final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
+
+  List<Todo> _todos = [];
+
   _MyHomePageState() {
     _init();
   }
 
-  List<Todo> _todos = [];
+  @override
+  Widget build(BuildContext context) {
+    return new Scaffold(
+      key: _scaffoldKey,
+      appBar: new AppBar(
+         title: new Text('Todo List')
+      ),
+      drawer: TodoDrawer(_sync, _dropDatabase),
+      body: TodoList(_todos),
+      floatingActionButton: new FloatingActionButton(
+        onPressed: _pushAddTodoScreen,
+        tooltip: 'Add task',
+        child: new Icon(Icons.add)
+      ),
+    );
+  }
 
   Future<void> _init() async {
     await _registerBundle();
@@ -87,10 +93,10 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> _sync() async {
-    print("Syncing...");
+    this._scaffoldKey.currentState.showSnackBar(SnackBar(content: Text('Syncing...'), duration: new Duration(seconds: 5)));
     await _replicant.sync('https://replicate.to/serve/boodman-todos');
     await _load();
-    print("Done");
+    this._scaffoldKey.currentState.hideCurrentSnackBar();
   }
 
   Future <void> _dropDatabase() async {
@@ -99,108 +105,18 @@ class _MyHomePageState extends State<MyHomePage> {
     Navigator.pop(context);
   }
 
-  Widget _buildDrawer() {
-    return Drawer(
-      child: ListView(
-        children: <Widget>[
-          DrawerHeader(
-            child: Text(""),
-              decoration: BoxDecoration(
-              color: Colors.blue,
-            ),
-          ),
-          ListTile(
-            title: Text('Sync'),
-            onTap: _sync,
-          ),
-          ListTile(
-            title: Text('Delete local state'),
-            onTap: _dropDatabase,
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return new Scaffold(
-      appBar: new AppBar(
-         title: new Text('Todo List')
-      ),
-      drawer: _buildDrawer(),
-      body: _buildTodoList(),
-      floatingActionButton: new FloatingActionButton(
-        onPressed: _pushAddTodoScreen,
-        tooltip: 'Add task',
-        child: new Icon(Icons.add)
-      ),
-    );
-  }
-
   void _addTodoItem(String task) async {
     var uuid = new Uuid();
     // Only add the task if the user actually entered something
     if(task.length > 0) {
       await _replicant.exec('addTodo', [uuid.v4(), task, _todos.length]);
       await _load();
+      await _sync();
     }
   }
 
   void _removeTodoItem(int index) {
     //setState(() => _todoItems.removeAt(index));
-  }
-
-  void _promptRemoveTodoItem(int index) {
-    /*
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return new AlertDialog(
-          title: new Text('Mark "${_todoItems[index]}" as done?'),
-          actions: <Widget>[
-            new FlatButton(
-              child: new Text('CANCEL'),
-              // The alert is actually part of the navigation stack, so to close it, we
-              // need to pop it.
-              onPressed: () => Navigator.of(context).pop()
-            ),
-            new FlatButton(
-              child: new Text('MARK AS DONE'),
-              onPressed: () {
-                _removeTodoItem(index);
-                Navigator.of(context).pop();
-              }
-            )
-          ]
-        );
-      }
-    );
-    */
-  }
-
-  // Build the whole list of todo items
-  Widget _buildTodoList() {
-    return ListView.builder(
-      itemBuilder: (BuildContext _context, int index) {
-        // itemBuilder will be automatically be called as many times as it takes for the
-        // list to fill up its available space, which is most likely more than the
-        // number of todo items we have. So, we need to check the index is OK.
-        if(index < _todos.length) {
-          return _buildTodoItem(_todos[index], index);
-        }
-      },
-    );
-  }
-
-  // Build a single todo item
-  Widget _buildTodoItem(Todo todo, int index) {
-    return new ListTile(
-      title: new Text(todo.title),
-      onTap: () => _promptRemoveTodoItem(index)
-      
-    );
-    
   }
 
   void _pushAddTodoScreen() {
@@ -228,6 +144,89 @@ class _MyHomePageState extends State<MyHomePage> {
           );
         }
       )
+    );
+  }
+}
+
+class TodoList extends StatelessWidget {
+  final List<Todo> _todos;
+
+  TodoList(this._todos);
+
+  // Build the whole list of todo items
+  @override
+  Widget build(BuildContext build) {
+    return ListView.builder(
+      itemBuilder: (BuildContext _context, int index) {
+        // itemBuilder will be automatically be called as many times as it takes for the
+        // list to fill up its available space, which is most likely more than the
+        // number of todo items we have. So, we need to check the index is OK.
+        if(index < _todos.length) {
+          return new ListTile(
+            title: new Text(_todos[index].title),
+            onTap: () => _handleRemove(index)
+          );
+        }
+      },
+    );
+  }
+
+  void _handleRemove(int index) {
+    /*
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return new AlertDialog(
+          title: new Text('Mark "${_todoItems[index]}" as done?'),
+          actions: <Widget>[
+            new FlatButton(
+              child: new Text('CANCEL'),
+              // The alert is actually part of the navigation stack, so to close it, we
+              // need to pop it.
+              onPressed: () => Navigator.of(context).pop()
+            ),
+            new FlatButton(
+              child: new Text('MARK AS DONE'),
+              onPressed: () {
+                _removeTodoItem(index);
+                Navigator.of(context).pop();
+              }
+            )
+          ]
+        );
+      }
+    );
+    */
+  }
+}
+
+class TodoDrawer extends StatelessWidget {
+  final Future<void> Function() _sync;
+  final Future<void> Function() _dropDatabase;
+
+  TodoDrawer(this._sync, this._dropDatabase);
+
+  @override
+  Widget build(BuildContext context) {
+    return Drawer(
+      child: ListView(
+        children: <Widget>[
+          DrawerHeader(
+            child: Text(""),
+              decoration: BoxDecoration(
+              color: Colors.blue,
+            ),
+          ),
+          ListTile(
+            title: Text('Sync'),
+            onTap: () => _sync(),
+          ),
+          ListTile(
+            title: Text('Delete local state'),
+            onTap: _dropDatabase,
+          ),
+        ],
+      ),
     );
   }
 }
