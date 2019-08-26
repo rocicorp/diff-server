@@ -4,6 +4,7 @@ package repm
 import (
 	"fmt"
 	"os"
+	"runtime/debug"
 
 	"github.com/attic-labs/noms/go/spec"
 
@@ -45,8 +46,9 @@ func (conn *Connection) Dispatch(rpc string, data []byte) (ret []byte, err error
 			} else {
 				msg = fmt.Sprintf("%v", r)
 			}
+			fmt.Fprintf(os.Stderr, "Replicant panicked with: %s\n%s\n", msg, string(debug.Stack()))
 			ret = nil
-			err = fmt.Errorf("Replicant panicked with: %s", msg)
+			err = fmt.Errorf("Replicant panicked with: %s - see stderr for more.", msg)
 		}
 	}()
 	switch rpc {
