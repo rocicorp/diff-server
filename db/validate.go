@@ -53,7 +53,7 @@ func validate(db *DB, commit Commit, forkPoint types.Ref) (err error) {
 		if err != nil {
 			return err
 		}
-		replayed = makeReorder(db.noms, commit.BasisRef(), commit.Meta.Reorder.Origin, commit.Meta.Reorder.Date, types.NewRef(target.Original), newBundle, newData)
+		replayed = makeReorder(db.noms, commit.BasisRef(), commit.Meta.Reorder.Origin, commit.Meta.Reorder.Date, commit.Target(), newBundle, newData)
 
 	case CommitTypeReject:
 		b, err := commit.Basis(db.noms)

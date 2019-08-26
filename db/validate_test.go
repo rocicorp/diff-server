@@ -169,16 +169,16 @@ func TestValidate(t *testing.T) {
 		err string
 	}{
 		{tx1, ""},
-		{tx1b, "Invalid commit ccn11ot718inmicflkuv3rueiqj02j2r: diff: .value {\n-   data: #atbvqcfprt13l5sadlpohu48tuctgmt4\n+   data: #a7u0iuqarbmjs9dnrf7d0fcotjrhdaaf\n  }\n"},
+		{tx1b, "Invalid commit 4b8h3oa959g80efc75gnk53lqv4sugl6: diff: .value {\n-   data: #atbvqcfprt13l5sadlpohu48tuctgmt4\n+   data: #a7u0iuqarbmjs9dnrf7d0fcotjrhdaaf\n  }\n"},
 		{tx2, ""},
-		{tx2b, "Invalid commit ccn11ot718inmicflkuv3rueiqj02j2r: diff: .value {\n-   data: #atbvqcfprt13l5sadlpohu48tuctgmt4\n+   data: #a7u0iuqarbmjs9dnrf7d0fcotjrhdaaf\n  }\n"},
+		{tx2b, "Invalid commit 4b8h3oa959g80efc75gnk53lqv4sugl6: diff: .value {\n-   data: #atbvqcfprt13l5sadlpohu48tuctgmt4\n+   data: #a7u0iuqarbmjs9dnrf7d0fcotjrhdaaf\n  }\n"},
 		{tx3, ""},
 		{ro1, ""},
-		{ro1b, "Invalid commit ogrtfd10a6pa39qd18v1c9l4nl57kliu: diff: .value {\n-   data: #1f3f1stoa9pit2jctse1svtl9vm01sbk\n+   data: #cdvf5afbdn7vpmj2ag7mhesrce5joob9\n  }\n"},
-		{ro1c, "Invalid commit ccn11ot718inmicflkuv3rueiqj02j2r: diff: .value {\n-   data: #atbvqcfprt13l5sadlpohu48tuctgmt4\n+   data: #a7u0iuqarbmjs9dnrf7d0fcotjrhdaaf\n  }\n"},
+		{ro1b, "Invalid commit 3qi8i0fq7j2v91m7oa5vh31mclt4rj3u: diff: .value {\n-   data: #1f3f1stoa9pit2jctse1svtl9vm01sbk\n+   data: #cdvf5afbdn7vpmj2ag7mhesrce5joob9\n  }\n"},
+		{ro1c, "Invalid commit 4b8h3oa959g80efc75gnk53lqv4sugl6: diff: .value {\n-   data: #atbvqcfprt13l5sadlpohu48tuctgmt4\n+   data: #a7u0iuqarbmjs9dnrf7d0fcotjrhdaaf\n  }\n"},
 		{rj1, ""},
-		{rj1b, "Invalid commit 9rrejcn1fo1lvo30biubb6e09hf56k7c: diff: .value {\n-   data: #cdvf5afbdn7vpmj2ag7mhesrce5joob9\n+   data: #a7u0iuqarbmjs9dnrf7d0fcotjrhdaaf\n  }\n"},
-		{rj1c, "Invalid commit ccn11ot718inmicflkuv3rueiqj02j2r: diff: .value {\n-   data: #atbvqcfprt13l5sadlpohu48tuctgmt4\n+   data: #a7u0iuqarbmjs9dnrf7d0fcotjrhdaaf\n  }\n"},
+		{rj1b, "Invalid commit 1odrcdf7fgs5fmt9takdhkjktbqalogb: diff: .value {\n-   data: #cdvf5afbdn7vpmj2ag7mhesrce5joob9\n+   data: #a7u0iuqarbmjs9dnrf7d0fcotjrhdaaf\n  }\n"},
+		{rj1c, "Invalid commit 4b8h3oa959g80efc75gnk53lqv4sugl6: diff: .value {\n-   data: #atbvqcfprt13l5sadlpohu48tuctgmt4\n+   data: #a7u0iuqarbmjs9dnrf7d0fcotjrhdaaf\n  }\n"},
 	}
 
 	for i, t := range tc {
