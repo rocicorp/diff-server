@@ -67,7 +67,7 @@ func validate(db *DB, commit Commit, forkPoint types.Ref) (err error) {
 	}
 
 	if !replayed.Original.Equals(commit.Original) {
-		return fmt.Errorf("Invalid commit %s: diff: %s", replayed.Original.Hash(), diff.Diff(commit.Original, replayed.Original))
+		return fmt.Errorf("Invalid commit %s: diff: %s", commit.Original.Hash(), diff.Diff(commit.Original, replayed.Original))
 	}
 
 	return nil
