@@ -7,7 +7,7 @@ import 'package:uuid/uuid.dart';
 import 'model.dart';
 import 'replicant.dart';
 
-const bundleVersion = 1;
+const bundleVersion = 2;
 
 void main() => runApp(MyApp());
 
@@ -107,13 +107,20 @@ class _MyHomePageState extends State<MyHomePage> {
       _timer = null;
       await _replicant.sync('https://replicate.to/serve/boodman-todos-1');
       await _load();
+    } catch (e) {
+      print('ERROR DURING SYNC');
+      print(e);
+      // We are seeing some consistency errors during sync -- we push commits,
+      // then turn around and fetch them and expect to see them, but don't.
+      // that is bad, but for now, just retry.
+      _timer = new Timer(new Duration(milliseconds: 100), _sync);
     } finally {
       _timer = new Timer(new Duration(seconds: 5), _sync);
     }
   }
 
   Future <void> _dropDatabase() async {
-    await _replicant.dropDatabase();
+    await _replicant.exec('deleteAllTodos');
     await _init();
     Navigator.pop(context);
   }

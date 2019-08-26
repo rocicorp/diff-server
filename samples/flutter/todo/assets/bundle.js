@@ -1,5 +1,5 @@
 function codeVersion() {
-    return 1;
+    return 2;
 }
 
 function init() {
@@ -38,6 +38,10 @@ function deleteTodo(id) {
     var todos = _read();
     delete todos[id];
     _store(todos);
+}
+
+function deleteAllTodos() {
+    db.put('todos', {});
 }
 
 function _read() {

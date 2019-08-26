@@ -25,7 +25,7 @@ class Replicant {
   }
 
   // Get a single value from the database.
-  Future<dynamic> get(String id) async {
+  Future<dynamic> get(String id) {
     return _invoke('get', {'id': id});
   }
 
