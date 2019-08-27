@@ -38,7 +38,7 @@
       NSLog(@"Replicant: Sending arguments: %@", call.arguments);
       NSData* res = [conn dispatch:call.method
                               data:[call.arguments dataUsingEncoding:NSUTF8StringEncoding]
-                            error: &err];
+                             error:&err];
       dispatch_async(dispatch_get_main_queue(), ^(void){
         if (err != nil) {
           result([FlutterError errorWithCode:@"UNAVAILABLE"
