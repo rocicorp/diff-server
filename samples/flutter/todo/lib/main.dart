@@ -120,9 +120,9 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future <void> _dropDatabase() async {
+    Navigator.pop(context);
     await _replicant.exec('deleteAllTodos');
     await _init();
-    Navigator.pop(context);
   }
 
   void _addTodoItem(String task) async {
