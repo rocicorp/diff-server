@@ -31,7 +31,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  static final _replicant = Replicant('replicant.dev/samples/todo');
+  static final _replicant = Replicant();
 
   final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
 
@@ -85,7 +85,6 @@ class _MyHomePageState extends State<MyHomePage> {
     try {
       registeredVersion = await _replicant.exec('codeVersion');
     } catch (e) {
-      print(e.toString());
       // https://github.com/aboodman/replicant/issues/25
       if (!e.toString().contains("Unknown function: codeVersion")) {
         throw e;

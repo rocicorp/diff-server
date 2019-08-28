@@ -2,11 +2,13 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart';
 
+const CHANNEL_NAME = 'replicant.dev';
+
 class Replicant {
   MethodChannel _platform;
 
-  Replicant(String channel) {
-     _platform = MethodChannel(channel);
+  Replicant() {
+     _platform = MethodChannel(CHANNEL_NAME);
   }
 
   Future<void> putBundle(String bundle) {

@@ -16,10 +16,8 @@ import java.util.Date;
 import android.util.Log;
 
 public class MainActivity extends FlutterActivity {
-  private static final String CHANNEL = "replicant.dev/samples/todo";
-
+  private static final String CHANNEL = "replicant.dev";
   private static repm.Connection conn;
-
   private static File tmpDir;
 
   private Handler uiThreadHandler;
@@ -28,15 +26,9 @@ public class MainActivity extends FlutterActivity {
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
 
-    uiThreadHandler = new Handler(Looper.getMainLooper());
-
     GeneratedPluginRegistrant.registerWith(this);
 
-    initTempDir();
-    initConnection();
-    if (conn == null) {
-      return;
-    }
+    uiThreadHandler = new Handler(Looper.getMainLooper());
 
     new MethodChannel(getFlutterView(), CHANNEL).setMethodCallHandler(
       new MethodCallHandler() {
@@ -46,8 +38,16 @@ public class MainActivity extends FlutterActivity {
             // Tempting to use AsyncTask but I'm not sure how many threads the backing pool
             // has and don't want sync(), which can block for a long time, to block other
             // calls into Replicant which should be near-instant.
+            Log.i("Replicant", "Calling: " + call.method + " with arguments: " + (String)call.arguments);
             new Thread(new Runnable() {
               public void run() {
+                MainActivity.this.initConnection();
+
+                if (conn == null) {
+                  sendResult(result, new byte[0], new Exception("Could not open Replicant database"));
+                  return;
+                }
+
                 // TODO: Avoid conversion here - can dart just send as bytes?
                 byte[] argData = new byte[0];
                 if (call.arguments != null) {
@@ -85,28 +85,29 @@ public class MainActivity extends FlutterActivity {
     });
   }
 
-  private void initConnection() {
-    try {
-      if (MainActivity.conn == null) {
-        File f = this.getFileStreamPath("db3");
-        MainActivity.conn = repm.Repm.open(f.getAbsolutePath(), "client1", tmpDir.getAbsolutePath());
-      }
-    } catch (Exception e) {
-      Log.e("Replicant", "Could not create connection: " + e.toString());
-    }
-  }
-
-  private void initTempDir() throws RuntimeException {
-    if (tmpDir != null) {
+  private synchronized void initConnection() {
+    if (MainActivity.conn != null) {
       return;
     }
 
-    tmpDir = new File(new File(getCacheDir(), "replicant"), "temp");
+    File replicantDir = this.getFileStreamPath("replicant");
+    File dataDir = new File(replicantDir, "data");
+    File tmpDir = new File(replicantDir, "temp");
+
+    // Android apps can't create directories in the global tmp directory, so we must create our own.
     if (!tmpDir.exists()) {
       if (!tmpDir.mkdirs()) {
-        throw new RuntimeException("Could not make temp dir!");
+        Log.e("Replicant", "Could not create temp directory");
+        return;
       }
     }
     tmpDir.deleteOnExit();
+
+    try {
+      // TODO: Properly set client ID.
+      MainActivity.conn = repm.Repm.open(dataDir.getAbsolutePath(), "android/c1", tmpDir.getAbsolutePath());
+    } catch (Exception e) {
+      Log.e("Replicant", "Could not open Replicant database", e);
+    }
   }
 }
