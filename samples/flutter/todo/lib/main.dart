@@ -36,6 +36,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Replicant _replicant;
   List<Todo> _todos = [];
+  bool _syncing = false;
   Timer _timer;
 
   _MyHomePageState() {
@@ -43,8 +44,9 @@ class _MyHomePageState extends State<MyHomePage> {
     _init();
   }
 
-  void _handleDatabaseChange() {
-    _load();
+  void _handleDatabaseChange() async {
+    await _load();
+    _sync();
   }
 
   @override
@@ -52,7 +54,8 @@ class _MyHomePageState extends State<MyHomePage> {
     return new Scaffold(
       key: _scaffoldKey,
       appBar: new AppBar(
-         title: new Text('Todo List')
+         title: new Text('Todo List'),
+         actions: _syncing ? [Icon(Icons.sync)] : [],
       ),
       drawer: TodoDrawer(_sync, _dropDatabase),
       body: TodoList(_todos, _handleDoneChanged),
@@ -101,7 +104,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  Future<void> _sync({force:false, status:false}) async {    
+  Future<void> _sync({force:false}) async {
     if (_timer == null) {
       if (!force) {
         // Another call stack is already inside _sync();
@@ -110,6 +113,10 @@ class _MyHomePageState extends State<MyHomePage> {
     } else {
       _timer.cancel();
     }
+
+    setState(() {
+      _syncing = true;
+    });
     
     try {
       _timer = null;
@@ -122,6 +129,9 @@ class _MyHomePageState extends State<MyHomePage> {
       // that is bad, but for now, just retry.
       _timer = new Timer(new Duration(milliseconds: 100), _sync);
     } finally {
+      setState(() {
+        _syncing = false;
+      });
       _timer = new Timer(new Duration(seconds: 5), _sync);
     }
   }
@@ -132,12 +142,11 @@ class _MyHomePageState extends State<MyHomePage> {
     await _init();
   }
 
-  void _addTodoItem(String task) async {
+  void _addTodoItem(String task) {
     var uuid = new Uuid();
     // Only add the task if the user actually entered something
     if(task.length > 0) {
-      await _replicant.exec('addTodo', [uuid.v4(), task, _todos.length]);
-      await _sync(status: true);
+      _replicant.exec('addTodo', [uuid.v4(), task, _todos.length]);
     }
   }
 
@@ -232,7 +241,7 @@ class TodoList extends StatelessWidget {
 }
 
 class TodoDrawer extends StatelessWidget {
-  final Future<void> Function({bool force, bool status}) _sync;
+  final Future<void> Function({bool force}) _sync;
   final Future<void> Function() _dropDatabase;
 
   TodoDrawer(this._sync, this._dropDatabase);
@@ -250,7 +259,7 @@ class TodoDrawer extends StatelessWidget {
           ),
           ListTile(
             title: Text('Sync'),
-            onTap: () => _sync(status: true),
+            onTap: _sync,
           ),
           ListTile(
             title: Text('Delete local state'),
