@@ -76,6 +76,10 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> _load() async {
     final Map<String, dynamic> res = await _replicant.exec('getTodos');
+    if (res == null) {
+      // This can happen when we put a bundle but we haven't even setup the schema yet.
+      return;
+    }
     List<Todo> todos = List.from(res.entries.map((e) => Todo.fromJson(e.key, e.value)));
     todos.sort((t1, t2) => t1.order < t2.order ? -1 : t1.order == t2.order ? 0 : 1);
     setState(() {
@@ -127,7 +131,7 @@ class _MyHomePageState extends State<MyHomePage> {
       // We are seeing some consistency errors during sync -- we push commits,
       // then turn around and fetch them and expect to see them, but don't.
       // that is bad, but for now, just retry.
-      _timer = new Timer(new Duration(milliseconds: 100), _sync);
+      _timer = new Timer(new Duration(seconds: 1), _sync);
     } finally {
       setState(() {
         _syncing = false;

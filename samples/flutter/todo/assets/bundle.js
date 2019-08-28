@@ -1,5 +1,5 @@
 function codeVersion() {
-    return 2;
+    return 3;
 }
 
 function init() {
@@ -24,7 +24,7 @@ function setDone(id, done) {
     var todos = _read();
     var item = todos[id];
     if (!item) {
-        throw new Error("todo not found: " + id);
+        return;
     }
     item.done = done;
     _store(todos);
