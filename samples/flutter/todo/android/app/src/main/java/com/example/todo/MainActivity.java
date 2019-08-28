@@ -1,5 +1,7 @@
 package com.example.todo;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -12,6 +14,7 @@ import io.flutter.plugins.GeneratedPluginRegistrant;
 
 import java.io.File;
 import java.util.Date;
+import java.util.UUID;
 
 import android.util.Log;
 
@@ -19,6 +22,7 @@ public class MainActivity extends FlutterActivity {
   private static final String CHANNEL = "replicant.dev";
   private static repm.Connection conn;
   private static File tmpDir;
+  private static String clientID;
 
   private Handler uiThreadHandler;
 
@@ -41,6 +45,7 @@ public class MainActivity extends FlutterActivity {
             Log.i("Replicant", "Calling: " + call.method + " with arguments: " + (String)call.arguments);
             new Thread(new Runnable() {
               public void run() {
+                MainActivity.this.initClientID();
                 MainActivity.this.initConnection();
 
                 if (conn == null) {
@@ -105,9 +110,28 @@ public class MainActivity extends FlutterActivity {
 
     try {
       // TODO: Properly set client ID.
-      MainActivity.conn = repm.Repm.open(dataDir.getAbsolutePath(), "android/c1", tmpDir.getAbsolutePath());
+      MainActivity.conn = repm.Repm.open(dataDir.getAbsolutePath(), MainActivity.clientID, tmpDir.getAbsolutePath());
     } catch (Exception e) {
       Log.e("Replicant", "Could not open Replicant database", e);
     }
+  }
+
+  private synchronized void initClientID() {
+    if (MainActivity.clientID != null) {
+      return;
+    }
+
+    SharedPreferences sharedPref = this.getPreferences(Context.MODE_PRIVATE);
+    MainActivity.clientID = sharedPref.getString("clientID", null);
+    if (MainActivity.clientID != null) {
+      return;
+    }
+
+    String cid = UUID.randomUUID().toString();
+    SharedPreferences.Editor editor = sharedPref.edit();
+    editor.putString("clientID", cid);
+    editor.commit();
+    Log.i("Replicant", "Generated and saved new clientID: " + cid);
+    MainActivity.clientID = cid;
   }
 }
