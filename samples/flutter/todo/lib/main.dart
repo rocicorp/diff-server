@@ -58,7 +58,7 @@ class _MyHomePageState extends State<MyHomePage> {
          actions: _syncing ? [Icon(Icons.sync)] : [],
       ),
       drawer: TodoDrawer(_sync, _dropDatabase),
-      body: TodoList(_todos, _handleDoneChanged),
+      body: TodoList(_todos, _handleDoneChanged, _removeTodoItem),
       floatingActionButton: new FloatingActionButton(
         onPressed: _pushAddTodoScreen,
         tooltip: 'Add task',
@@ -150,8 +150,8 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  void _removeTodoItem(int index) {
-    //setState(() => _todoItems.removeAt(index));
+  Future<void> _removeTodoItem(String id) async {
+    await _replicant.exec('deleteTodo', [id]);
   }
 
   void _pushAddTodoScreen() {
@@ -186,8 +186,9 @@ class _MyHomePageState extends State<MyHomePage> {
 class TodoList extends StatelessWidget {
   final List<Todo> _todos;
   final Future<void> Function(String, bool) _handleDoneChange;
+  final Future<void> Function(String) _removeTodoItem;
 
-  TodoList(this._todos, this._handleDoneChange);
+  TodoList(this._todos, this._handleDoneChange, this._removeTodoItem);
 
   // Build the whole list of todo items
   @override
@@ -197,21 +198,31 @@ class TodoList extends StatelessWidget {
         // itemBuilder will be automatically be called as many times as it takes for the
         // list to fill up its available space, which is most likely more than the
         // number of todo items we have. So, we need to check the index is OK.
-        if(index < _todos.length) {
-            var todo = _todos[index];
-            return new CheckboxListTile (
-              title: new Text(todo.title),
-              value: todo.done,
-              onChanged: (bool newValue) {
-                _handleDoneChange(todo.id, newValue);
-              },
-            );
+        if (index >= _todos.length) {
+          return null;
         }
-      },
+        var todo = _todos[index];
+        var id = todo.id;
+        return Dismissible(
+          key: Key(id),
+          onDismissed: (direction) {
+              _handleRemove(id);
+          },
+          // Show a red background as the item is swiped away.
+          background: Container(color: Colors.red),
+          child: new CheckboxListTile (
+            title: new Text(todo.title),
+            value: todo.done,
+            onChanged: (bool newValue) {
+              _handleDoneChange(id, newValue);
+            }),
+        );
+      }
     );
   }
 
-  void _handleRemove(int index) {
+  void _handleRemove(String id) {
+    _removeTodoItem(id);
     /*
     showDialog(
       context: context,
