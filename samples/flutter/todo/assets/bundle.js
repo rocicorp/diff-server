@@ -1,5 +1,5 @@
 function codeVersion() {
-    return 2;
+    return 3;
 }
 
 function init() {

@@ -1,6 +1,7 @@
 package db
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -90,12 +91,26 @@ func TestDel(t *testing.T) {
 	assert.False(ok)
 }
 
-func TestBundle(t *testing.T) {
+func TestBundleInvalid(t *testing.T) {
 	assert := assert.New(t)
 	db, dir := LoadTempDB(assert)
 
-	exp := types.NewBlob(db.noms, strings.NewReader("bundlebundle"))
+	err := db.PutBundle(types.NewBlob(db.noms, strings.NewReader("bundlebundle")))
+	assert.EqualError(err, "ReferenceError: 'bundlebundle' is not defined\n    at bundle.js:1:1\n")
 
+	dbs := []*DB{db, reloadDB(assert, dir)}
+	for _, d := range dbs {
+		act, err := d.Bundle()
+		assert.NoError(err)
+		assert.True(types.NewEmptyBlob(db.noms).Equals(act))
+	}
+}
+
+func TestBundleUnversioned(t *testing.T) {
+	assert := assert.New(t)
+	db, dir := LoadTempDB(assert)
+
+	exp := types.NewBlob(db.noms, strings.NewReader("function foo(){}"))
 	err := db.PutBundle(exp)
 	assert.NoError(err)
 
@@ -104,6 +119,51 @@ func TestBundle(t *testing.T) {
 		act, err := d.Bundle()
 		assert.NoError(err)
 		assert.True(exp.Equals(act))
+	}
+}
+
+func TestUpgrade(t *testing.T) {
+	assert := assert.New(t)
+	db, dir := LoadTempDB(assert)
+	fmt.Println(dir)
+
+	tc := []struct {
+		nb            string
+		expectedError string
+		expectUpgrade bool
+	}{
+		{"", "", false},                 // bundle is unchanged from default
+		{"function foo(){}", "", true},  // unversioned upgrade
+		{"function foo(){}", "", false}, // unchanged
+		{"function bar(){}", "", true},  // unversioned upgrade
+		{"function codeVersion() { return 'bonk'; }", "codeVersion() must return a number", false}, // invalid impl of codeVersion()
+		{"function codeVersion() { return 0.1; }", "", true},                                       // unversioned->versioned upgrade
+		{"function codeVersion() { return 0.1; }", "", false},                                      // unchanged
+		{"function codeVersion() { return 1.1; }", "", true},                                       // versioned upgrade
+		{"function codeVersion() { return 0.5; }", "", false},                                      // downgrade
+	}
+
+	for i, t := range tc {
+		msg := fmt.Sprintf("test case %d (%s)", i, t.nb)
+		prevHead := db.head.Original
+
+		proposed := types.NewBlob(db.noms, strings.NewReader(t.nb))
+		err := db.PutBundle(proposed)
+		if t.expectedError != "" {
+			assert.EqualError(err, t.expectedError)
+		} else {
+			assert.NoError(err, msg)
+		}
+
+		currBundle, err := db.Bundle()
+		assert.NoError(err, msg)
+
+		if t.expectUpgrade {
+			assert.False(db.head.Original.Equals(prevHead))
+			assert.True(proposed.Equals(currBundle), msg)
+		} else {
+			assert.True(db.head.Original.Equals(prevHead))
+		}
 	}
 }
 

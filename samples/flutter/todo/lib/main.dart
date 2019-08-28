@@ -8,8 +8,6 @@ import 'model.dart';
 import 'replicant.dart';
 import 'settings.dart';
 
-const bundleVersion = 2;
-
 void main() => runApp(MyApp());
 
 class MyApp extends StatelessWidget {
@@ -68,7 +66,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> _init() async {
-    await _registerBundle();
+    await _replicant.putBundle(await rootBundle.loadString('assets/bundle.js', cache: false));
     await _replicant.exec('init');
     await _load();
     _sync(force: true);
@@ -85,23 +83,6 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> _handleDoneChanged(String id, bool isDone) async {
     await _replicant.exec('setDone', [id, isDone]);
-  }
-
-  Future<void> _registerBundle() async {
-    var registeredVersion = 0;
-    try {
-      registeredVersion = await _replicant.exec('codeVersion');
-    } catch (e) {
-      // https://github.com/aboodman/replicant/issues/25
-      if (!e.toString().contains("Unknown function: codeVersion")) {
-        throw e;
-      }
-    }
-
-    if (registeredVersion < bundleVersion) {
-      await _replicant.putBundle(await rootBundle.loadString('assets/bundle.js', cache: false));
-      print("Upgraded bundle version from $registeredVersion to $bundleVersion");
-    }
   }
 
   Future<void> _sync({force:false}) async {
