@@ -1,3 +1,6 @@
+# Local settings
+lib/settings.dart
+
 # Miscellaneous
 *.class
 *.log

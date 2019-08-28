@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 
 import 'model.dart';
 import 'replicant.dart';
+import 'settings.dart';
 
 const bundleVersion = 2;
 
@@ -109,7 +110,7 @@ class _MyHomePageState extends State<MyHomePage> {
     
     try {
       _timer = null;
-      await _replicant.sync('https://replicate.to/serve/boodman-todos');
+      await _replicant.sync(db);
       await _load();
     } catch (e) {
       print('ERROR DURING SYNC');
