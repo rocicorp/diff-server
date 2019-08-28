@@ -3,6 +3,7 @@ package json
 import (
 	ej "encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/attic-labs/noms/go/hash"
 )
@@ -12,7 +13,7 @@ type Hash struct {
 }
 
 func (h Hash) MarshalJSON() ([]byte, error) {
-	return []byte(h.Hash.String()), nil
+	return []byte(fmt.Sprintf(`"%s"`, h.String())), nil
 }
 
 func (h *Hash) UnmarshalJSON(data []byte) (err error) {

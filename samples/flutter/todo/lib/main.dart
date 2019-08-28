@@ -32,15 +32,19 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  static final _replicant = Replicant();
-
   final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
 
+  Replicant _replicant;
   List<Todo> _todos = [];
   Timer _timer;
 
   _MyHomePageState() {
+    _replicant = Replicant(_handleDatabaseChange);
     _init();
+  }
+
+  void _handleDatabaseChange() {
+    _load();
   }
 
   @override
@@ -64,7 +68,7 @@ class _MyHomePageState extends State<MyHomePage> {
     await _registerBundle();
     await _replicant.exec('init');
     await _load();
-    await _sync(force: true);
+    _sync(force: true);
   }
 
   Future<void> _load() async {
@@ -78,7 +82,6 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> _handleDoneChanged(String id, bool isDone) async {
     await _replicant.exec('setDone', [id, isDone]);
-    _load();
   }
 
   Future<void> _registerBundle() async {
@@ -111,7 +114,6 @@ class _MyHomePageState extends State<MyHomePage> {
     try {
       _timer = null;
       await _replicant.sync(db);
-      await _load();
     } catch (e) {
       print('ERROR DURING SYNC');
       print(e);
@@ -135,7 +137,6 @@ class _MyHomePageState extends State<MyHomePage> {
     // Only add the task if the user actually entered something
     if(task.length > 0) {
       await _replicant.exec('addTodo', [uuid.v4(), task, _todos.length]);
-      await _load();
       await _sync(status: true);
     }
   }

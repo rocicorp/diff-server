@@ -16,6 +16,13 @@ import (
 	jsnoms "github.com/aboodman/replicant/util/noms/json"
 )
 
+type GetRootRequest struct {
+}
+
+type GetRootResponse struct {
+	Root jsnoms.Hash `json:"root"`
+}
+
 type HasRequest struct {
 	Key string `json:"key"`
 }
@@ -39,6 +46,7 @@ type PutRequest struct {
 }
 
 type PutResponse struct {
+	Root jsnoms.Hash `json:"root"`
 }
 
 type DelRequest struct {
@@ -46,7 +54,8 @@ type DelRequest struct {
 }
 
 type DelResponse struct {
-	Ok bool `json:"ok"`
+	Ok   bool        `json:"ok"`
+	Root jsnoms.Hash `json:"root"`
 }
 
 type GetBundleRequest struct {
@@ -61,6 +70,7 @@ type PutBundleRequest struct {
 }
 
 type PutBundleResponse struct {
+	Root jsnoms.Hash `json:"root"`
 }
 
 type ExecRequest struct {
@@ -70,6 +80,7 @@ type ExecRequest struct {
 
 type ExecResponse struct {
 	Result *jsnoms.Value `json:"result,omitempty"`
+	Root   jsnoms.Hash   `json:"root"`
 }
 
 type SyncRequest struct {
@@ -77,6 +88,7 @@ type SyncRequest struct {
 }
 
 type SyncResponse struct {
+	Root jsnoms.Hash `json:"root"`
 }
 
 type API struct {
@@ -89,6 +101,8 @@ func New(db *db.DB) *API {
 
 func (api *API) Dispatch(name string, req []byte) ([]byte, error) {
 	switch name {
+	case "getRoot":
+		return api.dispatchGetRoot(req)
 	case "has":
 		return api.dispatchHas(req)
 	case "get":
@@ -108,6 +122,21 @@ func (api *API) Dispatch(name string, req []byte) ([]byte, error) {
 	}
 	chk.Fail("Unsupported rpc name: %s", name)
 	return nil, nil
+}
+
+func (api *API) dispatchGetRoot(reqBytes []byte) ([]byte, error) {
+	var req GetRootRequest
+	err := json.Unmarshal(reqBytes, &req)
+	if err != nil {
+		return nil, err
+	}
+
+	res := GetRootResponse{
+		Root: jsnoms.Hash{
+			Hash: api.db.Hash(),
+		},
+	}
+	return mustMarshal(res), nil
 }
 
 func (api *API) dispatchHas(reqBytes []byte) ([]byte, error) {
@@ -161,7 +190,11 @@ func (api *API) dispatchPut(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	res := PutResponse{}
+	res := PutResponse{
+		Root: jsnoms.Hash{
+			Hash: api.db.Hash(),
+		},
+	}
 	return mustMarshal(res), nil
 }
 
@@ -177,6 +210,9 @@ func (api *API) dispatchDel(reqBytes []byte) ([]byte, error) {
 	}
 	res := DelResponse{
 		Ok: ok,
+		Root: jsnoms.Hash{
+			Hash: api.db.Hash(),
+		},
 	}
 	return mustMarshal(res), nil
 }
@@ -213,7 +249,11 @@ func (api *API) dispatchPutBundle(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	res := PutBundleResponse{}
+	res := PutBundleResponse{
+		Root: jsnoms.Hash{
+			Hash: api.db.Hash(),
+		},
+	}
 	return mustMarshal(res), nil
 }
 
@@ -231,7 +271,11 @@ func (api *API) dispatchExec(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	res := ExecResponse{}
+	res := ExecResponse{
+		Root: jsnoms.Hash{
+			Hash: api.db.Hash(),
+		},
+	}
 	if output != nil {
 		res.Result = jsnoms.New(api.db.Noms(), output)
 	}
@@ -249,7 +293,11 @@ func (api *API) dispatchSync(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	res := ExecResponse{}
+	res := SyncResponse{
+		Root: jsnoms.Hash{
+			Hash: api.db.Hash(),
+		},
+	}
 	return mustMarshal(res), nil
 }
 
