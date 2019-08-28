@@ -1,16 +1,36 @@
-# todo
+# Repldo (Flutter)
 
-A new Flutter project.
+A simple TODO app that demonstrates using Replicant from Flutter.
 
-## Getting Started
+# Prerequisites
 
-This project is a starting point for a Flutter application.
+* Download and setup the [Flutter SDK](https://flutter.dev/docs/get-started/install)
+* Get the repm (Replicant mobile) libraries, by either:
+  * (Preferred, at the moment) Building them: See [repm/README.md](../../../repm/README.md)
+  * [Downloading a prebuilt release](https://github.com/aboodman/replicant/releases)
+    * Warning: We don't have the releases being automatically built right now, so it is highly likely to be out of date
+    * Copy the repm.aar and Repm.framework.zip files into the `replicant/repm` directory of this project
+    * Unzip the Repm.framework.zip file
 
-A few resources to get you started if this is your first Flutter project:
+We will eventually just build a Dart package that hides all of this.
 
-- [Lab: Write your first Flutter app](https://flutter.dev/docs/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://flutter.dev/docs/cookbook)
+# Build / Run
 
-For help getting started with Flutter, view our
-[online documentation](https://flutter.dev/docs), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Once you have the prereqs, this is just a normal Flutter project, so:
+
+```
+flutter run
+```
+
+# Notes
+
+## Nuking all the data
+
+* If you just delete the local data and restart the app, the client will pull the server state.
+* If you delete the server db and restart the app, the client will push its state to the server.
+* Yay, sync!
+
+To delete everything and start over, do this:
+
+* Delete the app from all devices that are sharing the same server-side database
+* From a command-line: `noms ds -d https://replicate.to/serve/<db-name>::local` (requires the Noms CLI)

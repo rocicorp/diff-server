@@ -109,7 +109,7 @@ class _MyHomePageState extends State<MyHomePage> {
     
     try {
       _timer = null;
-      await _replicant.sync('https://replicate.to/serve/boodman-todos-1');
+      await _replicant.sync('https://replicate.to/serve/boodman-todos');
       await _load();
     } catch (e) {
       print('ERROR DURING SYNC');
