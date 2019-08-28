@@ -226,32 +226,9 @@ class TodoList extends StatelessWidget {
   }
 
   void _handleRemove(String id) {
+    // TODO: Maybe prompt about delete?
+    // See: https://gist.github.com/asialgearoid/227883a08bfd2cc45939758a064dd2ff
     _removeTodoItem(id);
-    /*
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return new AlertDialog(
-          title: new Text('Mark "${_todoItems[index]}" as done?'),
-          actions: <Widget>[
-            new FlatButton(
-              child: new Text('CANCEL'),
-              // The alert is actually part of the navigation stack, so to close it, we
-              // need to pop it.
-              onPressed: () => Navigator.of(context).pop()
-            ),
-            new FlatButton(
-              child: new Text('MARK AS DONE'),
-              onPressed: () {
-                _removeTodoItem(index);
-                Navigator.of(context).pop();
-              }
-            )
-          ]
-        );
-      }
-    );
-    */
   }
 }
 
