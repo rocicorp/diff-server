@@ -10,6 +10,7 @@ const NSString* CHANNEL_NAME = @"replicant.dev";
 @implementation AppDelegate
 
   RepmConnection* conn;
+  NSString* clientID;
 
 - (BOOL)application:(UIApplication *)application
     didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
@@ -22,7 +23,8 @@ const NSString* CHANNEL_NAME = @"replicant.dev";
 
   [channel setMethodCallHandler:^(FlutterMethodCall* call, FlutterResult result) {
     dispatch_async(dispatch_get_global_queue( DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(void){
-      [self connect];
+      [self ensureClientID];
+      [self ensureConnection];
       if (conn == nil) {
         result([NSError errorWithDomain:@"Replicant"
                                    code:1
@@ -51,9 +53,14 @@ const NSString* CHANNEL_NAME = @"replicant.dev";
   return [super application:application didFinishLaunchingWithOptions:launchOptions];
 }
 
-- (void)connect {
+- (void)ensureConnection {
   @synchronized (self) {
     if (conn != nil) {
+      return;
+    }
+
+    if (clientID == nil) {
+      NSLog(@"Replicant: clientID is nil, cannot open database");
       return;
     }
 
@@ -63,13 +70,38 @@ const NSString* CHANNEL_NAME = @"replicant.dev";
     }
 
     NSError *err;
-    // TODO: clientid needs to be device-unique
-    // Need to generate and store one in user prefs or something.
-    conn = RepmOpen(repDir, @"ios/c1", @"", &err);
+    conn = RepmOpen(repDir, clientID, @"", &err);
     if (err != nil) {
       NSLog(@"Replicant: Could not open database: %@", err);
       return;
     }
+  }
+}
+
+- (void)ensureClientID {
+  @synchronized (self) {
+    if (clientID != nil) {
+      return;
+    }
+
+    NSUserDefaults* defs = [NSUserDefaults standardUserDefaults];
+    clientID = [defs stringForKey:@"clientID"];
+    if (clientID != nil) {
+      return;
+    }
+
+    CFUUIDRef uuid = CFUUIDCreate(NULL);
+    NSString* uuidString = (NSString*)CFBridgingRelease(CFUUIDCreateString(NULL, uuid));
+    CFRelease(uuid);
+
+    [defs setValue:uuidString forKey:@"clientID"];
+    BOOL ok = [defs synchronize];
+    if (!ok) {
+      NSLog(@"Replicant: could not save clientID to userdefaults");
+      return;
+    }
+
+    clientID = uuidString;
   }
 }
 

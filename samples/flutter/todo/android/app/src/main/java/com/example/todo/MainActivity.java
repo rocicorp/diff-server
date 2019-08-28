@@ -95,6 +95,11 @@ public class MainActivity extends FlutterActivity {
       return;
     }
 
+    if (MainActivity.clientID == null) {
+      Log.e("Replicant", "clientID is null, cannot open database");
+      return;
+    }
+
     File replicantDir = this.getFileStreamPath("replicant");
     File dataDir = new File(replicantDir, "data");
     File tmpDir = new File(replicantDir, "temp");
@@ -109,7 +114,6 @@ public class MainActivity extends FlutterActivity {
     tmpDir.deleteOnExit();
 
     try {
-      // TODO: Properly set client ID.
       MainActivity.conn = repm.Repm.open(dataDir.getAbsolutePath(), MainActivity.clientID, tmpDir.getAbsolutePath());
     } catch (Exception e) {
       Log.e("Replicant", "Could not open Replicant database", e);
