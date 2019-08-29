@@ -21,6 +21,12 @@ const (
 	cmdDel
 )
 
+type UnknownFunctionError string
+
+func (ufe UnknownFunctionError) Error() string {
+	return fmt.Sprintf("Unknown function: %s", string(ufe))
+}
+
 type Database interface {
 	Noms() types.ValueReadWriter
 	Put(id string, value types.Value) error
@@ -128,7 +134,7 @@ func Run(db Database, source io.Reader, fn string, args types.List) (types.Value
 	ok, err := okv.ToBoolean()
 	chk.NoError(err)
 	if !ok {
-		return nil, fmt.Errorf("Unknown function: %s", fn)
+		return nil, UnknownFunctionError(fn)
 	}
 
 	res, err := obj.Get("result")

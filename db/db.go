@@ -189,8 +189,38 @@ func (db *DB) execImpl(basis types.Ref, bundle types.Blob, function string, args
 			output = types.Bool(ok)
 			break
 		case ".putBundle":
-			newBundle = db.noms.WriteValue(args.Get(uint64(0)).(types.Blob))
-			isWrite = true
+			cb := basisCommit.Bundle(db.noms)
+			nb := args.Get(uint64(0)).(types.Blob)
+			if cb.Equals(nb) {
+				fmt.Printf("Bundle %s already installed, skipping\n", cb.Hash())
+				break
+			}
+
+			var currentVersion, newVersion float64
+			currentVersion, err = getBundleVersion(cb, db.noms)
+			if err != nil {
+				return
+			}
+			newVersion, err = getBundleVersion(nb, db.noms)
+			if err != nil {
+				return
+			}
+			shouldUpdate := func() bool {
+				if currentVersion == 0 && newVersion == 0 {
+					fmt.Printf("Replacing unversioned bundle %s with %s\n", cb.Hash(), nb.Hash())
+					return true
+				}
+				if newVersion > currentVersion {
+					fmt.Printf("Upgrading bundle from %f to %f\n", currentVersion, newVersion)
+					return true
+				}
+				fmt.Printf("Proposed bundle version %f not better than current version %f, skipping update\n", newVersion, currentVersion)
+				return false
+			}
+			if shouldUpdate() {
+				newBundle = db.noms.WriteValue(nb)
+				isWrite = true
+			}
 			break
 		}
 	} else {
@@ -205,4 +235,23 @@ func (db *DB) execImpl(basis types.Ref, bundle types.Blob, function string, args
 	}
 
 	return newBundle, newData, output, isWrite, nil
+}
+
+func getBundleVersion(bundle types.Blob, noms types.ValueReadWriter) (float64, error) {
+	// TODO: Passing editor is not really necessary because the script cannot call
+	// it because it only has access to the `db` object which is passed as a param
+	// to transaction functions. We only need to pass something here because the
+	// impl of exec.Run() requires ed.noms.
+	ed := &editor{noms: noms, data: nil}
+	r, err := exec.Run(ed, bundle.Reader(), "codeVersion", types.NewList(noms))
+	if _, ok := err.(exec.UnknownFunctionError); ok {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, err
+	}
+	if r == nil || r.Kind() != types.NumberKind {
+		return 0, errors.New("codeVersion() must return a number")
+	}
+	return float64(r.(types.Number)), nil
 }
