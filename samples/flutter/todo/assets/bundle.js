@@ -51,3 +51,13 @@ function _read() {
 function _store(todos) {
     db.put('todos', todos);
 }
+
+function setOrder(id, order) {
+    var todos = _read();
+    var item = todos[id];
+    if (!item) {
+        throw new Error("todo not found: " + id);
+    }
+    item.order = order;
+    _store(todos);    
+}

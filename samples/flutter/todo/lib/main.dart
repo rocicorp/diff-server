@@ -56,7 +56,7 @@ class _MyHomePageState extends State<MyHomePage> {
          actions: _syncing ? [Icon(Icons.sync)] : [],
       ),
       drawer: TodoDrawer(_sync, _dropDatabase),
-      body: TodoList(_todos, _handleDoneChanged, _removeTodoItem),
+      body: TodoList(_todos, _handleDoneChanged, _removeTodoItem, _handleReorder),
       floatingActionButton: new FloatingActionButton(
         onPressed: _pushAddTodoScreen,
         tooltip: 'Add task',
@@ -87,6 +87,12 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> _handleDoneChanged(String id, bool isDone) async {
     await _replicant.exec('setDone', [id, isDone]);
+  }
+
+  Future<void> _handleReorder(int oldIndex, int newIndex) async {
+    String id  = this._todos[oldIndex].id;
+    double order = _getNewOrder(newIndex);
+    await _replicant.exec('setOrder', [id, order]);
   }
 
   Future<void> _sync({force:false}) async {
@@ -131,8 +137,23 @@ class _MyHomePageState extends State<MyHomePage> {
     var uuid = new Uuid();
     // Only add the task if the user actually entered something
     if(task.length > 0) {
-      _replicant.exec('addTodo', [uuid.v4(), task, _todos.length]);
+      int index = _todos.length == 0 ? 0 : _todos.length;
+      String id = uuid.v4();
+      double order = _getNewOrder(index);
+      _replicant.exec('addTodo', [id, task, order]);
     }
+  }
+
+  // calculates the order field by halving the distance between the left and right neighbor orders.
+  // min default value = -minPositive
+  // max default value = double.maxFinite
+  double _getNewOrder(int index) {
+    double minOrderValue = 0;
+    double maxOrderValue = double.maxFinite;
+    double leftNeighborOrder = index == 0 ? minOrderValue : _todos[index-1].order.toDouble();
+    double rightNeighborOrder = index == _todos.length ? maxOrderValue : _todos[index].order.toDouble();
+    double order = leftNeighborOrder + ((rightNeighborOrder - leftNeighborOrder)/2);
+    return order;
   }
 
   Future<void> _removeTodoItem(String id) async {
@@ -171,21 +192,24 @@ class _MyHomePageState extends State<MyHomePage> {
 class TodoList extends StatelessWidget {
   final List<Todo> _todos;
   final Future<void> Function(String, bool) _handleDoneChange;
+  final Future<void> Function(int, int) _handleReorder;
   final Future<void> Function(String) _removeTodoItem;
 
-  TodoList(this._todos, this._handleDoneChange, this._removeTodoItem);
+  TodoList(this._todos, this._handleDoneChange, this._removeTodoItem, this._handleReorder);
 
   // Build the whole list of todo items
   @override
   Widget build(BuildContext build) {
-    return ListView.builder(
-      itemBuilder: (BuildContext _context, int index) {
-        // itemBuilder will be automatically be called as many times as it takes for the
-        // list to fill up its available space, which is most likely more than the
-        // number of todo items we have. So, we need to check the index is OK.
-        if (index >= _todos.length) {
-          return null;
-        }
+    return _buildReorderableListView(build);
+    
+    // builds a listview of todo items. not called right now but just keeping it as sample code.
+    //return _buildListView(build);
+  }
+
+  // builds a reorderable list, reorder functionality is achieved by dragging and dropping list items.
+  Widget _buildReorderableListView(BuildContext context) {
+    return ReorderableListView(
+      children: List.generate(_todos.length, (index) {
         var todo = _todos[index];
         var id = todo.id;
         return Dismissible(
@@ -202,7 +226,10 @@ class TodoList extends StatelessWidget {
               _handleDoneChange(id, newValue);
             }),
         );
-      }
+      }),
+      onReorder: (int oldIndex, int newIndex) {
+        this._handleReorder(oldIndex, newIndex);
+      },
     );
   }
 
