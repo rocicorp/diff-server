@@ -56,7 +56,7 @@ class _MyHomePageState extends State<MyHomePage> {
          actions: _syncing ? [Icon(Icons.sync)] : [],
       ),
       drawer: TodoDrawer(_sync, _dropDatabase),
-      body: TodoList(_todos, _handleDoneChanged, _removeTodoItem, _handleReorder),
+      body: TodoList(_todos, _handleDone, _handleRemove, _handleReorder),
       floatingActionButton: new FloatingActionButton(
         onPressed: _pushAddTodoScreen,
         tooltip: 'Add task',
@@ -85,7 +85,7 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
-  Future<void> _handleDoneChanged(String id, bool isDone) async {
+  Future<void> _handleDone(String id, bool isDone) async {
     await _replicant.exec('setDone', [id, isDone]);
   }
 
@@ -93,6 +93,10 @@ class _MyHomePageState extends State<MyHomePage> {
     String id  = this._todos[oldIndex].id;
     double order = _getNewOrder(newIndex);
     await _replicant.exec('setOrder', [id, order]);
+  }
+
+  Future<void> _handleRemove(String id) async {
+    await _replicant.exec('deleteTodo', [id]);
   }
 
   Future<void> _sync({force:false}) async {
@@ -156,10 +160,6 @@ class _MyHomePageState extends State<MyHomePage> {
     return order;
   }
 
-  Future<void> _removeTodoItem(String id) async {
-    await _replicant.exec('deleteTodo', [id]);
-  }
-
   void _pushAddTodoScreen() {
     // Push this page onto the stack
     Navigator.of(context).push(
@@ -191,11 +191,11 @@ class _MyHomePageState extends State<MyHomePage> {
 
 class TodoList extends StatelessWidget {
   final List<Todo> _todos;
-  final Future<void> Function(String, bool) _handleDoneChange;
+  final Future<void> Function(String, bool) _handleDone;
+  final Future<void> Function(String) _handleRemove;
   final Future<void> Function(int, int) _handleReorder;
-  final Future<void> Function(String) _removeTodoItem;
 
-  TodoList(this._todos, this._handleDoneChange, this._removeTodoItem, this._handleReorder);
+  TodoList(this._todos, this._handleDone, this._handleRemove, this._handleReorder);
 
   // Build the whole list of todo items
   @override
@@ -223,7 +223,7 @@ class TodoList extends StatelessWidget {
             title: new Text(todo.title),
             value: todo.done,
             onChanged: (bool newValue) {
-              _handleDoneChange(id, newValue);
+              _handleDone(id, newValue);
             }),
         );
       }),
@@ -231,12 +231,6 @@ class TodoList extends StatelessWidget {
         this._handleReorder(oldIndex, newIndex);
       },
     );
-  }
-
-  void _handleRemove(String id) {
-    // TODO: Maybe prompt about delete?
-    // See: https://gist.github.com/asialgearoid/227883a08bfd2cc45939758a064dd2ff
-    _removeTodoItem(id);
   }
 }
 
