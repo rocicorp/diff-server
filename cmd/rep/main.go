@@ -14,6 +14,7 @@ import (
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/aboodman/replicant/db"
+	execpkg "github.com/aboodman/replicant/exec"
 	"github.com/aboodman/replicant/util/kp"
 )
 
@@ -60,6 +61,7 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 
 	has(app, &rdb, out)
 	get(app, &rdb, out)
+	scan(app, &rdb, out)
 	put(app, &rdb, sp, in)
 	del(app, &rdb, sp, out)
 	exec(app, &rdb, sp, out)
@@ -164,6 +166,26 @@ func get(parent *kingpin.Application, db *db.DB, out io.Writer) {
 			return nil
 		}
 		return jn.ToJSON(v, out, jn.ToOptions{Lists: true, Maps: true, Indent: "  "})
+	})
+}
+
+func scan(parent *kingpin.Application, db *db.DB, out io.Writer) {
+	kc := parent.Command("scan", "Scans values in-order from the database.")
+	var opts execpkg.ScanOptions
+	kc.Flag("prefix", "prefix of values to return").StringVar(&opts.Prefix)
+	kc.Flag("start-at", "id of the value to start scanning at").StringVar(&opts.StartAtID)
+	kc.Flag("start-after", "id of the value to start scanning after").StringVar(&opts.StartAfterID)
+	kc.Flag("limit", "maximum number of items to return").IntVar(&opts.Limit)
+	kc.Action(func(_ *kingpin.ParseContext) error {
+		items, err := db.Scan(opts)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return nil
+		}
+		for _, it := range items {
+			fmt.Fprintf(out, "%s: %s\n", it.ID, types.EncodedValue(it.Value.Value))
+		}
+		return nil
 	})
 }
 
