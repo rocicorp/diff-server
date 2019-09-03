@@ -12,6 +12,7 @@ import (
 	"github.com/attic-labs/noms/go/types"
 
 	"github.com/aboodman/replicant/db"
+	"github.com/aboodman/replicant/exec"
 	"github.com/aboodman/replicant/util/chk"
 	jsnoms "github.com/aboodman/replicant/util/noms/json"
 )
@@ -40,13 +41,7 @@ type GetResponse struct {
 	Data *jsnoms.Value `json:"data,omitempty"`
 }
 
-type ScanRequest struct {
-	Prefix    string `json:"prefix,omitempty"`
-	StartAtID string `json:"fromID,omitempty"`
-	Limit     int    `json:"limit,omitempty"`
-
-	// Future: EndAtID, EndBeforeID
-}
+type ScanRequest exec.ScanOptions
 
 type ScanItem struct {
 	ID    string       `json:"id"`
@@ -201,18 +196,11 @@ func (api *API) dispatchScan(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	items, err := api.db.Scan(db.ScanOptions(req))
+	items, err := api.db.Scan(exec.ScanOptions(req))
 	if err != nil {
 		return nil, err
 	}
-	res := make([]ScanItem, 0, len(items))
-	for _, it := range items {
-		res = append(res, ScanItem{
-			ID:    it.ID,
-			Value: jsnoms.Make(api.db.Noms(), it.Value),
-		})
-	}
-	return mustMarshal(res), nil
+	return mustMarshal(items), nil
 }
 
 func (api *API) dispatchPut(reqBytes []byte) ([]byte, error) {

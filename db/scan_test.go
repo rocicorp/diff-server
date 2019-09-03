@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aboodman/replicant/exec"
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
@@ -28,21 +29,24 @@ func TestScan(t *testing.T) {
 
 	// TODO: limit, startAt
 	tc := []struct {
-		startAt  string
+		startAtID   string
+		startAfterID string
 		prefix   string
 		limit    int
 		expected []string
 	}{
-		{"", "a", 0, []string{"a"}},
-		{"", "b", 0, []string{"ba", "bb"}},
-		{"", "", 0, []string{"", "a", "ba", "bb"}},
-		{"", "", 2, []string{"", "a"}},
-		{"a", "", 0, []string{"a", "ba", "bb"}},
-		{"a", "b", 0, []string{"ba", "bb"}},
+		{"", "", "a", 0, []string{"a"}},
+		{"", "", "b", 0, []string{"ba", "bb"}},
+		{"", "", "", 0, []string{"", "a", "ba", "bb"}},
+		{"", "", "", 2, []string{"", "a"}},
+		{"a", "", "", 0, []string{"a", "ba", "bb"}},
+		{"", "a", "", 0, []string{"ba", "bb"}},
+		{"a", "b", "ba", 0, []string{"ba"}},
+		{"", "ba", "b", 0, []string{"bb"}},
 	}
 
 	for i, t := range tc {
-		res, err := d.Scan(ScanOptions{StartAtID: t.startAt, Prefix: t.prefix, Limit: t.limit})
+		res, err := d.Scan(exec.ScanOptions{StartAtID: t.startAtID, StartAfterID: t.startAfterID, Prefix: t.prefix, Limit: t.limit})
 		assert.NoError(err)
 		act := []string{}
 		msg := fmt.Sprintf("case %d, prefix: %s", i, t.prefix)

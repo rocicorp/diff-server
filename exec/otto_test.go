@@ -2,9 +2,12 @@ package exec
 
 import (
 	"fmt"
+	"math"
+	"sort"
 	"strings"
 	"testing"
 
+	jsnoms "github.com/aboodman/replicant/util/noms/json"
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
@@ -32,6 +35,35 @@ func (d db) Has(id string) (ok bool, err error) {
 func (d db) Get(id string) (v types.Value, err error) {
 	v = d.data[id]
 	return
+}
+
+func (d db) Scan(opts ScanOptions) (r []ScanItem, err error) {
+	lim := opts.Limit
+	if lim == 0 {
+		lim = math.MaxInt32
+	}
+	for k, v := range d.data {
+		if k < opts.StartAtID {
+			continue
+		}
+		if opts.StartAfterID != "" && k <= opts.StartAfterID {
+			continue
+		}
+		if !strings.HasPrefix(k, opts.Prefix) {
+			continue
+		}
+		if len(r) == lim {
+			continue
+		}
+		r = append(r, ScanItem{
+			ID:    k,
+			Value: jsnoms.Make(d.noms, v),
+		})
+	}
+	sort.Slice(r, func(i, j int) bool {
+		return r[i].ID < r[j].ID
+	})
+	return r, nil
 }
 
 func (d db) Del(id string) (ok bool, err error) {
@@ -92,8 +124,17 @@ function assert(cond) {
 function test() {
 	assert(!db.has("foo"));
 	db.put("foo", "bar");
+	db.put("hot", "dog");
 	assert(db.has("foo"));
 	assert("bar" === db.get("foo"));
+	var results = db.scan({
+		fromID: "f",
+	});
+	assert(results.length == 2);
+	assert(results[0].id == "foo");
+	assert(results[0].value == "bar");
+	assert(results[1].id == "hot");
+	assert(results[01].value == "dog");
 	return "hi";
 }
 `
@@ -142,7 +183,7 @@ func TestErrors(t *testing.T) {
 	}{
 		{"!!not valid javascript!!!", "", "bundle.js: Line 1:7 Unexpected identifier (and 2 more errors)"},
 		{"throw new Error('bonk')", "", "Error: bonk\n    at bundle.js:1:11\n"},
-		{"function bonk() { throw new Error('bonk'); }", "bonk", "Error: bonk\n    at bonk (bundle.js:1:29)\n    at apply (<native code>)\n    at recv (bootstrap.js:58:12)\n"},
+		{"function bonk() { throw new Error('bonk'); }", "bonk", "Error: bonk\n    at bonk (bundle.js:1:29)\n    at apply (<native code>)\n    at recv (bootstrap.js:64:12)\n"},
 		{"", "bonk", "Unknown function: bonk"},
 	}
 

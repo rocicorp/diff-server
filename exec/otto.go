@@ -1,17 +1,17 @@
 package exec
 
 import (
-	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"strings"
 
 	"github.com/attic-labs/noms/go/types"
-	jn "github.com/attic-labs/noms/go/util/json"
 	o "github.com/robertkrimen/otto"
 
 	"github.com/aboodman/replicant/util/chk"
+	jsnoms "github.com/aboodman/replicant/util/noms/json"
 )
 
 const (
@@ -19,6 +19,7 @@ const (
 	cmdHas
 	cmdGet
 	cmdDel
+	cmdScan
 )
 
 type UnknownFunctionError string
@@ -27,11 +28,25 @@ func (ufe UnknownFunctionError) Error() string {
 	return fmt.Sprintf("Unknown function: %s", string(ufe))
 }
 
+type ScanOptions struct {
+	Prefix       string `json:"prefix,omitempty"`
+	StartAtID    string `json:"startAtID,omitempty"`
+	StartAfterID string `json:"startAfterID,omitempty"`
+	Limit        int    `json:"limit,omitempty"`
+	// Future: EndAtID, EndBeforeID
+}
+
+type ScanItem struct {
+	ID    string       `json:"id"`
+	Value jsnoms.Value `json:"value"`
+}
+
 type Database interface {
 	Noms() types.ValueReadWriter
 	Put(id string, value types.Value) error
 	Has(id string) (ok bool, err error)
 	Get(id string) (types.Value, error)
+	Scan(opts ScanOptions) ([]ScanItem, error)
 	Del(id string) (ok bool, err error)
 }
 
@@ -63,12 +78,13 @@ func Run(db Database, source io.Reader, fn string, args types.List) (types.Value
 
 		switch int(cmdID) {
 		case cmdPut:
-			v, err := jn.FromJSON(strings.NewReader(args[2].String()), db.Noms(), jn.FromOptions{})
+			v := jsnoms.Make(db.Noms(), nil)
+			json.NewDecoder(strings.NewReader(args[2].String())).Decode(&v)
 			if err != nil {
 				res.Set("error", err.Error())
 				break
 			}
-			err = db.Put(args[1].String(), v)
+			err = db.Put(args[1].String(), v.Value)
 			if err != nil {
 				res.Set("error", err.Error())
 			}
@@ -92,7 +108,28 @@ func Run(db Database, source io.Reader, fn string, args types.List) (types.Value
 				break
 			}
 			sb := &strings.Builder{}
-			err = jn.ToJSON(v, sb, jn.ToOptions{Lists: true, Maps: true})
+			err = json.NewEncoder(sb).Encode(jsnoms.Make(db.Noms(), v))
+			if err != nil {
+				res.Set("error", err.Error())
+				break
+			}
+			res.Set("ok", true)
+			res.Set("data", sb.String())
+
+		case cmdScan:
+			var opts ScanOptions
+			err := json.NewDecoder(strings.NewReader(args[1].String())).Decode(&opts)
+			if err != nil {
+				res.Set("error", err.Error())
+				break
+			}
+			r, err := db.Scan(opts)
+			if err != nil {
+				res.Set("error", err.Error())
+				break
+			}
+			sb := &strings.Builder{}
+			err = json.NewEncoder(sb).Encode(r)
 			if err != nil {
 				res.Set("error", err.Error())
 				break
@@ -115,16 +152,13 @@ func Run(db Database, source io.Reader, fn string, args types.List) (types.Value
 	chk.NoError(err)
 	chk.NotNil(f)
 
-	buf := &bytes.Buffer{}
-	err = jn.ToJSON(args, buf, jn.ToOptions{
-		Lists: true,
-		Maps:  true,
-	})
+	sb := &strings.Builder{}
+	err = json.NewEncoder(sb).Encode(jsnoms.MakeList(db.Noms(), args))
 	if err != nil {
 		return nil, err
 	}
 
-	ov, err := f.Call(o.NullValue(), fn, string(buf.Bytes()))
+	ov, err := f.Call(o.NullValue(), fn, sb.String())
 	if err != nil {
 		return nil, errDetail(err)
 	}
@@ -142,9 +176,10 @@ func Run(db Database, source io.Reader, fn string, args types.List) (types.Value
 	if res == o.UndefinedValue() {
 		return nil, nil
 	}
-	r, err := jn.FromJSON(strings.NewReader(res.String()), db.Noms(), jn.FromOptions{})
+	r := jsnoms.Make(db.Noms(), nil)
+	err = json.NewDecoder(strings.NewReader(res.String())).Decode(&r)
 	chk.NoError(err)
-	return r, nil
+	return r.Value, nil
 }
 
 func errDetail(err error) error {

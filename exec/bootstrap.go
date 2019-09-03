@@ -6,6 +6,7 @@ var commands = {
 	'has': 1,
 	'get': 2,
 	'del': 3,
+	'scan': 4,
 };
 
 var db = (function() {
@@ -40,6 +41,11 @@ var db = (function() {
 		get: function(id) {
 			validID(id);
 			var res = handleError(send(commands.get, id));
+			return res.ok ? JSON.parse(res.data) : undefined;
+		},
+
+		scan: function(opts) {
+			var res = handleError(send(commands.scan, JSON.stringify(opts)));
 			return res.ok ? JSON.parse(res.data) : undefined;
 		},
 
