@@ -7,10 +7,13 @@ go mod vendor
 cd $GOPATH/src
 mkdir -p github.com/aboodman
 ln -s $ROOT github.com/aboodman/replicant
-cd github.com/aboodman/replicant/repm
-rm repm.aar
-rm Repm.framework.zip
-rm -rf Repm.framework
-gomobile bind --target=ios
-gomobile bind --target=android
-zip -r Repm.framework.zip Repm.framework
+cd github.com/aboodman/replicant
+rm -rf build
+mkdir build
+cd build
+gomobile bind -ldflags="-s -w" --target=ios ../repm/
+gomobile bind -ldflags="-s -w" --target=android ../repm/
+cp -R ../bind/flutter replicant-flutter-sdk
+rm -rf replicant-flutter-sdk/ios/Repm.framework
+cp -R Repm.framework replicant-flutter-sdk/ios/
+zip -r replicant-flutter-sdk.zip replicant-flutter-sdk

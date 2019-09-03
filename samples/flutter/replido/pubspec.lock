@@ -98,8 +98,8 @@ packages:
   replicant:
     dependency: "direct main"
     description:
-      path: "../../../bind/flutter"
-      relative: true
+      path: "/Users/aa/Downloads/replicant-flutter-sdk/"
+      relative: false
     source: path
     version: "0.0.1"
   sky_engine:

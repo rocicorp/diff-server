@@ -4,6 +4,7 @@
 rep
 
 # build artifacts
+build
 samples/hello-replicant-android-java/.idea
 samples/hello-replicant-android-java/repm/build/
 repm/repm-sources.jar

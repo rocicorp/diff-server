@@ -1,3 +1,6 @@
+# Build step inserts this
+Repm.framework
+
 .idea/
 .vagrant/
 .sconsign.dblite

@@ -5,9 +5,12 @@
 const NSString* CHANNEL_NAME = @"replicant.dev";
 
 @implementation ReplicantPlugin
+  RepmConnection* conn;
+  NSString* clientID;
+
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar>*)registrar {
   FlutterMethodChannel* channel = [FlutterMethodChannel
-      methodChannelWithName:@"replicant"
+      methodChannelWithName:CHANNEL_NAME
             binaryMessenger:[registrar messenger]];
   ReplicantPlugin* instance = [[ReplicantPlugin alloc] init];
   [registrar addMethodCallDelegate:instance channel:channel];
