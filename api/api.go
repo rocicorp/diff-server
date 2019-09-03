@@ -40,6 +40,24 @@ type GetResponse struct {
 	Data *jsnoms.Value `json:"data,omitempty"`
 }
 
+type ScanRequest struct {
+	Prefix    string `json:"prefix,omitempty"`
+	StartAtID string `json:"fromID,omitempty"`
+	Limit     int    `json:"limit,omitempty"`
+
+	// Future: EndAtID, EndBeforeID
+}
+
+type ScanItem struct {
+	ID    string       `json:"id"`
+	Value jsnoms.Value `json:"value"`
+}
+
+type ScanResponse struct {
+	Values []ScanItem `json:"values"`
+	Done   bool       `json:"done"`
+}
+
 type PutRequest struct {
 	Key  string       `json:"key"`
 	Data jsnoms.Value `json:"data"`
@@ -107,6 +125,8 @@ func (api *API) Dispatch(name string, req []byte) ([]byte, error) {
 		return api.dispatchHas(req)
 	case "get":
 		return api.dispatchGet(req)
+	case "scan":
+		return api.dispatchScan(req)
 	case "put":
 		return api.dispatchPut(req)
 	case "del":
@@ -171,6 +191,26 @@ func (api *API) dispatchGet(reqBytes []byte) ([]byte, error) {
 	} else {
 		res.Has = true
 		res.Data = jsnoms.New(api.db.Noms(), v)
+	}
+	return mustMarshal(res), nil
+}
+
+func (api *API) dispatchScan(reqBytes []byte) ([]byte, error) {
+	var req ScanRequest
+	err := json.Unmarshal(reqBytes, &req)
+	if err != nil {
+		return nil, err
+	}
+	items, err := api.db.Scan(db.ScanOptions(req))
+	if err != nil {
+		return nil, err
+	}
+	res := make([]ScanItem, 0, len(items))
+	for _, it := range items {
+		res = append(res, ScanItem{
+			ID:    it.ID,
+			Value: jsnoms.Make(api.db.Noms(), it.Value),
+		})
 	}
 	return mustMarshal(res), nil
 }

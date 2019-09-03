@@ -71,6 +71,11 @@ func TestBasics(t *testing.T) {
 		// sync
 		{"sync", invalidRequest, ``, invalidRequestError},
 		{"sync", fmt.Sprintf(`{"remote":"%s"}`, remoteDir), `{"root":"lchcgvko3ou4ar43lhs23r30os01o850"}`, ""},
+
+		// scan
+		{"put", `{"key": "foopa", "data": "doopa"}`, `{"root":"v075m8grpbm72rk31gbacf9one3q35ql"}`, ""},
+		{"scan", `{"prefix": "foo"}`, `[{"id":"foo","value":"bar"},{"id":"foopa","value":"doopa"}]`, ""},
+		// TODO: other scan operators
 	}
 
 	for _, t := range tc {
