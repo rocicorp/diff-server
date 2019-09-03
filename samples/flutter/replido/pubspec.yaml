@@ -1,5 +1,5 @@
 name: replido
-description: A new Flutter project.
+description: An offline-first todo app using Replicant!
 
 # The following defines the version and build number for your application.
 # A version number is three numbers separated by dots, like 1.2.43
@@ -23,6 +23,13 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^0.1.2
+
+  #Simple, fast generation of RFC4122 UUIDs.
+  uuid: 2.0.1
+
+  replicant:
+    path:
+      ../../../bind/flutter/
 
 dev_dependencies:
   flutter_test:
