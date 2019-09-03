@@ -73,12 +73,12 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> _load() async {
-    final Map<String, dynamic> res = await _replicant.exec('getTodos');
+    final dynamic res = await _replicant.exec('getAllTodos');
     if (res == null) {
       // This can happen when we put a bundle but we haven't even setup the schema yet.
       return;
     }
-    List<Todo> todos = List.from(res.entries.map((e) => Todo.fromJson(e.key, e.value)));
+    List<Todo> todos = List.from(res.map((e) => Todo.fromJson(e['id'], e['value'])));
     todos.sort((t1, t2) => t1.order < t2.order ? -1 : t1.order == t2.order ? 0 : 1);
     setState(() {
       _todos = todos;

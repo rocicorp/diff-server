@@ -40,6 +40,12 @@ class Replicant {
     return _result(await _invoke('get', {'id': id}));
   }
 
+  // Gets many values from the database.
+  Future<List<ScanItem>> scan({prefix: String, startAtID: String, limit = 50}) async {
+    List<Map<String, dynamic>> r = await _invoke('scan', {prefix: prefix, startAtID: startAtID, limit: limit});
+    return r.map((e) => ScanItem.fromJson(e));
+  }
+
   Future<void> sync(String remote) async {
     return _result(await _checkChange(await _invoke("sync", {'remote': remote})));
   }
@@ -70,4 +76,13 @@ class Replicant {
     final r = await _platform.  invokeMethod(name, jsonEncode(args));
     return r == '' ? null : jsonDecode(r);
   }
+}
+
+class ScanItem {
+  ScanItem.fromJson(Map<String, dynamic> data)
+      : id = data['id'],
+        value = data['value'] {
+  }
+  String id;
+  var value;
 }

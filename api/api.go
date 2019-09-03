@@ -275,7 +275,7 @@ func (api *API) dispatchPutBundle(reqBytes []byte) ([]byte, error) {
 	b := types.NewBlob(api.db.Noms(), strings.NewReader(req.Code))
 	err = api.db.PutBundle(b)
 	if err != nil {
-		return nil, err
+		return nil, errors.New(err.Error())
 	}
 	res := PutBundleResponse{
 		Root: jsnoms.Hash{
