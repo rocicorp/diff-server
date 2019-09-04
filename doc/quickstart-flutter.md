@@ -71,4 +71,4 @@ Disconnect them. Take a subway ride. Whatever. It's all good. Replicant will syn
 
 # More Questions?
 
-See the design doc.
+See the [design doc](../README.md).
