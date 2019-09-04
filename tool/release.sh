@@ -1,4 +1,6 @@
 #!/bin/sh
+
+# repm
 ORIG=`pwd`
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 ROOT=$DIR/../
@@ -14,8 +16,14 @@ mkdir build
 cd build
 gomobile bind -ldflags="-s -w" --target=ios ../repm/
 gomobile bind -ldflags="-s -w" --target=android ../repm/
+
+# flutter bindings
 cp -R ../bind/flutter replicant-flutter-sdk
 rm -rf replicant-flutter-sdk/ios/Repm.framework
 cp -R Repm.framework replicant-flutter-sdk/ios/
 cp repm.aar replicant-flutter-sdk/android/
 zip -r replicant-flutter-sdk.zip replicant-flutter-sdk
+
+# rep tool
+GOOS=darwin GOARCH=amd64 go build -o rep-darwin-amd64 ./cmd/rep
+GOOS=linux GOARCH=amd64 go build -o rep-linux-amd64 ./cmd/rep
