@@ -1,6 +1,6 @@
 # Conflict-Free Offline Sync in Less than 5 Minutes
 
-### 1. Download and unzip the latest release
+#### 1. Download and unzip the latest release
 
 Get the latest replicant-flutter-sdk.zip from https://github.com/aboodman/replicant/releases then:
 
@@ -8,7 +8,7 @@ Get the latest replicant-flutter-sdk.zip from https://github.com/aboodman/replic
 unzip replicant-flutter-sdk.zip
 ```
 
-### 2. Add the `replicant` dependency to your `pubspec.yaml`
+#### 2. Add the `replicant` dependency to your `pubspec.yaml`
 
 ```
 ...
@@ -22,7 +22,7 @@ unzip replicant-flutter-sdk.zip
 ...
 ```
 
-### 3. Add your transaction bundle
+#### 3. Add your transaction bundle
 
 Create a new `lib/bundle.js` file inside your app, and add this code to it:
 
@@ -41,7 +41,7 @@ function getCount() {
 }
 ```
 
-### 4. Mark `lib/bundle.js` as an asset inside `pubspec.yaml`:
+#### 4. Mark `lib/bundle.js` as an asset inside `pubspec.yaml`:
 
 ```
 ...
@@ -54,7 +54,7 @@ flutter:
 ...
 ```
 
-### 5. Instantiate Replicant in your app
+#### 5. Instantiate Replicant in your app
 
 ```
 var rep = Replicant('https://repilicate.to/serve/any-name-here')
@@ -62,7 +62,7 @@ var rep = Replicant('https://repilicate.to/serve/any-name-here')
 
 For now, you can use any name you want after `serve` in the URL.
 
-### 6. Execute transactions
+#### 6. Execute transactions
 
 ```
 await rep.exec('incr', [1]);
