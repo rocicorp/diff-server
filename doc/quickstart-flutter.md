@@ -77,17 +77,17 @@ In fact, while you're away, why not install the app on two devices and let them 
 
 Disconnect them. Take a subway ride. Whatever. It's all good. Replicant will sync whenever there is connectivity.
 
-# Want something even easier?
+## Want something even easier?
 
 Download the above steps as a running sample. See [flutter/hello](../samples/flutter/hello).
 
-# Next Steps
+## Next steps
 
 - See [`flutter/replido`](../samples/flutter/replido) a fully functioning TODO app built on Flutter and Replicant
 - Review the Dart API for Replicant
 - Review the [JavaScript API for Replicant transactions](transaction-api.md)
 - Inspect your Replicant databases using the `rep` tool
 
-# More Questions?
+## More questions?
 
 See the [design doc](../README.md).
