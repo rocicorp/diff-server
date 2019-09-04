@@ -16,4 +16,5 @@ gomobile bind -ldflags="-s -w" --target=android ../repm/
 cp -R ../bind/flutter replicant-flutter-sdk
 rm -rf replicant-flutter-sdk/ios/Repm.framework
 cp -R Repm.framework replicant-flutter-sdk/ios/
+cp remp.aar replicant-flutter-sdk/android/
 zip -r replicant-flutter-sdk.zip replicant-flutter-sdk

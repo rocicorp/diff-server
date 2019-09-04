@@ -98,7 +98,7 @@ packages:
   replicant:
     dependency: "direct main"
     description:
-      path: "/Users/aa/Downloads/replicant-flutter-sdk/"
+      path: "/tmp/replicant-flutter-sdk/"
       relative: false
     source: path
     version: "0.0.1"
