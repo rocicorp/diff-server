@@ -64,7 +64,7 @@ Disconnect them. Take a subway ride. Whatever. It's all good. Replicant will syn
 # Next Steps
 
 - See [`hello`](../samples/flutter/hello), which contains the above steps in a runnable app
-- See [`replido`](../samples/replido) a fully functioning TODO app built on Flutter and Replicant
+- See [`replido`](../samples/flutter/replido) a fully functioning TODO app built on Flutter and Replicant
 - See the full Dart API for Replicant
 - Understand the JavaScript API available inside Replicant transactions
 - Inspect your Replicant databases using the `rep` tool
