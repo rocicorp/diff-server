@@ -12,8 +12,8 @@ dependencies:
   cupertino_icons: ^0.1.2
   uuid: 2.0.1
 
-  # To run the sample download the Replicant flutter sdk from:
-  # https://s3-us-west-2.amazonaws.com/dev.roci.replicant/replicant-flutter-sdk.zip.
+  # To run the sample download the latest Replicant flutter sdk from:
+  # https://github.com/aboodman/replicant/releases.
   # Then unzip it someplace, and insert that path here:
   replicant:
     path:
