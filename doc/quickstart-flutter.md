@@ -1,14 +1,14 @@
-# Conflict-Free Offline Sync in 5 Minutes
+# Conflict-Free Offline Sync in Less than 5 Minutes
 
 ### 1. Download and unzip the latest release
 
+Get the latest replicant-flutter-sdk.zip from https://github.com/aboodman/replicant/releases then:
+
 ```
-# Download the latest replicant-flutter-sdk.zip from https://github.com/aboodman/replicant/releases.
-cd ~/Downloads
 unzip replicant-flutter-sdk.zip
 ```
 
-### 2. Add the `replicant` dependency to your pubspec.yaml
+### 2. Add the `replicant` dependency to your `pubspec.yaml`
 
 ```
 ...
@@ -22,14 +22,16 @@ unzip replicant-flutter-sdk.zip
 ...
 ```
 
-### Add your transaction bundle
+### 3. Add your transaction bundle
+
+Create a new `lib/bundle.js` file inside your app, and add this code to it:
 
 ```
-echo "function codeVersion() {
+function codeVersion() {
     return 1.1;
 }
 
-function incr(delta) {
+function increment(delta) {
     var val = getCount();
     db.put('count', val + delta);
 }
@@ -37,25 +39,38 @@ function incr(delta) {
 function getCount() {
     return db.get('count') || 0;
 }
-" >> lib/bundle.js
 ```
 
-### Instanciate Replicant in your app
+### 4. Mark `lib/bundle.js` as an asset inside `pubspec.yaml`:
 
 ```
-var r = Replicant('https://repilicate.to/serve/any-name-here)
+...
+
+flutter:
+  uses-material-design: true
+  assets:
++    - lib/bundle.js
+
+...
+```
+
+### 5. Instantiate Replicant in your app
+
+```
+var rep = Replicant('https://repilicate.to/serve/any-name-here)
 ```
 
 You can use any name you want currenty for the remote database name. The hosted service has no authentication yet.
 
-### Execute transactions
+### 6. Execute transactions
 
 ```
-await r.exec('incr', [42]);
-var answer = await r.exec('getCount');
+await rep.exec('incr', [1]);
+await rep.exec('incr', [41]);
+var answer = await rep.exec('getCount');
 ```
 
-Congratulations! You are now done! Time for a cup of coffee.
+Congratulations — you are done! Time for a cup of coffee.
 
 In fact, while you're out, why not install the app on two devices and let them sync with each other?
 
