@@ -85,7 +85,7 @@ Download the above steps as a running sample. See [flutter/hello](../samples/flu
 
 - See [`flutter/replido`](../samples/flutter/replido) a fully functioning TODO app built on Flutter and Replicant
 - Review the Dart API for Replicant
-- Review the JavaScript API for Replicant transactions
+- Review the [JavaScript API for Replicant transactions](transaction-api.md)
 - Inspect your Replicant databases using the `rep` tool
 
 # More Questions?
