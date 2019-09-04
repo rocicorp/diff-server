@@ -1,0 +1,21 @@
+name: replicant
+description: Offline Sync for Mobile Apps
+version: 0.0.1
+author: Rocicorp
+homepage: https://replicate.to
+
+environment:
+  sdk: ">=2.1.0 <3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  plugin:
+    androidPackage: roci.dev.replicant
+    pluginClass: ReplicantPlugin
