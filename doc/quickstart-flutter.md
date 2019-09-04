@@ -77,7 +77,7 @@ In fact, while you're away, why not install the app on two devices and let them 
 
 Disconnect them. Take a subway ride. Whatever. It's all good. Replicant will sync whenever there is connectivity.
 
-# Want Something even Easier?
+# Want something even easier?
 
 Download the above steps as a running sample. See [flutter/hello](../samples/flutter/hello).
 
