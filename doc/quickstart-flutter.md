@@ -1,25 +1,70 @@
 # Conflict-Free Offline Sync in 5 Minutes
 
-1. Download and unzip the latest release of the [Replicant Flutter SDK](https://github.com/aboodman/replicant/releases)
+### 1. Download and unzip the latest release
 
-2. Add the `replicant` dependency to your pubspec.yaml
+```
+# Download the latest replicant-flutter-sdk.zip from https://github.com/aboodman/replicant/releases.
+cd ~/Downloads
+unzip replicant-flutter-sdk.zip
+```
 
-3. Add your transaction bundle
+### 2. Add the `replicant` dependency to your pubspec.yaml
 
-4. Instanciate Replicant in your app
+```
+...
 
-5. Execute transactions
+  cupertino_icons: ^0.1.2
 
-Congratulations! You are done now - time for a cup of coffee.
++   replicant:
++     path:
++       /tmp/replicant-flutter-sdk/
 
-In fact, while you're out, install the app on two devices and let them sync with each other. Disconnect them. Take a subway ride. Whatever. It's all good. Replicant will sync whenever there is connectivity.
+...
+```
 
-See also:
-* `hello-replicant`, which contains the above steps in a runnable app
-* `replido` a fully functioning TODO app built on Flutter and Replicant
+### Add your transaction bundle
+
+```
+echo "function codeVersion() {
+    return 1.1;
+}
+
+function incr(delta) {
+    var val = getCount();
+    db.put('count', val + delta);
+}
+
+function getCount() {
+    return db.get('count') || 0;
+}
+" >> lib/bundle.js
+```
+
+### Instanciate Replicant in your app
+
+```
+var r = Replicant('https://repilicate.to/serve/any-name-here)
+```
+
+You can use any name you want currenty for the remote database name. The hosted service has no authentication yet.
+
+### Execute transactions
+
+```
+await r.exec('incr', [42]);
+var answer = await r.exec('getCount');
+```
+
+Congratulations! You are now done! Time for a cup of coffee.
+
+In fact, while you're out, why not install the app on two devices and let them sync with each other?
+
+Disconnect them. Take a subway ride. Whatever. It's all good. Replicant will sync whenever there is connectivity.
 
 # Next Steps
 
+- See [`hello`](../samples/flutter/hello), which contains the above steps in a runnable app
+- See [`replido`](../samples/replido) a fully functioning TODO app built on Flutter and Replicant
 - See the full Dart API for Replicant
 - Understand the JavaScript API available inside Replicant transactions
 - Inspect your Replicant databases using the `rep` tool
