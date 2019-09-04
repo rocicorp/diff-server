@@ -35,16 +35,12 @@ class _MyHomePageState extends State<MyHomePage> {
   Replicant _replicant;
   List<Todo> _todos = [];
   bool _syncing = false;
-  Timer _timer;
 
   _MyHomePageState() {
-    _replicant = Replicant(_handleDatabaseChange);
+    _replicant = Replicant(db);
+    _replicant.onChange = this._load;
+    _replicant.onSync = this._handleSync;
     _init();
-  }
-
-  void _handleDatabaseChange() async {
-    await _load();
-    _sync();
   }
 
   @override
@@ -55,7 +51,7 @@ class _MyHomePageState extends State<MyHomePage> {
          title: new Text('Todo List'),
          actions: _syncing ? [Icon(Icons.sync)] : [],
       ),
-      drawer: TodoDrawer(_sync, _dropDatabase),
+      drawer: TodoDrawer(_replicant.sync, _dropDatabase),
       body: TodoList(_todos, _handleDone, _handleRemove, _handleReorder),
       floatingActionButton: new FloatingActionButton(
         onPressed: _pushAddTodoScreen,
@@ -69,7 +65,6 @@ class _MyHomePageState extends State<MyHomePage> {
     await _replicant.putBundle(await rootBundle.loadString('assets/bundle.js', cache: false));
     await _replicant.exec('init');
     await _load();
-    _sync(force: true);
   }
 
   Future<void> _load() async {
@@ -85,6 +80,12 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
+  void _handleSync(bool syncing) {
+    setState(() {
+      _syncing = syncing;
+    });
+  }
+
   Future<void> _handleDone(String id, bool isDone) async {
     await _replicant.exec('setDone', [id, isDone]);
   }
@@ -97,38 +98,6 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> _handleRemove(String id) async {
     await _replicant.exec('deleteTodo', [id]);
-  }
-
-  Future<void> _sync({force:false}) async {
-    if (_timer == null) {
-      if (!force) {
-        // Another call stack is already inside _sync();
-        return;
-      }
-    } else {
-      _timer.cancel();
-    }
-
-    setState(() {
-      _syncing = true;
-    });
-    
-    try {
-      _timer = null;
-      await _replicant.sync(db);
-    } catch (e) {
-      print('ERROR DURING SYNC');
-      print(e);
-      // We are seeing some consistency errors during sync -- we push commits,
-      // then turn around and fetch them and expect to see them, but don't.
-      // that is bad, but for now, just retry.
-      _timer = new Timer(new Duration(seconds: 1), _sync);
-    } finally {
-      setState(() {
-        _syncing = false;
-      });
-      _timer = new Timer(new Duration(seconds: 5), _sync);
-    }
   }
 
   Future <void> _dropDatabase() async {
@@ -235,7 +204,7 @@ class TodoList extends StatelessWidget {
 }
 
 class TodoDrawer extends StatelessWidget {
-  final Future<void> Function({bool force}) _sync;
+  final Future<void> Function() _sync;
   final Future<void> Function() _dropDatabase;
 
   TodoDrawer(this._sync, this._dropDatabase);

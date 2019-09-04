@@ -6,15 +6,21 @@ import 'package:flutter/services.dart';
 const CHANNEL_NAME = 'replicant.dev';
 
 typedef void ChangeHandler();
+typedef void SyncHandler(bool syncing);
 
 class Replicant {
-  MethodChannel _platform;
-  ChangeHandler _onChange;
-  Future<String> _root;
+  ChangeHandler onChange;
+  SyncHandler onSync;
 
-  Replicant(this._onChange) {
+  String _remote;
+  MethodChannel _platform;
+  Future<String> _root;
+  Timer _timer;
+
+  Replicant(this._remote) {
      _platform = MethodChannel(CHANNEL_NAME);
      _root = _getRoot();
+     this.sync();
   }
 
   Future<void> putBundle(String bundle) async {
@@ -46,8 +52,28 @@ class Replicant {
     return r.map((e) => ScanItem.fromJson(e));
   }
 
-  Future<void> sync(String remote) async {
-    return _result(await _checkChange(await _invoke("sync", {'remote': remote})));
+  Future<void> sync() async {
+    this._fireOnSync(true);
+    try {
+      if (_timer == null) {
+        // Another call stack is already inside _sync();
+        return;
+      }
+
+      _timer.cancel();
+      _timer = null;
+      await _checkChange(await _invoke("sync", {'remote': this._remote}));
+    } catch (e) {
+      print('ERROR DURING SYNC');
+      print(e);
+      // We are seeing some consistency errors during sync -- we push commits,
+      // then turn around and fetch them and expect to see them, but don't.
+      // that is bad, but for now, just retry.
+      _timer = new Timer(new Duration(seconds: 1), sync);
+    } finally {
+      _timer = new Timer(new Duration(seconds: 5), sync);
+      this._fireOnSync(false);
+    }
   }
 
   Future<void> dropDatabase() async {
@@ -67,7 +93,7 @@ class Replicant {
     var currentRoot = await _root;  // instantaneous except maybe first time
     if (result != null && result['root'] != null && result['root'] != currentRoot) {
       _root = Future.value(result['root']);
-      scheduleMicrotask(_onChange);
+      _fireOnChange();
     }
     return result;
   }
@@ -75,6 +101,18 @@ class Replicant {
   Future<dynamic> _invoke(String name, [Map<String, dynamic> args = const {}]) async {
     final r = await _platform.  invokeMethod(name, jsonEncode(args));
     return r == '' ? null : jsonDecode(r);
+  }
+
+  void _fireOnSync(bool syncing) {
+    if (onSync != null) {
+      scheduleMicrotask(() => onSync(syncing));
+    }
+  }
+
+  void _fireOnChange() {
+    if (onChange != null) {
+      scheduleMicrotask(onChange);
+    }
   }
 }
 
