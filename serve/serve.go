@@ -118,9 +118,13 @@ func getServer(name string) (*server, error) {
 type server struct {
 	router *httprouter.Router
 	db     *db.DB
+	mu     sync.Mutex
 }
 
 func (s *server) sync(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	err := s.db.Reload()
 	if err != nil {
 		serverError(w, err)
