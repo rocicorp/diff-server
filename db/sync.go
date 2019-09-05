@@ -18,6 +18,9 @@ import (
 )
 
 func (db *DB) Sync(remote spec.Spec) error {
+	// No lock here because we're doing http requests.
+	localHead := db.head
+
 	remoteDB, err := Load(remote, fmt.Sprintf("%s/remote", db.origin))
 	if err != nil {
 		return err
@@ -31,10 +34,9 @@ func (db *DB) Sync(remote spec.Spec) error {
 	}()
 
 	// 1: Push client head to server
-	datas.Pull(db.noms, remoteDB.noms, types.NewRef(db.head.Original), progress)
+	datas.Pull(db.noms, remoteDB.noms, localHead.Ref(), progress)
 
 	// 2: Merge client changes into server state
-	localHead := db.head
 	var remoteHead types.Ref
 	if remote.Protocol == "http" || remote.Protocol == "https" {
 		remoteHead, err = remoteSync(remote, remoteDB, localHead)
@@ -48,6 +50,11 @@ func (db *DB) Sync(remote spec.Spec) error {
 	// 3: Pull remote head to client
 	datas.Pull(remoteDB.noms, db.noms, remoteHead, progress)
 
+	// Lock here because all work from here on out is local and we are going to read/write
+	// local state.
+	defer db.lock()()
+	localHead = db.head
+
 	// 4: Save the new remote state - primarily to avoid re-downloading it in the future and for debugging purposes.
 	_, err = db.noms.SetHead(db.noms.GetDataset(remote_dataset), remoteHead)
 	if err != nil {
@@ -55,7 +62,7 @@ func (db *DB) Sync(remote spec.Spec) error {
 	}
 
 	// 5: Rebase any new local changes from between 1 and 3.
-	rebased, err := rebase(db, remoteHead, time.DateTime(), db.head, types.Ref{})
+	rebased, err := rebase(db, remoteHead, time.DateTime(), localHead, types.Ref{})
 	if err != nil {
 		return err
 	}

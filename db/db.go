@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/attic-labs/noms/go/datas"
 	"github.com/attic-labs/noms/go/hash"
@@ -24,6 +25,7 @@ type DB struct {
 	noms   datas.Database
 	origin string
 	head   Commit
+	mu     sync.Mutex
 }
 
 func Load(sp spec.Spec, origin string) (*DB, error) {
@@ -39,6 +41,7 @@ func New(noms datas.Database, origin string) (*DB, error) {
 		noms:   noms,
 		origin: origin,
 	}
+	defer r.lock()()
 	err := r.init()
 	if err != nil {
 		return nil, err
@@ -92,11 +95,13 @@ func (db *DB) Get(id string) (types.Value, error) {
 }
 
 func (db *DB) Put(path string, v types.Value) error {
+	defer db.lock()()
 	_, err := db.execInternal(types.Blob{}, ".putValue", types.NewList(db.noms, types.String(path), v))
 	return err
 }
 
 func (db *DB) Del(path string) (ok bool, err error) {
+	defer db.lock()()
 	v, err := db.execInternal(types.Blob{}, ".delValue", types.NewList(db.noms, types.String(path)))
 	return bool(v.(types.Bool)), err
 }
@@ -106,11 +111,13 @@ func (db *DB) Bundle() (types.Blob, error) {
 }
 
 func (db *DB) PutBundle(b types.Blob) error {
+	defer db.lock()()
 	_, err := db.execInternal(types.Blob{}, ".putBundle", types.NewList(db.noms, b))
 	return err
 }
 
 func (db *DB) Exec(function string, args types.List) (types.Value, error) {
+	defer db.lock()()
 	if strings.HasPrefix(function, ".") {
 		return nil, fmt.Errorf("Cannot call system function: %s", function)
 	}
@@ -118,6 +125,7 @@ func (db *DB) Exec(function string, args types.List) (types.Value, error) {
 }
 
 func (db *DB) Reload() error {
+	defer db.lock()()
 	db.noms.Rebase()
 	return db.init()
 }
@@ -235,6 +243,13 @@ func (db *DB) execImpl(basis types.Ref, bundle types.Blob, function string, args
 	}
 
 	return newBundle, newData, output, isWrite, nil
+}
+
+func (db *DB) lock() func() {
+	db.mu.Lock()
+	return func() {
+		db.mu.Unlock()
+	}
 }
 
 func getBundleVersion(bundle types.Blob, noms types.ValueReadWriter) (float64, error) {
