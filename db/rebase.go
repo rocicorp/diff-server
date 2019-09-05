@@ -19,7 +19,7 @@ import (
 // effect on the data and from user's point of view is the same as `git rebase`.
 func rebase(db *DB, onto types.Ref, date datetime.DateTime, commit Commit, forkPoint types.Ref) (rebased Commit, err error) {
 	if forkPoint.IsZeroValue() {
-		forkPoint, err = commonAncestor(db.head.Ref(), commit.Ref(), db.Noms())
+		forkPoint, err = commonAncestor(onto, commit.Ref(), db.Noms())
 		if err != nil {
 			return rebased, err
 		}

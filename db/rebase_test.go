@@ -64,6 +64,19 @@ func TestRebase(t *testing.T) {
 	assert.NoError(err)
 	assertEqual(bCommit, actual)
 
+	// https://github.com/aboodman/replicant/issues/68
+	// same as nop, except where there's also a 'local' branch whose head is > onto
+	// local: g - a - b
+	// onto:  g - a
+	// head:  g - a - b
+	// rslt:  g - a - b
+	_, err = noms.SetHead(noms.GetDataset(local_dataset), bCommit.Ref())
+	assert.NoError(err)
+	db.Reload()
+	actual, err = rebase(db, aCommit.Ref(), epoch, bCommit, types.Ref{})
+	assert.NoError(err)
+	assertEqual(bCommit, actual)
+
 	// ff
 	// onto: g - a - b
 	// head: g - a
