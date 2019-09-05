@@ -25,5 +25,6 @@ cp repm.aar replicant-flutter-sdk/android/
 zip -r replicant-flutter-sdk.zip replicant-flutter-sdk
 
 # rep tool
-GOOS=darwin GOARCH=amd64 go build -o rep-darwin-amd64 ./cmd/rep
-GOOS=linux GOARCH=amd64 go build -o rep-linux-amd64 ./cmd/rep
+cd $ROOT
+GOOS=darwin GOARCH=amd64 go build -o build/rep-darwin-amd64 ./cmd/rep
+GOOS=linux GOARCH=amd64 go build -o build/rep-linux-amd64 ./cmd/rep
