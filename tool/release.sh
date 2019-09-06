@@ -1,5 +1,7 @@
 #!/bin/sh
 
+export GO111MODULE=off
+
 # repm
 ORIG=`pwd`
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
@@ -27,4 +29,5 @@ zip -r replicant-flutter-sdk.zip replicant-flutter-sdk
 # rep tool
 cd $ROOT
 GOOS=darwin GOARCH=amd64 go build -o build/rep-darwin-amd64 ./cmd/rep
+
 GOOS=linux GOARCH=amd64 go build -o build/rep-linux-amd64 ./cmd/rep
