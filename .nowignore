@@ -1,10 +1,12 @@
 .vscode
 
 # build artifacts
+build
 rep
 repm/repm-sources.jar
 repm/repm.aar
-vendor
 
-# Samples - I guess eventually we'll want to do something with these but they just make everything slow now
+# Directories we don't deploy
 samples
+bind
+vendor
