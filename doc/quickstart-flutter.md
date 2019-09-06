@@ -1,8 +1,8 @@
 # Conflict-Free Offline Sync in Less than 5 Minutes
 
-#### 1. Download and unzip the latest release
+#### 1. Get the SDK
 
-Get the latest replicant-flutter-sdk.zip from https://github.com/aboodman/replicant/releases then:
+Download the latest [replicant-flutter-sdk.zip](https://github.com/aboodman/replicant/releases), then unzip it.
 
 ```
 unzip replicant-flutter-sdk.zip
@@ -22,9 +22,11 @@ unzip replicant-flutter-sdk.zip
 ...
 ```
 
-#### 3. Add your transaction bundle
+#### 3. Create a transaction bundle
 
-Create a new `lib/bundle.js` file inside your app, and add this code to it:
+You interact with Replicant by executing JavaScript _transactions_.
+
+Create a new `lib/bundle.js` file inside your app to hold these transactions, then add this code to it:
 
 ```
 function codeVersion() {
@@ -54,7 +56,7 @@ flutter:
 ...
 ```
 
-#### 5. Instantiate Replicant in your app
+#### 5. Instantiate Replicant
 
 ```
 var rep = Replicant('https://repilicate.to/serve/any-name-here')
@@ -75,7 +77,9 @@ Congratulations — you are done 🎉. Time for a cup of coffee.
 
 In fact, while you're away, why not install the app on two devices and let them sync with each other?
 
-Disconnect them. Take a subway ride. Whatever. It's all good. Replicant will sync whenever there is connectivity.
+Disconnect them. Take a subway ride. Whatever. It's all good. The devices will sync up automatically when there is connectivity.
+
+[Conflicts are handled naturally](https://github.com/aboodman/replicant/blob/master/README.md#conflicts) by ordering atomic transactions consistently on all devices.
 
 ## Want something even easier?
 
