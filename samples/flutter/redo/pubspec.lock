@@ -126,10 +126,10 @@ packages:
   replicant:
     dependency: "direct main"
     description:
-      path: "/tmp/replicant-flutter-sdk/"
+      path: "../../../build/replicant-flutter-sdk"
       relative: true
     source: path
-    version: "0.0.1"
+    version: "0.0.1+a188349a"
   sky_engine:
     dependency: transitive
     description: flutter

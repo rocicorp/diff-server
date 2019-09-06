@@ -1,4 +1,4 @@
-name: replido
+name: redo
 description: An offline-first todo app using Replicant!
 
 version: 1.0.0+1
@@ -17,7 +17,7 @@ dependencies:
   # Then unzip it someplace, and insert that path here:
   replicant:
     path:
-      /tmp/replicant-flutter-sdk/
+      ../../../build/replicant-flutter-sdk/
 
 dev_dependencies:
   flutter_test:
