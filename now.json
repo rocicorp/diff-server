@@ -4,6 +4,7 @@
     "alias": "replicate.to",
     "builds": [
         { "src": "landing/**", "use": "@now/static" },
+        { "src": "doc/flutter/**", "use": "@now/static" },
         { "src": "serve/serve.go", "use": "@now/go" }
     ],
     "routes": [
