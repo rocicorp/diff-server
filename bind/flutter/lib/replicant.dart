@@ -23,6 +23,7 @@ class Replicant {
      this.sync();
   }
 
+  /// Adds new transactions to the db.
   Future<void> putBundle(String bundle) async {
     // We check for changes here, even though putBundle doesn't change data, because
     // it can change the bundle which the client app uses to read the data, thus it
@@ -30,28 +31,30 @@ class Replicant {
     return _result(await _checkChange(await _invoke('putBundle', {'code': bundle})));
   }
 
-  // Executes the named function with provided arguments from the current
-  // bundle as an atomic transaction.
+  /// Executes the named function with provided arguments from the current
+  /// bundle as an atomic transaction.
   Future<dynamic> exec(String function, [List<dynamic> args = const []]) async {
     return _result(await _checkChange(await _invoke('exec', {'name': function, 'args': args})));
   }
 
-  // Puts a single value into the database in its own transaction.
+  /// Puts a single value into the database in its own transaction.
   Future<void> put(String id, dynamic value) async {
     return _result(await _checkChange(await _invoke('put', {'id': id, 'value': value})));
   }
 
-  // Get a single value from the database.
+  /// Get a single value from the database.
   Future<dynamic> get(String id) async {
     return _result(await _invoke('get', {'id': id}));
   }
 
-  // Gets many values from the database.
+  /// Gets many values from the database.
   Future<List<ScanItem>> scan({prefix: String, startAtID: String, limit = 50}) async {
     List<Map<String, dynamic>> r = await _invoke('scan', {prefix: prefix, startAtID: startAtID, limit: limit});
     return r.map((e) => ScanItem.fromJson(e));
   }
 
+  /// Synchronizes the database with the server. New local transactions that have been executed since the last
+  /// sync are sent to the server, and new remote transactions are received and replayed.
   Future<void> sync() async {
     this._fireOnSync(true);
     try {
