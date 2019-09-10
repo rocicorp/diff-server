@@ -6,7 +6,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/attic-labs/noms/go/spec"
+	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aboodman/replicant/db"
 )
 
 func TestCommands(t *testing.T) {
@@ -151,5 +155,45 @@ func TestCommands(t *testing.T) {
 		assert.Equal(c.out, ob.String(), c.label)
 		assert.Equal(c.err, eb.String(), c.label)
 	}
+}
 
+func TestDrop(t *testing.T) {
+	assert := assert.New(t)
+	tc := []struct {
+		in      string
+		errs    string
+		deleted bool
+	}{
+		{"no\n", "", false},
+		{"N\n", "", false},
+		{"balls\n", "", false},
+		{"n\n", "", false},
+		{"windows\r\n", "", false},
+		{"y\n", "", true},
+		{"y\r\n", "", true},
+	}
+
+	for i, t := range tc {
+		d, dir := db.LoadTempDB(assert)
+		d.Put("foo", types.String("bar"))
+		val, err := d.Get("foo")
+		assert.NoError(err)
+		assert.Equal("bar", string(val.(types.String)))
+
+		desc := fmt.Sprintf("test case %d, input: %s", i, t.in)
+		args := append([]string{"--db=" + dir, "drop"})
+		out := strings.Builder{}
+		errs := strings.Builder{}
+		code := 0
+		impl(args, strings.NewReader(t.in), &out, &errs, func(c int) { code = c })
+
+		assert.Equal(dropWarning, out.String(), desc)
+		assert.Equal(t.errs, errs.String(), desc)
+		assert.Equal(0, code, desc)
+		sp, err := spec.ForDatabase(dir)
+		assert.NoError(err)
+		noms := sp.GetDatabase()
+		ds := noms.GetDataset(db.LOCAL_DATASET)
+		assert.Equal(!t.deleted, ds.HasHead())
+	}
 }

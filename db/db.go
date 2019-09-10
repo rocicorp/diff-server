@@ -17,8 +17,8 @@ import (
 )
 
 const (
-	local_dataset  = "local"
-	remote_dataset = "remote"
+	LOCAL_DATASET  = "local"
+	REMOTE_DATASET = "remote"
 )
 
 type DB struct {
@@ -51,7 +51,7 @@ func New(noms datas.Database, origin string) (*DB, error) {
 }
 
 func (db *DB) init() error {
-	ds := db.noms.GetDataset(local_dataset)
+	ds := db.noms.GetDataset(LOCAL_DATASET)
 	if !ds.HasHead() {
 		genesis := makeGenesis(db.noms)
 		genRef := db.noms.WriteValue(genesis.Original)
@@ -152,7 +152,7 @@ func (db *DB) execInternal(bundle types.Blob, function string, args types.List) 
 
 	// FastForward not strictly needed here because we should have already ensured that we were
 	// fast-forwarding outside of Noms, but it's a nice sanity check.
-	_, err = db.noms.FastForward(db.noms.GetDataset(local_dataset), commitRef)
+	_, err = db.noms.FastForward(db.noms.GetDataset(LOCAL_DATASET), commitRef)
 	if err != nil {
 		return nil, err
 	}

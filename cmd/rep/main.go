@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -16,6 +17,10 @@ import (
 	"github.com/aboodman/replicant/db"
 	execpkg "github.com/aboodman/replicant/exec"
 	"github.com/aboodman/replicant/util/kp"
+)
+
+const (
+	dropWarning = "This command deletes an entire database and its history. This operations is not recoverable. Proceed? y/n\n"
 )
 
 type opt struct {
@@ -66,6 +71,7 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 	del(app, &rdb, sp, out)
 	exec(app, &rdb, sp, out)
 	sync(app, &rdb, sp)
+	drop(app, sp, in, out)
 
 	bundle := app.Command("bundle", "Manage the currently registered bundle.")
 	getBundle(bundle, &rdb, out)
@@ -223,5 +229,27 @@ func sync(parent *kingpin.Application, db *db.DB, sp *spec.Spec) {
 	kc.Action(func(_ *kingpin.ParseContext) error {
 		// TODO: progress
 		return db.Sync(*remoteSpec)
+	})
+}
+
+func drop(parent *kingpin.Application, sp *spec.Spec, in io.Reader, out io.Writer) {
+	kc := parent.Command("drop", "Deletes a replicant database and its history")
+
+	r := bufio.NewReader(in)
+	w := bufio.NewWriter(out)
+	kc.Action(func(_ *kingpin.ParseContext) error {
+		w.WriteString(dropWarning)
+		w.Flush()
+		answer, err := r.ReadString('\n')
+		if err != nil {
+			return err
+		}
+		answer = strings.TrimSpace(answer)
+		if answer != "y" {
+			return nil
+		}
+		noms := sp.GetDatabase()
+		_, err = noms.Delete(noms.GetDataset(db.LOCAL_DATASET))
+		return err
 	})
 }

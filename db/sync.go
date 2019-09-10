@@ -56,7 +56,7 @@ func (db *DB) Sync(remote spec.Spec) error {
 	localHead = db.head
 
 	// 4: Save the new remote state - primarily to avoid re-downloading it in the future and for debugging purposes.
-	_, err = db.noms.SetHead(db.noms.GetDataset(remote_dataset), remoteHead)
+	_, err = db.noms.SetHead(db.noms.GetDataset(REMOTE_DATASET), remoteHead)
 	if err != nil {
 		return err
 	}
@@ -68,7 +68,7 @@ func (db *DB) Sync(remote spec.Spec) error {
 	}
 
 	// 6: Commit new local head.
-	_, err = db.noms.FastForward(db.noms.GetDataset(local_dataset), db.noms.WriteValue(rebased.Original))
+	_, err = db.noms.FastForward(db.noms.GetDataset(LOCAL_DATASET), db.noms.WriteValue(rebased.Original))
 	if err != nil {
 		return err
 	}
@@ -118,7 +118,7 @@ func HandleSync(dest *DB, commit Commit) (newHead types.Ref, err error) {
 	if err != nil {
 		return newHead, err
 	}
-	_, err = dest.noms.FastForward(dest.noms.GetDataset(local_dataset), dest.noms.WriteValue(rebased.Original))
+	_, err = dest.noms.FastForward(dest.noms.GetDataset(LOCAL_DATASET), dest.noms.WriteValue(rebased.Original))
 	if err != nil {
 		return newHead, err
 	}
