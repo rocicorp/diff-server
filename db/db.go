@@ -1,3 +1,5 @@
+// Package db implements the core database abstraction of Replicant. It provides facilities to import
+// transaction bundles, execute transactions, and synchronize Replicant databases.
 package db
 
 import (
