@@ -64,7 +64,15 @@ var rep = Replicant('https://repilicate.to/serve/any-name-here')
 
 For now, you can use any name you want after `serve` in the URL.
 
-#### 6. Execute transactions
+#### 6. Put bundle
+
+```dart
+await rep.putBundle(
+  await rootBundle.loadString('lib/bundle.js', cache: false),
+);
+```
+
+#### 7. Execute transactions
 
 ```
 await rep.exec('incr', [1]);
