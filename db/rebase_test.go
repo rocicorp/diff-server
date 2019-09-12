@@ -70,7 +70,7 @@ func TestRebase(t *testing.T) {
 	// onto:  g - a
 	// head:  g - a - b
 	// rslt:  g - a - b
-	_, err = noms.SetHead(noms.GetDataset(local_dataset), bCommit.Ref())
+	_, err = noms.SetHead(noms.GetDataset(LOCAL_DATASET), bCommit.Ref())
 	assert.NoError(err)
 	db.Reload()
 	actual, err = rebase(db, aCommit.Ref(), epoch, bCommit, types.Ref{})
@@ -81,7 +81,7 @@ func TestRebase(t *testing.T) {
 	// onto: g - a - b
 	// head: g - a
 	// rslt: g - a - b
-	_, err = noms.SetHead(noms.GetDataset(local_dataset), bCommit.Ref())
+	_, err = noms.SetHead(noms.GetDataset(LOCAL_DATASET), bCommit.Ref())
 	assert.NoError(err)
 	db.Reload()
 	actual, err = rebase(db, db.head.Ref(), epoch, aCommit, types.Ref{})
@@ -93,7 +93,7 @@ func TestRebase(t *testing.T) {
 	// head: g - b
 	// rslt: g - a - ro(b)
 	//         \ b /
-	_, err = noms.SetHead(noms.GetDataset(local_dataset), aCommitRef)
+	_, err = noms.SetHead(noms.GetDataset(LOCAL_DATASET), aCommitRef)
 	assert.NoError(err)
 	db.Reload()
 	bCommit = makeTx(noms, gCommit, "test", epoch, br, "log", list("foo", "baz"), br, write(data("baz")))
@@ -109,7 +109,7 @@ func TestRebase(t *testing.T) {
 	// rslt: g - a - ro(b) - ro(c)
 	//         \ b /         /
 	//            \ ------- c
-	_, err = noms.SetHead(noms.GetDataset(local_dataset), aCommitRef)
+	_, err = noms.SetHead(noms.GetDataset(LOCAL_DATASET), aCommitRef)
 	assert.NoError(err)
 	db.Reload()
 	cCommit := makeTx(noms, bCommit.Ref(), "test", epoch, br, "log", list("foo", "quux"), br, write(data("baz", "quux")))
@@ -129,7 +129,7 @@ func TestRebase(t *testing.T) {
 	// rslt: g - a -  b  -  ro(ro(c))
 	//         \    \ ro(c) /
 	//          \  c  /
-	_, err = noms.SetHead(noms.GetDataset(local_dataset), aCommitRef)
+	_, err = noms.SetHead(noms.GetDataset(LOCAL_DATASET), aCommitRef)
 	assert.NoError(err)
 	db.Reload()
 	_, err = db.Exec("log", list("foo", "baz"))
@@ -150,7 +150,7 @@ func TestRebase(t *testing.T) {
 	// onto: g ---- rj(b)
 	//         \ b /
 	// rslt: error: can't rebase reject commits
-	_, err = noms.SetHead(noms.GetDataset(local_dataset), aCommitRef)
+	_, err = noms.SetHead(noms.GetDataset(LOCAL_DATASET), aCommitRef)
 	assert.NoError(err)
 	db.Reload()
 	bCommit = makeTx(noms, gCommit, "test", epoch, br, "log", list("foo", "baz"), br, write(data("baz")))
