@@ -19,6 +19,7 @@ import (
 	"github.com/attic-labs/noms/go/marshal"
 	"github.com/attic-labs/noms/go/nbs"
 	"github.com/attic-labs/noms/go/spec"
+	"github.com/attic-labs/noms/go/util/verbose"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -43,6 +44,8 @@ var (
 )
 
 func Handler(w http.ResponseWriter, r *http.Request) {
+	verbose.SetVerbose(true)
+
 	defer func() {
 		err := recover()
 		if err != nil {
