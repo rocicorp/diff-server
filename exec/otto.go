@@ -1,3 +1,5 @@
+// Package exec provides the ability to execute JavaScript against a Replicant database, as
+// when transactions are executed.
 package exec
 
 import (

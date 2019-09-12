@@ -1,3 +1,4 @@
+// Package chk implements a handful of runtime assertions.
 package chk
 
 import "fmt"

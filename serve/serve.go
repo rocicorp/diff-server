@@ -1,3 +1,5 @@
+// Package serve implements the Replicant http server. This includes all the Noms endpoints,
+// plus a Replicant-specific sync endpoint that implements the server-side of the Replicant sync protocol.
 package serve
 
 import (

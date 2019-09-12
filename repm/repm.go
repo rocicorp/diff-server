@@ -1,4 +1,4 @@
-// package remp implements a Gomobile-compatible API to replicant.
+// Package repm implements an Android and iOS interface to Replicant via [Gomobile](https://github.com/golang/go/wiki/Mobile).
 package repm
 
 import (

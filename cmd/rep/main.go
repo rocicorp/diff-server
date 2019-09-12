@@ -233,7 +233,7 @@ func sync(parent *kingpin.Application, db *db.DB, sp *spec.Spec) {
 }
 
 func drop(parent *kingpin.Application, sp *spec.Spec, in io.Reader, out io.Writer) {
-	kc := parent.Command("drop", "Deletes a replicant database and its history")
+	kc := parent.Command("drop", "Deletes a replicant database and its history.")
 
 	r := bufio.NewReader(in)
 	w := bufio.NewWriter(out)

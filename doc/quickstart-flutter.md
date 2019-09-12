@@ -59,12 +59,20 @@ flutter:
 #### 5. Instantiate Replicant
 
 ```
-var rep = Replicant('https://repilicate.to/serve/any-name-here')
+var rep = Replicant('https://replicate.to/serve/any-name-here')
 ```
 
 For now, you can use any name you want after `serve` in the URL.
 
-#### 6. Execute transactions
+#### 6. Put bundle
+
+```dart
+await rep.putBundle(
+  await rootBundle.loadString('lib/bundle.js', cache: false),
+);
+```
+
+#### 7. Execute transactions
 
 ```
 await rep.exec('incr', [1]);
@@ -90,7 +98,7 @@ Download the above steps as a running sample. See [flutter/hello](../samples/flu
 - See [`flutter/redo`](../samples/flutter/redo) a fully functioning TODO app built on Flutter and Replicant
 - Review the [Flutter API](https://replicate.to/doc/flutter/)
 - Review the [JavaScript API for Replicant transactions](transaction-api.md)
-- Inspect your Replicant databases using the `rep` tool
+- Inspect your Replicant databases using [the `rep` tool](cli.md)
 
 ## More questions?
 

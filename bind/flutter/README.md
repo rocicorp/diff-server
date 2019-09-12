@@ -1,6 +1,6 @@
 # Replicant
 
-Painless Sync for Mobile Apps
+A Flutter package for the Replicant database.
 
 ## Getting Started
 
