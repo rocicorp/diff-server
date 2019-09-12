@@ -75,8 +75,8 @@ await rep.putBundle(
 #### 7. Execute transactions
 
 ```
-await rep.exec('incr', [1]);
-await rep.exec('incr', [41]);
+await rep.exec('increment', [1]);
+await rep.exec('increment', [41]);
 var count = await rep.exec('getCount');
 print('The answer is ${count}');
 ```
