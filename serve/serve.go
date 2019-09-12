@@ -45,6 +45,7 @@ var (
 
 func Handler(w http.ResponseWriter, r *http.Request) {
 	verbose.SetVerbose(true)
+	fmt.Println("Handling request: ", r.URL.String())
 
 	defer func() {
 		err := recover()
