@@ -19,7 +19,7 @@ Examples:
 rep --db=/path/to/my/db scan --start-at='message/'
 
 # Execute a transaction on a remote database
-rep ==db=https://replicate.to/serve/my-remote-db exec sellWidgets 42
+rep --db=https://replicate.to/serve/my-remote-db exec sellWidgets 42
 ```
 
 See `rep --help` for complete documentation.
