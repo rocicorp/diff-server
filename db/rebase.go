@@ -2,10 +2,14 @@ package db
 
 import (
 	"fmt"
+	"os"
 
+	"github.com/attic-labs/noms/go/datas"
 	"github.com/attic-labs/noms/go/marshal"
 	"github.com/attic-labs/noms/go/types"
 	"github.com/attic-labs/noms/go/util/datetime"
+
+	"github.com/aboodman/replicant/util/noms/diff"
 )
 
 // rebase transforms a forked commit history into a linear one by moving one side
@@ -45,6 +49,34 @@ func rebase(db *DB, onto types.Ref, date datetime.DateTime, commit Commit, forkP
 		return Commit{}, err
 	}
 
+	// Validate the original change against its original basis.
+	// This is only *necessary* for fast-forward commits, but we do it for all commits out of caution.
+	replayed, err := validate(db, commit)
+	if err != nil {
+		return Commit{}, err
+	}
+	if !replayed.Original.Equals(commit.Original) {
+		// Create and return a reject commit, which will become the basis for the prev frame of the recursive call.
+		rj := makeReject(
+			db.noms,
+			types.NewRef(newBasis.Original), // basis
+			db.origin,
+			date,
+			types.NewRef(commit.Original),   // subject
+			types.NewRef(replayed.Original), // expected
+			"",
+			newBasis.Value.Code, // since the commit was rejected, any code and data changes it made are dropped
+			newBasis.Value.Data)
+
+		// Print out a scary warning to the log.
+		fmt.Fprintf(os.Stderr, "ERROR: Detected non-deterministic commit %s, diff: %s - Created reject commit: %s",
+			commit.Original.Hash(),
+			diff.Diff(commit.Original, replayed.Original),
+			rj.Original.Hash())
+
+		return rj, nil
+	}
+
 	// If the current and desired basis match, this is a fast-forward, and there's nothing to do.
 	if newBasis.Original.Equals(oldBasis.Original) {
 		return commit, nil
@@ -82,4 +114,12 @@ func rebase(db *DB, onto types.Ref, date datetime.DateTime, commit Commit, forkP
 	newCommit := makeReorder(db.noms, types.NewRef(newBasis.Original), db.origin, date, types.NewRef(commit.Original), newBundle, newData)
 	db.noms.WriteValue(newCommit.Original)
 	return newCommit, nil
+}
+
+func commonAncestor(r1, r2 types.Ref, noms types.ValueReader) (a types.Ref, err error) {
+	fp, ok := datas.FindCommonAncestor(r1, r2, noms)
+	if !ok {
+		return a, fmt.Errorf("No common ancestor between commits: %s and %s", r1.TargetHash(), r2.TargetHash())
+	}
+	return fp, nil
 }

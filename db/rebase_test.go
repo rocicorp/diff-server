@@ -53,11 +53,11 @@ func TestRebase(t *testing.T) {
 			basis.Ref(),
 			"test", // origin
 			epoch,
-			bundleRef,  // bundle
-			"log",  // function
-			list("foo", arg),  // args
-			basis.Value.Code,  // result bundle
-			write(types.NewMap(noms, types.String("foo"), foo)))  // result data
+			bundleRef,        // bundle
+			"log",            // function
+			list("foo", arg), // args
+			basis.Value.Code, // result bundle
+			write(types.NewMap(noms, types.String("foo"), foo))) // result data
 		write(r.Original)
 		return r
 	}
@@ -72,7 +72,7 @@ func TestRebase(t *testing.T) {
 			epoch,
 			subject.Ref(),
 			basis.Value.Code,
-			write(types.NewMap(noms, types.String("foo"), foo)))  // result data
+			write(types.NewMap(noms, types.String("foo"), foo))) // result data
 		write(r.Original)
 		return r
 	}
@@ -88,7 +88,7 @@ func TestRebase(t *testing.T) {
 			subject.Ref(),
 			"",
 			basis.Value.Code,
-			write(types.NewMap(noms, types.String("foo"), foo)))  // result data
+			write(types.NewMap(noms, types.String("foo"), foo))) // result data
 		write(r.Original)
 		return r
 	}

@@ -136,6 +136,7 @@ func TestValidate(t *testing.T) {
 		"o1",
 		epoch,
 		noms.WriteValue(tx3.Original),
+		types.Ref{},
 		"reason1",
 		noms.WriteValue(eb),
 		noms.WriteValue(
@@ -147,6 +148,7 @@ func TestValidate(t *testing.T) {
 		"o1",
 		epoch,
 		noms.WriteValue(tx3.Original),
+		types.Ref{},
 		"reason1",
 		noms.WriteValue(eb),
 		noms.WriteValue(
@@ -158,6 +160,7 @@ func TestValidate(t *testing.T) {
 		"o1",
 		epoch,
 		noms.WriteValue(tx3.Original),
+		types.Ref{},
 		"reason1",
 		noms.WriteValue(eb),
 		noms.WriteValue(
@@ -177,12 +180,12 @@ func TestValidate(t *testing.T) {
 		{ro1b, "Invalid commit 3qi8i0fq7j2v91m7oa5vh31mclt4rj3u: diff: .value {\n-   data: #1f3f1stoa9pit2jctse1svtl9vm01sbk\n+   data: #cdvf5afbdn7vpmj2ag7mhesrce5joob9\n  }\n"},
 		{ro1c, "Invalid commit 4b8h3oa959g80efc75gnk53lqv4sugl6: diff: .value {\n-   data: #atbvqcfprt13l5sadlpohu48tuctgmt4\n+   data: #a7u0iuqarbmjs9dnrf7d0fcotjrhdaaf\n  }\n"},
 		{rj1, ""},
-		{rj1b, "Invalid commit 1odrcdf7fgs5fmt9takdhkjktbqalogb: diff: .value {\n-   data: #cdvf5afbdn7vpmj2ag7mhesrce5joob9\n+   data: #a7u0iuqarbmjs9dnrf7d0fcotjrhdaaf\n  }\n"},
+		{rj1b, "Invalid commit bpc9ho415qjc395qudg1e7lqihvpse75: diff: .value {\n-   data: #cdvf5afbdn7vpmj2ag7mhesrce5joob9\n+   data: #a7u0iuqarbmjs9dnrf7d0fcotjrhdaaf\n  }\n"},
 		{rj1c, "Invalid commit 4b8h3oa959g80efc75gnk53lqv4sugl6: diff: .value {\n-   data: #atbvqcfprt13l5sadlpohu48tuctgmt4\n+   data: #a7u0iuqarbmjs9dnrf7d0fcotjrhdaaf\n  }\n"},
 	}
 
 	for i, t := range tc {
-		err := validate(db, t.in, types.Ref{})
+		replayed, err := validate(db, t.in)
 		db.noms.Flush()
 		if t.err == "" {
 			assert.NoError(err, "test case %d", i)

@@ -1,6 +1,7 @@
 package db
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/attic-labs/noms/go/marshal"
@@ -42,7 +43,11 @@ Struct Commit {
 			secSinceEpoch: Number,
 		},
 		subject: Ref<Cycle<Commit>>,
-		reason: Value
+		reason: Struct Nondeterm {
+			expected: Ref<Cycle<Commit>>,
+		} | Struct Fiat {
+			detail: String,
+		},
 	},
 	value: Struct {
 		code: Ref<Blob>,
@@ -73,11 +78,39 @@ type Reorder struct {
 	Subject types.Ref
 }
 
+type Nondeterm struct {
+	Expected types.Ref
+}
+
+type Fiat struct {
+	Detail string
+}
+
+type Reason struct {
+	Nondeterm Nondeterm
+	Fiat      Fiat
+}
+
+func (r Reason) MarshalNoms(vrw types.ValueReadWriter) (val types.Value, err error) {
+	v, err := union.Marshal(r, vrw)
+	if err != nil {
+		return nil, err
+	}
+	if v == nil {
+		return nil, errors.New("At least one field of Reason is required")
+	}
+	return v, nil
+}
+
+func (r *Reason) UnmarshalNoms(v types.Value) error {
+	return union.Unmarshal(v, r)
+}
+
 type Reject struct {
 	Origin  string
 	Date    datetime.DateTime
 	Subject types.Ref
-	Reason  string
+	Reason  Reason
 }
 
 type Meta struct {
@@ -282,13 +315,14 @@ func makeReorder(noms types.ValueReadWriter, basis types.Ref, origin string, d d
 	return c
 }
 
-func makeReject(noms types.ValueReadWriter, basis types.Ref, origin string, d datetime.DateTime, subject types.Ref, reason string, newBundle, newData types.Ref) Commit {
+func makeReject(noms types.ValueReadWriter, basis types.Ref, origin string, d datetime.DateTime, subject, nondeterm types.Ref, fiatDetail string, newBundle, newData types.Ref) Commit {
 	c := Commit{}
 	c.Parents = []types.Ref{basis, subject}
 	c.Meta.Reject.Origin = origin
 	c.Meta.Reject.Date = d
 	c.Meta.Reject.Subject = subject
-	c.Meta.Reject.Reason = reason
+	c.Meta.Reject.Reason.Nondeterm.Expected = nondeterm
+	c.Meta.Reject.Reason.Fiat.Detail = fiatDetail
 	c.Value.Code = newBundle
 	c.Value.Data = newData
 	c.Original = marshal.MustMarshal(noms, c).(types.Struct)
