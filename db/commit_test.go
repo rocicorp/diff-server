@@ -1,6 +1,7 @@
 package db
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -122,6 +123,6 @@ func TestMarshal(t *testing.T) {
 
 		remarshalled, err := marshal.Marshal(noms, roundtrip)
 		assert.NoError(err)
-		assert.True(act.Equals(remarshalled))
+		assert.True(act.Equals(remarshalled), fmt.Sprintf("test case %d", i))
 	}
 }

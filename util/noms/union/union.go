@@ -18,7 +18,7 @@ func Marshal(st interface{}, noms types.ValueReadWriter) (types.Value, error) {
 	for i := 0; i < v.NumField(); i++ {
 		fv := v.Field(i).Interface()
 		chk.Equal(reflect.Struct, v.Kind())
-		if reflect.Zero(t.Field(i).Type).Interface() == fv {
+		if reflect.DeepEqual(reflect.Zero(t.Field(i).Type).Interface(), fv) {
 			continue
 		}
 		nfv, err := marshal.Marshal(noms, fv)
@@ -33,7 +33,7 @@ func Marshal(st interface{}, noms types.ValueReadWriter) (types.Value, error) {
 	return r, nil
 }
 
-func Unmarshal(in types.Value, out interface{}, noms types.ValueReadWriter) error {
+func Unmarshal(in types.Value, out interface{}) error {
 	if in.Kind() != types.StructKind {
 		return errors.New("Can only unmarshal Noms structs into unions")
 	}

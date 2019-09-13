@@ -1,7 +1,6 @@
 package db
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/attic-labs/noms/go/marshal"
@@ -10,6 +9,7 @@ import (
 	"github.com/attic-labs/noms/go/util/datetime"
 
 	"github.com/aboodman/replicant/util/chk"
+	"github.com/aboodman/replicant/util/noms/union"
 )
 
 var (
@@ -52,8 +52,6 @@ Struct Commit {
 )
 
 // TODO: These types should be private
-type Genesis struct{}
-
 type Tx struct {
 	Origin string
 	Date   datetime.DateTime
@@ -82,15 +80,35 @@ type Reject struct {
 	Reason  string
 }
 
+type Meta struct {
+	// At most one of these will be set. If none are set, then the commit is the genesis commit.
+	Tx      Tx      `noms:",omitempty"`
+	Reorder Reorder `noms:",omitempty"`
+	Reject  Reject  `noms:",omitempty"`
+}
+
+func (m Meta) MarshalNoms(vrw types.ValueReadWriter) (val types.Value, err error) {
+	v, err := union.Marshal(m, vrw)
+	if err != nil {
+		return nil, err
+	}
+	if v == nil {
+		v = types.NewStruct("Genesis", types.StructData{})
+	}
+	return v, nil
+}
+
+func (m *Meta) UnmarshalNoms(v types.Value) error {
+	if v.(types.Struct).Name() == "Genesis" {
+		return nil
+	}
+	return union.Unmarshal(v, m)
+}
+
 type Commit struct {
 	Parents []types.Ref `noms:",set"`
-	Meta    struct {
-		// At most one of these will be set. If none are set, then the commit is the genesis commit.
-		Tx      Tx      `noms:",omitempty"`
-		Reorder Reorder `noms:",omitempty"`
-		Reject  Reject  `noms:",omitempty"`
-	}
-	Value struct {
+	Meta    Meta
+	Value   struct {
 		Code types.Ref `noms:",omitempty"`
 		Data types.Ref `noms:",omitempty"` // TODO: Rename "Bundle"
 	}
@@ -227,55 +245,6 @@ func (c Commit) Basis(noms types.ValueReader) (Commit, error) {
 		return Commit{}, err
 	}
 	return r, nil
-}
-
-func (c Commit) MarshalNoms(vrw types.ValueReadWriter) (val types.Value, err error) {
-	r, err := marshal.Marshal(vrw, internal(c))
-	if err != nil {
-		return nil, err
-	}
-	rs := r.(types.Struct)
-	meta := rs.Get("meta").(types.Struct)
-	var found types.Value
-	for _, f := range []string{"tx", "reorder", "reject"} {
-		if v, ok := meta.MaybeGet(f); ok {
-			if found != nil {
-				return nil, errors.New("Only one of meta.{genesis, tx, reorder, reject} may be set")
-			}
-			found = v
-		}
-	}
-	if found != nil {
-		return rs.Set("meta", found), nil
-	} else {
-		return rs.Set("meta", types.NewStruct("Genesis", types.StructData{})), nil
-	}
-}
-
-func (c *Commit) UnmarshalNoms(v types.Value) error {
-	err := marshal.Unmarshal(v, (*internal)(c))
-	if err != nil {
-		return err
-	}
-	meta := c.Original.Get("meta").(types.Struct)
-	switch meta.Name() {
-	case "Genesis":
-		return nil
-	case "Tx":
-		return marshal.Unmarshal(meta, &c.Meta.Tx)
-	case "Reorder":
-		return marshal.Unmarshal(meta, &c.Meta.Reorder)
-	case "Reject":
-		return marshal.Unmarshal(meta, &c.Meta.Reject)
-	}
-	chk.Fail("Unexpected op name: %s", meta.Name())
-	return nil
-}
-
-type internal Commit
-
-func (_ internal) MarshalNomsStructName() string {
-	return "Commit"
 }
 
 func makeGenesis(noms types.ValueReadWriter) Commit {

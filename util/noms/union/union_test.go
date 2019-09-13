@@ -37,7 +37,7 @@ func TestMarshalUnion(t *testing.T) {
 	assert.True(exp.Equals(v))
 
 	act := Foo{}
-	err = Unmarshal(v, &act, ms)
+	err = Unmarshal(v, &act)
 	assert.NoError(err)
 	assert.Equal(act, f)
 
