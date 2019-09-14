@@ -1,8 +1,6 @@
 package db
 
-import (
-	"github.com/aboodman/replicant/util/chk"
-)
+import "fmt"
 
 // Replays the provided transaction against its basis and returns the resulting commit.
 // Callers can determine if a commit is valid by comparing the replayed version to the original.
@@ -31,6 +29,5 @@ func validate(db *DB, commit Commit) (replayed Commit, err error) {
 	// - reject: clients aren't allowed to create reject commits, only the server, so forks should never contain rejects
 	// - genesis: the genesis commit should never be in a fork
 
-	chk.Fail("Asked to validate unexpected commit type: %v", commit.Type())
-	return Commit{}, nil
+	return Commit{}, fmt.Errorf("Invalid commit type: %v", commit.Type())
 }
