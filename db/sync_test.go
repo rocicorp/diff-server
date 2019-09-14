@@ -102,3 +102,5 @@ func TestSyncFastForward(t *testing.T) {
 	assert.Equal(c2.Original.Hash(), client.head.Original.Hash(), diff.Diff(c2.Original, client.head.Original))
 	assert.Equal(c2.Original.Hash(), server.head.Original.Hash(), diff.Diff(c2.Original, server.head.Original))
 }
+
+// TODO: add a test for syncing a commit that is rejected and continuing

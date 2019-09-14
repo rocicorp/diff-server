@@ -62,14 +62,14 @@ func rebase(db *DB, onto types.Ref, date datetime.DateTime, commit Commit, forkP
 			types.NewRef(newBasis.Original), // basis
 			db.origin,
 			date,
-			types.NewRef(commit.Original),   // subject
-			types.NewRef(replayed.Original), // expected
+			types.NewRef(commit.Original),         // subject
+			db.noms.WriteValue(replayed.Original), // expected
 			"",
 			newBasis.Value.Code, // since the commit was rejected, any code and data changes it made are dropped
 			newBasis.Value.Data)
 
 		// Print out a scary warning to the log.
-		fmt.Fprintf(os.Stderr, "ERROR: Detected non-deterministic commit %s, diff: %s - Created reject commit: %s",
+		fmt.Fprintf(os.Stderr, "ERROR: Detected non-deterministic commit %s, diff: %sCreated reject commit: %s\n",
 			commit.Original.Hash(),
 			diff.Diff(commit.Original, replayed.Original),
 			rj.Original.Hash())
