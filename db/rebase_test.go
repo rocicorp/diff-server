@@ -26,12 +26,6 @@ func TestRebase(t *testing.T) {
 		return r.List()
 	}
 
-	data := func(items ...string) types.Map {
-		r := types.NewMap(noms).Edit()
-		r.Set(types.String("foo"), list(items...))
-		return r.Map()
-	}
-
 	write := func(v types.Value) types.Ref {
 		return noms.WriteValue(v)
 	}
@@ -40,68 +34,113 @@ func TestRebase(t *testing.T) {
 		if c1.Original.Equals(c2.Original) {
 			return
 		}
+		fmt.Println(c1.Original.Hash(), c2.Original.Hash())
 		assert.Fail("Commits are unequal", "expected: %s, actual: %s, diff: %s", c1.Original.Hash(), c2.Original.Hash(), diff.Diff(c1.Original, c2.Original))
 	}
 
+	g := db.head
 	epoch := datetime.DateTime{}
-	b := types.NewBlob(noms, strings.NewReader("function log(k, v) { var val = db.get(k) || []; val.push(v); db.put(k, val); }"))
-	err := db.PutBundle(b)
-	br := types.NewRef(b)
+	bundle := types.NewBlob(noms, strings.NewReader("function log(k, v) { var val = db.get(k) || []; val.push(v); db.put(k, val); }"))
+	err := db.PutBundle(bundle)
 	assert.NoError(err)
-	gCommit := db.head.Ref()
+	bundleRef := types.NewRef(bundle)
 
-	// nop
-	// onto: g - a
-	// head: g - a - b
-	// rslt: g - a - b
-	_, err = db.Exec("log", list("foo", "bar"))
-	assert.NoError(err)
-	aCommit := db.head
-	aCommitRef := aCommit.Ref()
-	bCommit := makeTx(noms, db.head.Ref(), "test", epoch, br, "log", list("foo", "baz"), br, write(data("bar", "baz")))
-	write(bCommit.Original)
-	actual, err := rebase(db, db.head.Ref(), epoch, bCommit, types.Ref{})
-	assert.NoError(err)
-	assertEqual(bCommit, actual)
+	tx := func(basis Commit, arg string, data string) Commit {
+		dataSlice := strings.Split(data, ",")
+		foo := list(dataSlice...)
+		r := makeTx(
+			noms,
+			basis.Ref(),
+			"test", // origin
+			epoch,
+			bundleRef,  // bundle
+			"log",  // function
+			list("foo", arg),  // args
+			basis.Value.Code,  // result bundle
+			write(types.NewMap(noms, types.String("foo"), foo)))  // result data
+		write(r.Original)
+		return r
+	}
+
+	ro := func(basis, subject Commit, data string) Commit {
+		dataSlice := strings.Split(data, ",")
+		foo := list(dataSlice...)
+		r := makeReorder(
+			noms,
+			basis.Ref(),
+			"test",
+			epoch,
+			subject.Ref(),
+			basis.Value.Code,
+			write(types.NewMap(noms, types.String("foo"), foo)))  // result data
+		write(r.Original)
+		return r
+	}
+
+	rj := func(basis, subject Commit, data string) Commit {
+		dataSlice := strings.Split(data, ",")
+		foo := list(dataSlice...)
+		r := makeReject(
+			noms,
+			basis.Ref(),
+			"test",
+			epoch,
+			subject.Ref(),
+			"",
+			basis.Value.Code,
+			write(types.NewMap(noms, types.String("foo"), foo)))  // result data
+		write(r.Original)
+		return r
+	}
+
+	test := func(onto, head, expected Commit, expectedError string) {
+		noms.Flush()
+		actual, err := rebase(db, onto.Ref(), epoch, head, types.Ref{})
+		if expectedError != "" {
+			assert.EqualError(err, expectedError)
+			return
+		}
+		assert.NoError(err)
+		write(actual.Original)
+		noms.Flush()
+		assertEqual(expected, actual)
+	}
+
+	// dest ff
+	// onto: g
+	// head: g - a
+	// rslt: g - a
+	a := tx(g, "a", "a")
+	test(g, a, a, "")
 
 	// https://github.com/aboodman/replicant/issues/68
-	// same as nop, except where there's also a 'local' branch whose head is > onto
-	// local: g - a - b
-	// onto:  g - a
-	// head:  g - a - b
-	// rslt:  g - a - b
-	_, err = noms.SetHead(noms.GetDataset(LOCAL_DATASET), bCommit.Ref())
+	// same as dest ff, except where there's also a 'local' branch whose head is > onto
+	// local: g - a
+	// onto:  g
+	// head:  g - a
+	// rslt:  g - a
+	a = tx(g, "a", "a")
+	_, err = noms.SetHead(noms.GetDataset(LOCAL_DATASET), a.Ref())
 	assert.NoError(err)
 	db.Reload()
-	actual, err = rebase(db, aCommit.Ref(), epoch, bCommit, types.Ref{})
-	assert.NoError(err)
-	assertEqual(bCommit, actual)
+	test(g, a, a, "")
 
-	// ff
-	// onto: g - a - b
-	// head: g - a
-	// rslt: g - a - b
-	_, err = noms.SetHead(noms.GetDataset(LOCAL_DATASET), bCommit.Ref())
-	assert.NoError(err)
-	db.Reload()
-	actual, err = rebase(db, db.head.Ref(), epoch, aCommit, types.Ref{})
-	assert.Nil(err)
-	assertEqual(bCommit, actual)
+	// source ff
+	// onto: g - a
+	// head: g
+	// rslt: g - a
+	a = tx(g, "a", "a")
+	test(a, g, a, "")
 
 	// simple reorder
 	// onto: g - a
 	// head: g - b
 	// rslt: g - a - ro(b)
 	//         \ b /
-	_, err = noms.SetHead(noms.GetDataset(LOCAL_DATASET), aCommitRef)
-	assert.NoError(err)
-	db.Reload()
-	bCommit = makeTx(noms, gCommit, "test", epoch, br, "log", list("foo", "baz"), br, write(data("baz")))
-	expected := makeReorder(noms, db.head.Ref(), "test", epoch, write(bCommit.Original), br, write(data("bar", "baz")))
-	noms.WriteValue(expected.Original)
-	actual, err = rebase(db, db.head.Ref(), epoch, bCommit, types.Ref{})
-	assert.NoError(err)
-	assertEqual(expected, actual)
+	a = tx(g, "a", "a")
+	b := tx(g, "b", "b")
+	expected := ro(a, b, "a,b")
+	test(a, b, expected, "")
 
 	// chained reorder
 	// onto: g - a
@@ -109,18 +148,12 @@ func TestRebase(t *testing.T) {
 	// rslt: g - a - ro(b) - ro(c)
 	//         \ b /         /
 	//            \ ------- c
-	_, err = noms.SetHead(noms.GetDataset(LOCAL_DATASET), aCommitRef)
-	assert.NoError(err)
-	db.Reload()
-	cCommit := makeTx(noms, bCommit.Ref(), "test", epoch, br, "log", list("foo", "quux"), br, write(data("baz", "quux")))
-	noms.WriteValue(cCommit.Original)
-	bReorder := makeReorder(noms, db.head.Ref(), "test", epoch, write(bCommit.Original), br, write(data("bar", "baz")))
-	noms.WriteValue(bReorder.Original)
-	cReorder := makeReorder(noms, bReorder.Ref(), "test", epoch, cCommit.Ref(), br, write(data("bar", "baz", "quux")))
-	noms.WriteValue(cReorder.Original)
-	actual, err = rebase(db, db.head.Ref(), epoch, cCommit, types.Ref{})
-	assert.NoError(err)
-	assertEqual(cReorder, actual)
+	a = tx(g, "a", "a")
+	b = tx(g, "b", "b")
+	c := tx(b, "c", "b,c")
+	rob := ro(a, b, "a,b")
+	roc := ro(rob, c, "a,b,c")
+	test(a, c, roc, "")
 
 	// re-reorder
 	// onto: g - a - b
@@ -129,35 +162,20 @@ func TestRebase(t *testing.T) {
 	// rslt: g - a -  b  -  ro(ro(c))
 	//         \    \ ro(c) /
 	//          \  c  /
-	_, err = noms.SetHead(noms.GetDataset(LOCAL_DATASET), aCommitRef)
-	assert.NoError(err)
-	db.Reload()
-	_, err = db.Exec("log", list("foo", "baz"))
-	assert.NoError(err)
-	bCommit = db.head
-	cCommit = makeTx(noms, gCommit, "test", epoch, br, "log", list("foo", "quux"), br, write(data("quux")))
-	noms.WriteValue(cCommit.Original)
-	cReorder = makeReorder(noms, aCommit.Ref(), "test", epoch, cCommit.Ref(), br, write(data("bar", "quux")))
-	noms.WriteValue(cReorder.Original)
-	cReReorder := makeReorder(noms, bCommit.Ref(), "test", epoch, cReorder.Ref(), br, write(data("bar", "baz", "quux")))
-	noms.WriteValue(cReReorder.Original)
-	actual, err = rebase(db, bCommit.Ref(), epoch, cReorder, types.Ref{})
-	assert.NoError(err)
-	assertEqual(cReReorder, actual)
+	a = tx(g, "a", "a")
+	b = tx(a, "b", "a,b")
+	c = tx(g, "c", "c")
+	roc = ro(a, c, "a,c")
+	expected = ro(b, roc, "a,b,c")
+	test(b, roc, expected, "")
 
 	// reject unsupported
-	// head: g - a
-	// onto: g ---- rj(b)
+	// onto: g - a
+	// head: g ---- rj(b)
 	//         \ b /
 	// rslt: error: can't rebase reject commits
-	_, err = noms.SetHead(noms.GetDataset(LOCAL_DATASET), aCommitRef)
-	assert.NoError(err)
-	db.Reload()
-	bCommit = makeTx(noms, gCommit, "test", epoch, br, "log", list("foo", "baz"), br, write(data("baz")))
-	write(bCommit.Original)
-	bRjCommit := makeReject(noms, gCommit, "test", epoch, bCommit.Ref(), "r1", br, write(data()))
-	write(bRjCommit.Original)
-	actual, err = rebase(db, aCommit.Ref(), epoch, bRjCommit, types.Ref{})
-	assert.Error(err)
-	assert.True(strings.HasPrefix(err.Error(), "Cannot rebase commit of type CommitTypeReject:"))
+	a = tx(g, "a", "a")
+	b = tx(a, "b", "b")
+	rjb := rj(g, b, "")
+	test(a, rjb, Commit{}, "unsupported commit type: CommitTypeReject")
 }
