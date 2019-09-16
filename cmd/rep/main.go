@@ -77,6 +77,11 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 	getBundle(bundle, &rdb, out)
 	putBundle(bundle, &rdb, sp, in)
 
+	if len(args) == 0 {
+		app.Usage(args)
+		return
+	}
+
 	_, err := app.Parse(args)
 	if err != nil {
 		fmt.Fprintln(errs, err.Error())
