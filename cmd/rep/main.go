@@ -38,7 +38,7 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 	app.UsageWriter(errs)
 	app.Terminate(exit)
 
-	sp := kp.DatabaseSpec(app.Flag("db", "Database to connect to. See https://github.com/attic-labs/noms/blob/master/doc/spelling.md#spelling-databases.").Required().PlaceHolder("/path/to/db"))
+	sp := kp.DatabaseSpec(app.Flag("db", "The database to connect to. Both local and remote databases are supported. For local databases, specify a directory path to store the database in. For remote databases, specify the http(s) URL to the database (usually https://replicate.to/serve/<mydb>).").Required().PlaceHolder("/path/to/db"))
 	origin := app.Flag("origin", "The unique name of the client to use as the origin of any write transactions.").Default("cli").String()
 	tf := app.Flag("trace", "Name of a file to write a trace to").OpenFile(os.O_RDWR|os.O_CREATE, 0644)
 
