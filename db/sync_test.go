@@ -103,4 +103,41 @@ func TestSyncFastForward(t *testing.T) {
 	assert.Equal(c2.Original.Hash(), server.head.Original.Hash(), diff.Diff(c2.Original, server.head.Original))
 }
 
-// TODO: add a test for syncing a commit that is rejected and continuing
+func TestSyncRejectAndContinue(t *testing.T) {
+	defer time.SetFake()()
+	assert := assert.New(t)
+
+	client, dir := LoadTempDB(assert)
+	fmt.Println("client", dir)
+
+	b := types.NewBlob(client.noms,
+		strings.NewReader(`function write(v) { db.put("foo", v); } function read() { return db.get("foo"); }`))
+	err := client.PutBundle(b)
+	assert.NoError(err)
+
+	// Purposely insert an incorrect transaction
+	// (the value should be foo/bar not foo/baz per the arguments)
+	badCommit := makeTx(client.noms, client.head.Ref(), client.origin, time.DateTime(), types.NewRef(b), "write",
+		types.NewList(client.noms, types.String("bar")), types.NewRef(b),
+		client.noms.WriteValue(types.NewMap(client.noms, types.String("foo"), types.String("baz"))))
+	client.noms.WriteValue(badCommit.Original)
+	_, err = client.noms.SetHead(client.noms.GetDataset(LOCAL_DATASET), badCommit.Ref())
+	assert.NoError(err)
+	err = client.Reload()
+	assert.NoError(err)
+
+	server, dir := LoadTempDB(assert)
+	fmt.Println("server", dir)
+
+	sp, err := spec.ForDatabase(dir)
+	assert.NoError(err)
+	err = client.Sync(sp)
+	assert.NoError(err)
+	err = server.Reload()
+	assert.NoError(err)
+
+	assert.Equal(CommitType(CommitTypeReject), client.head.Type())
+	target, err := client.head.TargetCommit(client.noms)
+	assert.NoError(err)
+	assert.True(target.Original.Equals(badCommit.Original))
+}
