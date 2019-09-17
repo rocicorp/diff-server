@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 
@@ -196,4 +197,24 @@ func TestDrop(t *testing.T) {
 		ds := noms.GetDataset(db.LOCAL_DATASET)
 		assert.Equal(!t.deleted, ds.HasHead())
 	}
+}
+
+func TestServe(t *testing.T) {
+	assert := assert.New(t)
+	_, dir := db.LoadTempDB(assert)
+	args := append([]string{"--db=" + dir, "serve", "--port=8674"})
+	go impl(args, strings.NewReader(""), os.Stdout, os.Stderr, func(_ int) {})
+
+	sp, err := spec.ForDatabase("http://localhost:8674")
+	assert.NoError(err)
+	d, err := db.New(sp.GetDatabase(), "test")
+	assert.NoError(err)
+
+	err = d.PutBundle(types.NewBlob(d.Noms(), strings.NewReader("function setFoo(val) { db.put('foo', val); }")))
+	assert.NoError(err)
+	_, err = d.Exec("setFoo", types.NewList(d.Noms(), types.String("bar")))
+	assert.NoError(err)
+	v, err := d.Get("foo")
+	assert.NoError(err)
+	assert.Equal("bar", string(v.(types.String)))
 }

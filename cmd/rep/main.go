@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"runtime/trace"
 	"strconv"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/aboodman/replicant/db"
 	execpkg "github.com/aboodman/replicant/exec"
+	servepkg "github.com/aboodman/replicant/serve"
 	"github.com/aboodman/replicant/util/kp"
 )
 
@@ -71,6 +73,7 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 	del(app, &rdb, sp, out)
 	exec(app, &rdb, sp, out)
 	sync(app, &rdb, sp)
+	serve(app, &rdb, sp)
 	drop(app, sp, in, out)
 
 	bundle := app.Command("bundle", "Manage the currently registered bundle.")
@@ -234,6 +237,21 @@ func sync(parent *kingpin.Application, db *db.DB, sp *spec.Spec) {
 	kc.Action(func(_ *kingpin.ParseContext) error {
 		// TODO: progress
 		return db.Sync(*remoteSpec)
+	})
+}
+
+func serve(parent *kingpin.Application, db *db.DB, sp *spec.Spec) {
+	kc := parent.Command("serve", "Starts a local Replicant server")
+	port := kc.Flag("port", "The port to run on").Default("7001").Int()
+	kc.Action(func(_ *kingpin.ParseContext) error {
+		ps := fmt.Sprintf(":%d", *port)
+		fmt.Printf("Listening on %s...\n", ps)
+		s, err := servepkg.NewServer(sp.NewChunkStore(), "")
+		if err != nil {
+			return err
+		}
+		http.Handle("/", s)
+		return http.ListenAndServe(fmt.Sprintf(":%d", *port), nil)
 	})
 }
 

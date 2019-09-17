@@ -5,10 +5,8 @@ package serve
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
-	"regexp"
 	"runtime/debug"
 	"strings"
 	"sync"
@@ -17,33 +15,34 @@ import (
 	"github.com/attic-labs/noms/go/datas"
 	"github.com/attic-labs/noms/go/hash"
 	"github.com/attic-labs/noms/go/marshal"
-	"github.com/attic-labs/noms/go/nbs"
-	"github.com/attic-labs/noms/go/spec"
 	"github.com/attic-labs/noms/go/util/verbose"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/julienschmidt/httprouter"
 
 	"github.com/aboodman/replicant/db"
-	"github.com/aboodman/replicant/util/chk"
 )
 
-const (
-	aws_access_key_id     = "REPLICANT_AWS_ACCESS_KEY_ID"
-	aws_secret_access_key = "REPLICANT_AWS_SECRET_ACCESS_KEY"
-	aws_region            = "us-west-2"
-)
+// Server is a single Replicant instance. The Replicant service runs many such instances.
+type Server struct {
+	router *httprouter.Router
+	db     *db.DB
+	mu     sync.Mutex
+}
 
-var (
-	servers = map[string]*server{}
-	sess    *session.Session
-	mu      sync.Mutex
-)
+func NewServer(cs chunks.ChunkStore, urlPrefix string) (*Server, error) {
+	router := datas.Router(cs, urlPrefix)
+	noms := datas.NewDatabase(cs)
+	db, err := db.New(noms, "server")
+	if err != nil {
+		return nil, err
+	}
+	s := &Server{router: router, db: db}
+	s.router.POST(urlPrefix+"/sync", func(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+		s.sync(w, req)
+	})
+	return s, nil
+}
 
-func Handler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	verbose.SetVerbose(true)
 	fmt.Println("Handling request: ", r.URL.String())
 
@@ -56,78 +55,10 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	re, err := regexp.Compile("^/serve/([^/]+)/(.*)")
-	chk.NoError(err)
-
-	parts := re.FindStringSubmatch(r.URL.Path)
-	if parts == nil {
-		clientError(w, "invalid database name")
-		return
-	}
-	dbName := parts[1]
-	s, err := getServer(dbName)
-	if err != nil {
-		serverError(w, err)
-	}
 	s.router.ServeHTTP(w, r)
 }
 
-func getServer(name string) (*server, error) {
-	mu.Lock()
-	defer mu.Unlock()
-
-	s := servers[name]
-	if s == nil {
-		var cs chunks.ChunkStore
-		if os.Getenv(aws_access_key_id) != "" {
-			if sess == nil {
-				sess = session.Must(session.NewSession(
-					aws.NewConfig().WithRegion(aws_region).WithCredentials(
-						credentials.NewStaticCredentials(
-							os.Getenv(aws_access_key_id),
-							os.Getenv(aws_secret_access_key), ""))))
-			}
-			const table = "replicant"
-			const bucket = "aa-replicant2"
-			cs = nbs.NewAWSStore(table, name, bucket, s3.New(sess), dynamodb.New(sess), 1<<28)
-			fmt.Printf("Found AWS credentials in environment. Running against DynamoDB table: %s, bucket: %s, namespace: %s\n", table, bucket, name)
-		} else {
-			td, err := ioutil.TempDir("", "")
-			if err != nil {
-				return nil, err
-			}
-			fmt.Println("No AWS credentials found in environment")
-			fmt.Println("Running on local disk at: ", td)
-			sp, err := spec.ForDatabase(td)
-			if err != nil {
-				return nil, err
-			}
-			cs = sp.NewChunkStore()
-		}
-		router := datas.Router(cs, "/serve/"+name)
-		noms := datas.NewDatabase(cs)
-		db, err := db.New(noms, "server")
-		if err != nil {
-			return nil, err
-		}
-		s = &server{router: router, db: db}
-		servers[name] = s
-
-		s.router.POST("/serve/"+name+"/sync", func(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
-			s.sync(w, req, ps)
-		})
-	}
-
-	return s, nil
-}
-
-type server struct {
-	router *httprouter.Router
-	db     *db.DB
-	mu     sync.Mutex
-}
-
-func (s *server) sync(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+func (s *Server) sync(w http.ResponseWriter, req *http.Request) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

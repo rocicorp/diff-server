@@ -2,8 +2,8 @@ package serve
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/http"
-	"os"
 	"strings"
 	"testing"
 
@@ -17,11 +17,14 @@ import (
 func TestBasics(t *testing.T) {
 	assert := assert.New(t)
 
-	assert.NoError(os.Setenv(aws_access_key_id, ""))
-	assert.NoError(os.Setenv(aws_secret_access_key, ""))
-
 	go func() {
-		http.HandleFunc("/", Handler)
+		serverDir, err := ioutil.TempDir("", "")
+		assert.NoError(err)
+		sp, err := spec.ForDatabase(serverDir)
+		assert.NoError(err)
+		s, err := NewServer(sp.NewChunkStore(), "")
+		assert.NoError(err)
+		http.Handle("/", s)
 		assert.NoError(http.ListenAndServe(":8674", nil))
 	}()
 
@@ -33,7 +36,7 @@ func TestBasics(t *testing.T) {
 	_, err = d.Exec("push", types.NewList(d.Noms(), types.String("items"), types.String("bar")))
 	assert.NoError(err)
 
-	sp, err := spec.ForDatabase("http://localhost:8674/serve/foo")
+	sp, err := spec.ForDatabase("http://localhost:8674")
 	assert.NoError(err)
 	err = d.Sync(sp)
 	assert.NoError(err)
