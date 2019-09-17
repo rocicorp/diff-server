@@ -102,7 +102,8 @@ func TestMarshal(t *testing.T) {
 					"origin":  types.String("o1"),
 					"date":    marshal.MustMarshal(noms, d),
 					"subject": types.NewRef(tx.Original),
-					"reason": types.NewStruct("Fiat", types.StructData{
+					"reason":  types.String("unused"),
+					"reason2": types.NewStruct("Fiat", types.StructData{
 						"detail": types.String("didn't feel like it"),
 					}),
 				}),
@@ -120,7 +121,8 @@ func TestMarshal(t *testing.T) {
 					"origin":  types.String("o1"),
 					"date":    marshal.MustMarshal(noms, d),
 					"subject": types.NewRef(tx.Original),
-					"reason": types.NewStruct("Nondeterm", types.StructData{
+					"reason":  types.String("unused"),
+					"reason2": types.NewStruct("Nondeterm", types.StructData{
 						"expected": noms.WriteValue(types.String("foo")),
 					}),
 				}),

@@ -43,11 +43,13 @@ Struct Commit {
 			secSinceEpoch: Number,
 		},
 		subject: Ref<Cycle<Commit>>,
-		reason: Struct Nondeterm {
+		reason2: Struct Nondeterm {
 			expected: Ref<Cycle<Commit>>,
 		} | Struct Fiat {
 			detail: String,
 		},
+
+		reason: Value, // deprecated
 	},
 	value: Struct {
 		code: Ref<Blob>,
@@ -110,7 +112,18 @@ type Reject struct {
 	Origin  string
 	Date    datetime.DateTime
 	Subject types.Ref
-	Reason  Reason
+	Reason  Reason `noms:"reason2"`
+}
+
+func (r Reject) MarshalNoms(vrw types.ValueReadWriter) (val types.Value, err error) {
+	type internal Reject
+	vs := marshal.MustMarshal(vrw, internal(r)).(types.Struct)
+
+	// Must set legacy "reason" even though it isn't used for backward compat with clients that validated that.
+	vs = vs.Set("reason", types.String("unused"))
+	vs = vs.SetName("Reject")
+
+	return vs, nil
 }
 
 type Meta struct {
