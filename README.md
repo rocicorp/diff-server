@@ -4,7 +4,7 @@ Choose your adventure:
 
 * Quickstarts:
   * [Flutter](./doc/quickstart-flutter.md)
-  * React Native (soon)
+  * React Native (in progress!)
   * iOS/Swift (soon)
   * iOS/Objective-C (soon)
   * Android/Kotlin (soon)
