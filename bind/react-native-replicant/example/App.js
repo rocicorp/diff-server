@@ -16,11 +16,10 @@ export default class App extends Component<{}> {
   state = {
     root: '',
   };
-  componentDidMount() {
-    Replicant.dispatch('getRoot', '{}', (result) => {
-      this.setState({
-        root: result,
-      });
+  async componentDidMount() {
+    const result = await Replicant.dispatch('getRoot', '{}');
+    this.setState({
+      root: result,
     });
   }
   render() {
