@@ -41,11 +41,19 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 	app.Terminate(exit)
 
 	sp := kp.DatabaseSpec(app.Flag("db", "The database to connect to. Both local and remote databases are supported. For local databases, specify a directory path to store the database in. For remote databases, specify the http(s) URL to the database (usually https://replicate.to/serve/<mydb>).").Required().PlaceHolder("/path/to/db"))
-	origin := app.Flag("origin", "The unique name of the client to use as the origin of any write transactions.").Default("cli").String()
+	origin := app.Flag("origin", "The unique name of the client to use as the origin of any write transactions Defaults to 'server' for the 'serve' subcommand and 'cli' otherwise.").String()
 	tf := app.Flag("trace", "Name of a file to write a trace to").OpenFile(os.O_RDWR|os.O_CREATE, 0644)
 
 	var rdb db.DB
-	app.Action(func(_ *kingpin.ParseContext) error {
+	app.Action(func(pc *kingpin.ParseContext) error {
+		if *origin == "" {
+			if pc.SelectedCommand.Model().Name == "serve" {
+				*origin = "server"
+			} else {
+				*origin = "cli"
+			}
+		}
+
 		if *tf != nil {
 			err := trace.Start(*tf)
 			if err != nil {
@@ -73,7 +81,7 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 	del(app, &rdb, sp, out)
 	exec(app, &rdb, sp, out)
 	sync(app, &rdb, sp)
-	serve(app, &rdb, sp)
+	serve(app, sp, origin)
 	drop(app, sp, in, out)
 
 	bundle := app.Command("bundle", "Manage the currently registered bundle.")
@@ -240,13 +248,13 @@ func sync(parent *kingpin.Application, db *db.DB, sp *spec.Spec) {
 	})
 }
 
-func serve(parent *kingpin.Application, db *db.DB, sp *spec.Spec) {
-	kc := parent.Command("serve", "Starts a local Replicant server")
+func serve(parent *kingpin.Application, sp *spec.Spec, origin *string) {
+	kc := parent.Command("serve", "Starts a local Replicant server.")
 	port := kc.Flag("port", "The port to run on").Default("7001").Int()
 	kc.Action(func(_ *kingpin.ParseContext) error {
 		ps := fmt.Sprintf(":%d", *port)
 		fmt.Printf("Listening on %s...\n", ps)
-		s, err := servepkg.NewServer(sp.NewChunkStore(), "")
+		s, err := servepkg.NewServer(sp.NewChunkStore(), "", *origin)
 		if err != nil {
 			return err
 		}

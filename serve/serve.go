@@ -3,6 +3,7 @@
 package serve
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
@@ -18,6 +19,7 @@ import (
 	"github.com/attic-labs/noms/go/util/verbose"
 	"github.com/julienschmidt/httprouter"
 
+	"github.com/aboodman/replicant/api"
 	"github.com/aboodman/replicant/db"
 )
 
@@ -26,16 +28,40 @@ type Server struct {
 	router *httprouter.Router
 	db     *db.DB
 	mu     sync.Mutex
+	api    *api.API
 }
 
-func NewServer(cs chunks.ChunkStore, urlPrefix string) (*Server, error) {
+func NewServer(cs chunks.ChunkStore, urlPrefix, origin string) (*Server, error) {
 	router := datas.Router(cs, urlPrefix)
 	noms := datas.NewDatabase(cs)
-	db, err := db.New(noms, "server")
+	db, err := db.New(noms, origin)
 	if err != nil {
 		return nil, err
 	}
-	s := &Server{router: router, db: db}
+	s := &Server{router: router, db: db, api: api.New(db)}
+	for _, method := range []string{"getRoot", "has", "get", "scan", "put", "del", "getBundle", "putBundle", "exec"} {
+		m := method
+		s.router.POST(fmt.Sprintf("%s/%s", urlPrefix, method), func(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+			body := bytes.Buffer{}
+			_, err := io.Copy(&body, req.Body)
+			if err != nil {
+				serverError(w, err)
+				return
+			}
+			resp, err := s.api.Dispatch(m, body.Bytes())
+			if err != nil {
+				// TODO: this might not be a client (4xx) error
+				// Need to change API to be able to indicate user vs server error
+				clientError(w, err.Error()+"\n")
+			}
+			_, err = io.Copy(w, bytes.NewReader(resp))
+			if err != nil {
+				serverError(w, err)
+			}
+
+			w.Write([]byte{'\n'})
+		})
+	}
 	s.router.POST(urlPrefix+"/sync", func(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 		s.sync(w, req)
 	})

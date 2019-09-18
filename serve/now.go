@@ -73,7 +73,7 @@ func getServer(name string) (*Server, error) {
 	cs = nbs.NewAWSStore(table, name, bucket, s3.New(sess), dynamodb.New(sess), 1<<28)
 	fmt.Printf("Found AWS credentials in environment. Running against DynamoDB table: %s, bucket: %s, namespace: %s\n", table, bucket, name)
 	var err error
-	s, err = NewServer(cs, "/serve/"+name)
+	s, err = NewServer(cs, "/serve/"+name, "server")
 	servers[name] = s
 	if err != nil {
 		return nil, err
