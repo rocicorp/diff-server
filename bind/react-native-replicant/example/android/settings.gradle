@@ -1,0 +1,5 @@
+rootProject.name = 'example'
+include ':react-native-replicant'
+project(':react-native-replicant').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-replicant/android')
+
+include ':app'
