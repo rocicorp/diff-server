@@ -16,16 +16,34 @@ RCT_EXPORT_METHOD(dispatch:(NSString *)method arguments:(nonnull NSString *)argu
     return;
   }
   
-  NSError *err;
   NSLog(@"Replicant: Calling: %@ with arguments: %@", method, arguments);
-  NSData* res = [conn dispatch:method
-                          data:[arguments dataUsingEncoding:NSUTF8StringEncoding]
-                         error:&err];
+  __block NSError *err;
+  if ([method isEqualToString:@"sync"]) {
+    dispatch_async(dispatch_get_global_queue( DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(void){
+      NSData* res = [self request:method args:arguments error:&err];
+      dispatch_async(dispatch_get_main_queue(), ^(void){
+        [self respond:method err:err result:res resolve:resolve reject:reject];
+      });
+    });
+    return;
+  }
+  
+  NSData *res = [self request:method args:arguments error:&err];
+  [self respond:method err:err result:res resolve:resolve reject:reject];
+}
+
+- (NSData*)request:(NSString*)method args:(NSString*)args error:(NSError**)error {
+  return [conn dispatch:method
+                   data:[args dataUsingEncoding:NSUTF8StringEncoding]
+                  error:error];
+}
+
+- (void)respond:(NSString*)method err:(NSError*)err result:(NSData*)result resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject {
   if (err != nil) {
     reject(@"Replicant", [NSString stringWithFormat:@"Error dispatching %@", method], err);
     return;
   }
-  resolve(@[[[NSString alloc] initWithData:res encoding:NSUTF8StringEncoding]]);
+  resolve(@[[[NSString alloc] initWithData:result encoding:NSUTF8StringEncoding]]);
 }
 
 - (void)ensureConnection {

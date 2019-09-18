@@ -9,7 +9,7 @@
  */
 
 import React, { Component } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View, Button } from 'react-native';
 import Replicant from 'react-native-replicant';
 
 export default class App extends Component<{}> {
@@ -22,11 +22,16 @@ export default class App extends Component<{}> {
       root: result,
     });
   }
+  async _handleSync() {
+    const result = await Replicant.dispatch('sync', JSON.stringify({remote: 'https://replicate.to/serve/react-native-test'}));
+    console.log('Sync result was', result);
+  }
   render() {
     return (
       <View style={styles.container}>
         <Text style={styles.welcome}>☆Replicant example☆</Text>
         <Text style={styles.instructions}>Current root: {this.state.root}</Text>
+        <Button onPress={this._handleSync} title="Sync"/>
       </View>
     );
   }
