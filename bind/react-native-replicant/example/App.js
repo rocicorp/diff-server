@@ -7,19 +7,20 @@
  *
  * https://github.com/facebook/react-native
  */
-
+ 
 import React, { Component } from 'react';
 import { Platform, StyleSheet, Text, View, Button } from 'react-native';
-import Replicant from 'react-native-replicant';
+import Replicant from './replicant.js';
 
 export default class App extends Component<{}> {
   state = {
     root: '',
   };
   async componentDidMount() {
-    const result = await Replicant.dispatch('getRoot', '{}');
+    this._replicant = new Replicant('https://replicate.to/serve/react-native-test');
+    const root = await this._replicant.root();
     this.setState({
-      root: result,
+      root,
     });
   }
   async _handleSync() {
