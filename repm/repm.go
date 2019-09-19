@@ -33,7 +33,6 @@ func Open(dir, origin, tmpDir string) (*Connection, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return &Connection{api: api.New(db), dir: dir, origin: origin, tmpDir: tmpDir}, nil
 }
 

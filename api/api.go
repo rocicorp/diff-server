@@ -25,7 +25,7 @@ type GetRootResponse struct {
 }
 
 type HasRequest struct {
-	Key string `json:"key"`
+	ID string `json:"id"`
 }
 
 type HasResponse struct {
@@ -33,12 +33,12 @@ type HasResponse struct {
 }
 
 type GetRequest struct {
-	Key string `json:"key"`
+	ID string `json:"id"`
 }
 
 type GetResponse struct {
-	Has  bool          `json:"has"`
-	Data *jsnoms.Value `json:"data,omitempty"`
+	Has   bool          `json:"has"`
+	Value *jsnoms.Value `json:"value,omitempty"`
 }
 
 type ScanRequest exec.ScanOptions
@@ -54,8 +54,8 @@ type ScanResponse struct {
 }
 
 type PutRequest struct {
-	Key  string       `json:"key"`
-	Data jsnoms.Value `json:"data"`
+	ID    string       `json:"id"`
+	Value jsnoms.Value `json:"value"`
 }
 
 type PutResponse struct {
@@ -63,7 +63,7 @@ type PutResponse struct {
 }
 
 type DelRequest struct {
-	Key string `json:"key"`
+	ID string `json:"id"`
 }
 
 type DelResponse struct {
@@ -160,7 +160,7 @@ func (api *API) dispatchHas(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	ok, err := api.db.Has(req.Key)
+	ok, err := api.db.Has(req.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +176,7 @@ func (api *API) dispatchGet(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	v, err := api.db.Get(req.Key)
+	v, err := api.db.Get(req.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +185,7 @@ func (api *API) dispatchGet(reqBytes []byte) ([]byte, error) {
 		res.Has = false
 	} else {
 		res.Has = true
-		res.Data = jsnoms.New(api.db.Noms(), v)
+		res.Value = jsnoms.New(api.db.Noms(), v)
 	}
 	return mustMarshal(res), nil
 }
@@ -205,16 +205,16 @@ func (api *API) dispatchScan(reqBytes []byte) ([]byte, error) {
 
 func (api *API) dispatchPut(reqBytes []byte) ([]byte, error) {
 	req := PutRequest{
-		Data: jsnoms.Make(api.db.Noms(), nil),
+		Value: jsnoms.Make(api.db.Noms(), nil),
 	}
 	err := json.Unmarshal(reqBytes, &req)
 	if err != nil {
 		return nil, err
 	}
-	if req.Data.Value == nil {
-		return nil, errors.New("data field is required")
+	if req.Value.Value == nil {
+		return nil, errors.New("value field is required")
 	}
-	err = api.db.Put(req.Key, req.Data.Value)
+	err = api.db.Put(req.ID, req.Value.Value)
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +232,7 @@ func (api *API) dispatchDel(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	ok, err := api.db.Del(req.Key)
+	ok, err := api.db.Del(req.ID)
 	if err != nil {
 		return nil, err
 	}

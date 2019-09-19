@@ -25,7 +25,7 @@ func TestBasics(t *testing.T) {
 
 	d, dir := db.LoadTempDB(assert)
 	fmt.Println("client test db", dir)
-	assert.NoError(d.PutBundle(types.NewBlob(d.Noms(), strings.NewReader(`function push(key, val) { list = db.get(key) || []; list.push(val); db.put(key, list); }`))))
+	assert.NoError(d.PutBundle(types.NewBlob(d.Noms(), strings.NewReader(`function push(id, val) { list = db.get(id) || []; list.push(val); db.put(id, list); }`))))
 	_, err := d.Exec("push", types.NewList(d.Noms(), types.String("items"), types.String("foo")))
 	assert.NoError(err)
 	_, err = d.Exec("push", types.NewList(d.Noms(), types.String("items"), types.String("bar")))
@@ -47,7 +47,7 @@ func TestAPI(t *testing.T) {
 	defer startTestServer(assert).Shutdown(context.Background())
 	defer time.SetFake()()
 
-	const code = `function add(key, d) { var v = db.get(key) || 0; v += d; db.put(key, v); return v; }`
+	const code = `function add(id, d) { var v = db.get(id) || 0; v += d; db.put(id, v); return v; }`
 	tc := []struct {
 		rpc              string
 		req              string
@@ -58,14 +58,14 @@ func TestAPI(t *testing.T) {
 		// We don't need to test everything here, just a smoke test that api tests via http are working!
 		// These hashes should line up with those in api_test.go.
 		{"getRoot", `{}`, `{"root":"klra597i7o2u52k222chv2lqeb13v5sd"}`, ""},
-		{"put", `{"key": "foo", "data": "bar"}`, `{"root":"3aktuu35stgss7djb5famn6u7iul32nv"}`, ""},
-		{"has", `{"key": "foo"}`, `{"has":true}`, ""},
-		{"get", `{"key": "foo"}`, `{"has":true,"data":"bar"}`, ""},
-		{"putBundle", fmt.Sprintf(`{"code": "%s"}`, code), `{"root":"mrbevq1sg25j8t86f60oq88nis40ud01"}`, ""},
+		{"put", `{"id": "foo", "value": "bar"}`, `{"root":"3aktuu35stgss7djb5famn6u7iul32nv"}`, ""},
+		{"has", `{"id": "foo"}`, `{"has":true}`, ""},
+		{"get", `{"id": "foo"}`, `{"has":true,"value":"bar"}`, ""},
+		{"putBundle", fmt.Sprintf(`{"code": "%s"}`, code), `{"root":"bicmkeg8tfbhcv7gu283lab120r4tc7c"}`, ""},
 		{"getBundle", `{}`, fmt.Sprintf(`{"code":"%s"}`, code), ""},
-		{"exec", `{"name": "add", "args": ["bar", 2]}`, `{"result":2,"root":"lchcgvko3ou4ar43lhs23r30os01o850"}`, ""},
-		{"get", `{"key": "bar"}`, `{"has":true,"data":2}`, ""},
-		{"put", `{"key": "foopa", "data": "doopa"}`, `{"root":"v075m8grpbm72rk31gbacf9one3q35ql"}`, ""},
+		{"exec", `{"name": "add", "args": ["bar", 2]}`, `{"result":2,"root":"mcvqlfeba8olg9o1vakmar6o8cbp76m4"}`, ""},
+		{"get", `{"id": "bar"}`, `{"has":true,"value":2}`, ""},
+		{"put", `{"id": "foopa", "value": "doopa"}`, `{"root":"bvb8b8o945cih7fvliq9s6n3pdd9l2qa"}`, ""},
 		{"scan", `{"prefix": "foo"}`, `[{"id":"foo","value":"bar"},{"id":"foopa","value":"doopa"}]`, ""},
 	}
 
