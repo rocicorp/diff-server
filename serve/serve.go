@@ -23,6 +23,10 @@ import (
 	"github.com/aboodman/replicant/db"
 )
 
+var (
+	commands = []string{"getRoot", "has", "get", "scan", "put", "del", "getBundle", "putBundle", "exec"}
+)
+
 // Server is a single Replicant instance. The Replicant service runs many such instances.
 type Server struct {
 	router *httprouter.Router
@@ -39,7 +43,7 @@ func NewServer(cs chunks.ChunkStore, urlPrefix, origin string) (*Server, error) 
 		return nil, err
 	}
 	s := &Server{router: router, db: db, api: api.New(db)}
-	for _, method := range []string{"getRoot", "has", "get", "scan", "put", "del", "getBundle", "putBundle", "exec"} {
+	for _, method := range commands {
 		m := method
 		s.router.POST(fmt.Sprintf("%s/%s", urlPrefix, method), func(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 			body := bytes.Buffer{}
