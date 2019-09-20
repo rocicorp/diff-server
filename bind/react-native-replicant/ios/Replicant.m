@@ -40,7 +40,7 @@ RCT_EXPORT_METHOD(dispatch:(NSString *)method arguments:(nonnull NSString *)argu
 
 - (void)respond:(NSString*)method err:(NSError*)err result:(NSData*)result resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject {
   if (err != nil) {
-    reject(@"Replicant", [NSString stringWithFormat:@"Error dispatching %@", method], err);
+    reject(@"Replicant", [NSString stringWithFormat:@"Error dispatching %@: %@", method, [err localizedDescription]], err);
     return;
   }
   resolve(@[[[NSString alloc] initWithData:result encoding:NSUTF8StringEncoding]]);

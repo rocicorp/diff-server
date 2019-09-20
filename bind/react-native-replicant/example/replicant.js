@@ -23,6 +23,9 @@ export default class Replicant {
   // Executes the named function with provided arguments from the current
   // bundle as an atomic transaction.
   async exec(functionName, args) {
+    if (args == null) {
+      args = [];
+    }
     return this._result(await this._checkChange(await this._invoke('exec', {'name': functionName, 'args': args})));
   }
 
@@ -61,7 +64,7 @@ export default class Replicant {
   }
 
   async _checkChange(result) {
-    var currentRoot = await _root;  // instantaneous except maybe first time
+    var currentRoot = await this._root;  // instantaneous except maybe first time
     if (result != null && result['root'] != null && result['root'] != currentRoot) {
       this._root = Promise.resolve(result['root']);
       this._fireOnChange();
@@ -75,8 +78,12 @@ export default class Replicant {
   }
 
   _fireOnChange() {
-    if (onChange != null) {
-      scheduleMicrotask(onChange);
+    if (this.onChange != null) {
+      try {
+        this.onChange();
+      } catch (e) {
+        console.error(e);
+      }
     }
   }
 };

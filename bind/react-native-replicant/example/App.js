@@ -11,6 +11,7 @@
 import React, { Component } from 'react';
 import { Platform, StyleSheet, Text, View, Button } from 'react-native';
 import Replicant from './replicant.js';
+import bundle from './bundle.js';
 
 export default class App extends Component<{}> {
   state = {
@@ -18,10 +19,19 @@ export default class App extends Component<{}> {
   };
   async componentDidMount() {
     this._replicant = new Replicant('https://replicate.to/serve/react-native-test');
+    await this._replicant.putBundle(bundle);
+
     const root = await this._replicant.root();
     this.setState({
       root,
     });
+
+    await this._replicant.exec('addTodo', ['1', 'Pickup Abby', 1, false]);
+    await this._replicant.exec('addTodo', ['1', 'Pickup Sam', 2, false]);
+    console.warn('all todos', await this._replicant.exec('getAllTodos'));
+
+    await this._replicant.exec('deleteAllTodos');
+    console.warn('after delete', await this._replicant.exec('getAllTodos'));
   }
   async _handleSync() {
     const result = await Replicant.dispatch('sync', JSON.stringify({remote: 'https://replicate.to/serve/react-native-test'}));
