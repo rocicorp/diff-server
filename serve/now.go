@@ -1,7 +1,7 @@
 package serve
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"regexp"
@@ -16,6 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 
 	"github.com/aboodman/replicant/util/chk"
+	rlog "github.com/aboodman/replicant/util/log"
 )
 
 const (
@@ -32,6 +33,8 @@ var (
 
 // Handler implements the Zeit Now entrypoint for our server.
 func Handler(w http.ResponseWriter, r *http.Request) {
+	rlog.Init(os.Stderr, rlog.Options{Prefix: true})
+
 	re, err := regexp.Compile("^/serve/([^/]+)/(.*)")
 	chk.NoError(err)
 
@@ -71,7 +74,7 @@ func getServer(name string) (*Server, error) {
 	const table = "replicant"
 	const bucket = "aa-replicant2"
 	cs = nbs.NewAWSStore(table, name, bucket, s3.New(sess), dynamodb.New(sess), 1<<28)
-	fmt.Printf("Found AWS credentials in environment. Running against DynamoDB table: %s, bucket: %s, namespace: %s\n", table, bucket, name)
+	log.Printf("Found AWS credentials in environment. Running against DynamoDB table: %s, bucket: %s, namespace: %s", table, bucket, name)
 	var err error
 	s, err = NewServer(cs, "/serve/"+name, "server")
 	servers[name] = s

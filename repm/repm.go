@@ -3,6 +3,7 @@ package repm
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"runtime/debug"
 
@@ -10,6 +11,7 @@ import (
 
 	"github.com/aboodman/replicant/api"
 	"github.com/aboodman/replicant/db"
+	rlog "github.com/aboodman/replicant/util/log"
 )
 
 type Connection struct {
@@ -20,11 +22,13 @@ type Connection struct {
 }
 
 func Open(dir, origin, tmpDir string) (*Connection, error) {
-	fmt.Printf("Opening Replicant database at: %s for origin: %s\n", dir, origin)
+	rlog.Init(os.Stderr, rlog.Options{Prefix: true})
+
+	log.Printf("Opening Replicant database at: %s for origin: %s", dir, origin)
 	if tmpDir != "" {
 		os.Setenv("TMPDIR", tmpDir)
 	}
-	fmt.Println("Using tempdir: ", os.TempDir())
+	log.Println("Using tempdir: ", os.TempDir())
 	sp, err := spec.ForDatabase(dir)
 	if err != nil {
 		return nil, err
@@ -45,7 +49,7 @@ func (conn *Connection) Dispatch(rpc string, data []byte) (ret []byte, err error
 			} else {
 				msg = fmt.Sprintf("%v", r)
 			}
-			fmt.Fprintf(os.Stderr, "Replicant panicked with: %s\n%s\n", msg, string(debug.Stack()))
+			log.Printf("Replicant panicked with: %s\n%s\n", msg, string(debug.Stack()))
 			ret = nil
 			err = fmt.Errorf("Replicant panicked with: %s - see stderr for more.", msg)
 		}

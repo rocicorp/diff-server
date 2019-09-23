@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 
@@ -29,7 +30,7 @@ func (db *DB) Sync(remote spec.Spec) error {
 	progress := make(chan datas.PullProgress)
 	go func() {
 		for p := range progress {
-			fmt.Println("pull progress", p)
+			log.Println("pull progress", p)
 		}
 	}()
 

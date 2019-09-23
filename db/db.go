@@ -5,6 +5,7 @@ package db
 import (
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 
@@ -202,7 +203,7 @@ func (db *DB) execImpl(basis types.Ref, bundle types.Blob, function string, args
 			cb := basisCommit.Bundle(db.noms)
 			nb := args.Get(uint64(0)).(types.Blob)
 			if cb.Equals(nb) {
-				fmt.Printf("Bundle %s already installed, skipping\n", cb.Hash())
+				log.Printf("Bundle %s already installed, skipping", cb.Hash())
 				break
 			}
 
@@ -217,14 +218,14 @@ func (db *DB) execImpl(basis types.Ref, bundle types.Blob, function string, args
 			}
 			shouldUpdate := func() bool {
 				if currentVersion == 0 && newVersion == 0 {
-					fmt.Printf("Replacing unversioned bundle %s with %s\n", cb.Hash(), nb.Hash())
+					log.Printf("Replacing unversioned bundle %s with %s", cb.Hash(), nb.Hash())
 					return true
 				}
 				if newVersion > currentVersion {
-					fmt.Printf("Upgrading bundle from %f to %f\n", currentVersion, newVersion)
+					log.Printf("Upgrading bundle from %f to %f", currentVersion, newVersion)
 					return true
 				}
-				fmt.Printf("Proposed bundle version %f not better than current version %f, skipping update\n", newVersion, currentVersion)
+				log.Printf("Proposed bundle version %f not better than current version %f, skipping update", newVersion, currentVersion)
 				return false
 			}
 			if shouldUpdate() {

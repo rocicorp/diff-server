@@ -6,8 +6,8 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
-	"os"
 	"runtime/debug"
 	"strings"
 	"sync"
@@ -74,13 +74,13 @@ func NewServer(cs chunks.ChunkStore, urlPrefix, origin string) (*Server, error) 
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	verbose.SetVerbose(true)
-	fmt.Println("Handling request: ", r.URL.String())
+	log.Println("Handling request: ", r.URL.String())
 
 	defer func() {
 		err := recover()
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprintf(os.Stderr, "handler panicked: %+v\n", err)
+			log.Printf("handler panicked: %+v\n", err)
 			debug.PrintStack()
 		}
 	}()
@@ -125,11 +125,11 @@ func (s *Server) sync(w http.ResponseWriter, req *http.Request) {
 
 func clientError(w http.ResponseWriter, msg string) {
 	w.WriteHeader(http.StatusBadRequest)
-	fmt.Println(http.StatusBadRequest, msg)
+	log.Println(http.StatusBadRequest, msg)
 	io.Copy(w, strings.NewReader(msg))
 }
 
 func serverError(w http.ResponseWriter, err error) {
 	w.WriteHeader(http.StatusInternalServerError)
-	fmt.Fprintln(os.Stderr, err.Error())
+	log.Println(err.Error())
 }

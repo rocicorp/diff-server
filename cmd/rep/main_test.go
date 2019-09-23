@@ -31,7 +31,7 @@ func TestCommands(t *testing.T) {
 			"bundle put",
 			0,
 			"",
-			"",
+			"Replacing unversioned bundle 2eulo8v8rihcjm0e93brv14dopakkder with a2gj33rbobbebq5r89c2vmr8k2so3mo0\n",
 		},
 		{
 			"bundle get good",

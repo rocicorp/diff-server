@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"runtime/trace"
@@ -19,6 +20,7 @@ import (
 	execpkg "github.com/aboodman/replicant/exec"
 	servepkg "github.com/aboodman/replicant/serve"
 	"github.com/aboodman/replicant/util/kp"
+	rlog "github.com/aboodman/replicant/util/log"
 )
 
 const (
@@ -46,6 +48,7 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 
 	var rdb db.DB
 	app.Action(func(pc *kingpin.ParseContext) error {
+		// Default origin
 		if *origin == "" {
 			if pc.SelectedCommand.Model().Name == "serve" {
 				*origin = "server"
@@ -53,6 +56,13 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 				*origin = "cli"
 			}
 		}
+
+		// Init logging
+		logOptions := rlog.Options{}
+		if pc.SelectedCommand.Model().Name == "serve" {
+			logOptions.Prefix = true
+		}
+		rlog.Init(errs, logOptions)
 
 		if *tf != nil {
 			err := trace.Start(*tf)
@@ -76,12 +86,12 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 
 	has(app, &rdb, out)
 	get(app, &rdb, out)
-	scan(app, &rdb, out)
+	scan(app, &rdb, out, errs)
 	put(app, &rdb, sp, in)
 	del(app, &rdb, sp, out)
 	exec(app, &rdb, sp, out)
 	sync(app, &rdb, sp)
-	serve(app, sp, origin)
+	serve(app, sp, origin, errs)
 	drop(app, sp, in, out)
 
 	bundle := app.Command("bundle", "Manage the currently registered bundle.")
@@ -191,7 +201,7 @@ func get(parent *kingpin.Application, db *db.DB, out io.Writer) {
 	})
 }
 
-func scan(parent *kingpin.Application, db *db.DB, out io.Writer) {
+func scan(parent *kingpin.Application, db *db.DB, out, errs io.Writer) {
 	kc := parent.Command("scan", "Scans values in-order from the database.")
 	var opts execpkg.ScanOptions
 	kc.Flag("prefix", "prefix of values to return").StringVar(&opts.Prefix)
@@ -201,7 +211,7 @@ func scan(parent *kingpin.Application, db *db.DB, out io.Writer) {
 	kc.Action(func(_ *kingpin.ParseContext) error {
 		items, err := db.Scan(opts)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			fmt.Fprintln(errs, err)
 			return nil
 		}
 		for _, it := range items {
@@ -248,12 +258,12 @@ func sync(parent *kingpin.Application, db *db.DB, sp *spec.Spec) {
 	})
 }
 
-func serve(parent *kingpin.Application, sp *spec.Spec, origin *string) {
+func serve(parent *kingpin.Application, sp *spec.Spec, origin *string, errs io.Writer) {
 	kc := parent.Command("serve", "Starts a local Replicant server.")
 	port := kc.Flag("port", "The port to run on").Default("7001").Int()
 	kc.Action(func(_ *kingpin.ParseContext) error {
 		ps := fmt.Sprintf(":%d", *port)
-		fmt.Printf("Listening on %s...\n", ps)
+		log.Printf("Listening on %s...", ps)
 		s, err := servepkg.NewServer(sp.NewChunkStore(), "", *origin)
 		if err != nil {
 			return err
