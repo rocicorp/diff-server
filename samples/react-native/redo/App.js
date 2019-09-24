@@ -9,9 +9,8 @@
  */
  
 import React, { Component } from 'react';
-import { Platform, StyleSheet, Text, View, Button } from 'react-native';
+import { Platform, StyleSheet, Text, View, Button, Image } from 'react-native';
 import Replicant from 'replicant-react-native';
-import bundle from './bundle.js';
 
 export default class App extends Component<{}> {
   state = {
@@ -19,7 +18,7 @@ export default class App extends Component<{}> {
   };
   async componentDidMount() {
     this._replicant = new Replicant('https://replicate.to/serve/react-native-test');
-    await this._replicant.putBundle(bundle);
+    await this._initBundle();
 
     const root = await this._replicant.root();
     this.setState({
@@ -33,10 +32,18 @@ export default class App extends Component<{}> {
     await this._replicant.exec('deleteAllTodos');
     console.warn('after delete', await this._replicant.exec('getAllTodos'));
   }
+
   async _handleSync() {
     const result = await Replicant.dispatch('sync', JSON.stringify({remote: 'https://replicate.to/serve/react-native-test'}));
     console.log('Sync result was', result);
   }
+
+  async _initBundle() {
+    const resource = require('./replicant.bundle');
+    const resolved = Image.resolveAssetSource(resource);
+    await this._replicant.putBundle(await (await fetch(resolved.uri)).text());
+  }
+
   render() {
     return (
       <View style={styles.container}>

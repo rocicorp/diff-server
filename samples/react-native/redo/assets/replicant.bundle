@@ -1,4 +1,4 @@
-export default `function codeVersion() {
+function codeVersion() {
     return 6.2;
 }
 
@@ -69,4 +69,4 @@ function _fullid(tid) {
 
 function _tid(fullid) {
     return fullid.substr(prefix.length);
-}`;
+}
