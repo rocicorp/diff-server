@@ -1,5 +1,10 @@
 function codeVersion() {
     return 6.2;
+
+function uid() {
+    var next = db.get('uid') || 1;
+    db.put('uid', next+1);
+    return next;
 }
 
 function init() {

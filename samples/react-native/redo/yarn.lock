@@ -5369,9 +5369,9 @@ repeat-string@^1.6.1:
   resolved "https://registry.yarnpkg.com/repeat-string/-/repeat-string-1.6.1.tgz#8dcae470e1c88abc2d600fff4a776286da75e637"
   integrity sha1-jcrkcOHIirwtYA//Sndihtp15jc=
 
-replicant-react-native@/Users/aa/Desktop/replicant-react-native.tar.gz:
+replicant-react-native@../../../bind/react-native/build/replicant-react-native.tar.gz:
   version "1.0.0"
-  resolved "/Users/aa/Desktop/replicant-react-native.tar.gz#5c8e0bfb1545cd1ece1ffb0e90c34f8a34658f8a"
+  resolved "../../../bind/react-native/build/replicant-react-native.tar.gz#3cd0fa876f8b97a7ae66cbf6c7f517e8965394b7"
 
 request-promise-core@1.1.2:
   version "1.1.2"
