@@ -43,20 +43,21 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 	app.Terminate(exit)
 
 	sp := kp.DatabaseSpec(app.Flag("db", "The database to connect to. Both local and remote databases are supported. For local databases, specify a directory path to store the database in. For remote databases, specify the http(s) URL to the database (usually https://replicate.to/serve/<mydb>).").Required().PlaceHolder("/path/to/db"))
-	origin := app.Flag("origin", "The unique name of the client to use as the origin of any write transactions Defaults to 'server' for the 'serve' subcommand and 'cli' otherwise.").String()
 	tf := app.Flag("trace", "Name of a file to write a trace to").OpenFile(os.O_RDWR|os.O_CREATE, 0644)
 
-	var rdb db.DB
-	app.Action(func(pc *kingpin.ParseContext) error {
-		// Default origin
-		if *origin == "" {
-			if pc.SelectedCommand.Model().Name == "serve" {
-				*origin = "server"
-			} else {
-				*origin = "cli"
-			}
+	var rdb *db.DB
+	getDB := func() (db.DB, error) {
+		if rdb != nil {
+			return *rdb, nil
 		}
-
+		r, err := db.Load(*sp, "cli")
+		if err != nil {
+			return db.DB{}, err
+		}
+		rdb = r
+		return *r, nil
+	}
+	app.Action(func(pc *kingpin.ParseContext) error {
 		// Init logging
 		logOptions := rlog.Options{}
 		if pc.SelectedCommand.Model().Name == "serve" {
@@ -71,11 +72,6 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 			}
 		}
 
-		r, err := db.Load(*sp, *origin)
-		if err != nil {
-			return err
-		}
-		rdb = *r
 		return nil
 	})
 	defer func() {
@@ -84,19 +80,19 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 		}
 	}()
 
-	has(app, &rdb, out)
-	get(app, &rdb, out)
-	scan(app, &rdb, out, errs)
-	put(app, &rdb, sp, in)
-	del(app, &rdb, sp, out)
-	exec(app, &rdb, sp, out)
-	sync(app, &rdb, sp)
-	serve(app, sp, origin, errs)
+	has(app, getDB, out)
+	get(app, getDB, out)
+	scan(app, getDB, out, errs)
+	put(app, getDB, in)
+	del(app, getDB, out)
+	exec(app, getDB, out)
+	sync(app, getDB)
+	serve(app, sp, errs)
 	drop(app, sp, in, out)
 
 	bundle := app.Command("bundle", "Manage the currently registered bundle.")
-	getBundle(bundle, &rdb, out)
-	putBundle(bundle, &rdb, sp, in)
+	getBundle(bundle, getDB, out)
+	putBundle(bundle, getDB, in)
 
 	if len(args) == 0 {
 		app.Usage(args)
@@ -109,9 +105,16 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 		exit(1)
 	}
 }
-func getBundle(parent *kingpin.CmdClause, db *db.DB, out io.Writer) {
+
+type gdb func() (db.DB, error)
+
+func getBundle(parent *kingpin.CmdClause, gdb gdb, out io.Writer) {
 	kc := parent.Command("get", "Get the current JavaScript code bundle.")
 	kc.Action(func(_ *kingpin.ParseContext) error {
+		db, err := gdb()
+		if err != nil {
+			return err
+		}
 		b, err := db.Bundle()
 		if err != nil {
 			return err
@@ -121,20 +124,24 @@ func getBundle(parent *kingpin.CmdClause, db *db.DB, out io.Writer) {
 	})
 }
 
-func putBundle(parent *kingpin.CmdClause, db *db.DB, sp *spec.Spec, in io.Reader) {
+func putBundle(parent *kingpin.CmdClause, gdb gdb, in io.Reader) {
 	kc := parent.Command("put", "Set a new JavaScript code bundle.")
 	kc.Action(func(_ *kingpin.ParseContext) error {
-		return db.PutBundle(types.NewBlob(sp.GetDatabase(), in))
+		db, err := gdb()
+		if err != nil {
+			return err
+		}
+		return db.PutBundle(types.NewBlob(db.Noms(), in))
 	})
 }
 
-func exec(parent *kingpin.Application, db *db.DB, sp *spec.Spec, out io.Writer) {
+func exec(parent *kingpin.Application, gdb gdb, out io.Writer) {
 	kc := parent.Command("exec", "Execute a function.")
 
 	name := kc.Arg("name", "Name of function from current transaction bundle to execute.").Required().String()
 	raw := kc.Arg("args", "JSON-formatted arguments to the function. For convenience, bare strings are also supported.").Strings()
 
-	parse := func(s string) (types.Value, error) {
+	parse := func(s string, noms types.ValueReadWriter) (types.Value, error) {
 		switch s {
 		case "true":
 			return types.Bool(true), nil
@@ -143,7 +150,7 @@ func exec(parent *kingpin.Application, db *db.DB, sp *spec.Spec, out io.Writer) 
 		}
 		switch s[0] {
 		case '[', '{', '"':
-			return jn.FromJSON(strings.NewReader(s), sp.GetDatabase(), jn.FromOptions{})
+			return jn.FromJSON(strings.NewReader(s), noms, jn.FromOptions{})
 		default:
 			if f, err := strconv.ParseFloat(s, 10); err == nil {
 				return types.Number(f), nil
@@ -153,15 +160,20 @@ func exec(parent *kingpin.Application, db *db.DB, sp *spec.Spec, out io.Writer) 
 	}
 
 	kc.Action(func(_ *kingpin.ParseContext) error {
+		db, err := gdb()
+		if err != nil {
+			return err
+		}
+
 		args := make([]types.Value, 0, len(*raw))
 		for _, r := range *raw {
-			v, err := parse(r)
+			v, err := parse(r, db.Noms())
 			if err != nil {
 				return err
 			}
 			args = append(args, v)
 		}
-		output, err := db.Exec(*name, types.NewList(sp.GetDatabase(), args...))
+		output, err := db.Exec(*name, types.NewList(db.Noms(), args...))
 		if output != nil {
 			types.WriteEncodedValue(out, output)
 		}
@@ -169,10 +181,14 @@ func exec(parent *kingpin.Application, db *db.DB, sp *spec.Spec, out io.Writer) 
 	})
 }
 
-func has(parent *kingpin.Application, db *db.DB, out io.Writer) {
+func has(parent *kingpin.Application, gdb gdb, out io.Writer) {
 	kc := parent.Command("has", "Check whether a value exists in the database.")
 	id := kc.Arg("id", "id of the value to check for").Required().String()
 	kc.Action(func(_ *kingpin.ParseContext) error {
+		db, err := gdb()
+		if err != nil {
+			return err
+		}
 		ok, err := db.Has(*id)
 		if err != nil {
 			return err
@@ -186,10 +202,14 @@ func has(parent *kingpin.Application, db *db.DB, out io.Writer) {
 	})
 }
 
-func get(parent *kingpin.Application, db *db.DB, out io.Writer) {
+func get(parent *kingpin.Application, gdb gdb, out io.Writer) {
 	kc := parent.Command("get", "Reads a value from the database.")
 	id := kc.Arg("id", "id of the value to get").Required().String()
 	kc.Action(func(_ *kingpin.ParseContext) error {
+		db, err := gdb()
+		if err != nil {
+			return err
+		}
 		v, err := db.Get(*id)
 		if err != nil {
 			return err
@@ -201,7 +221,7 @@ func get(parent *kingpin.Application, db *db.DB, out io.Writer) {
 	})
 }
 
-func scan(parent *kingpin.Application, db *db.DB, out, errs io.Writer) {
+func scan(parent *kingpin.Application, gdb gdb, out, errs io.Writer) {
 	kc := parent.Command("scan", "Scans values in-order from the database.")
 	var opts execpkg.ScanOptions
 	kc.Flag("prefix", "prefix of values to return").StringVar(&opts.Prefix)
@@ -209,6 +229,10 @@ func scan(parent *kingpin.Application, db *db.DB, out, errs io.Writer) {
 	kc.Flag("start-after", "id of the value to start scanning after").StringVar(&opts.StartAfterID)
 	kc.Flag("limit", "maximum number of items to return").IntVar(&opts.Limit)
 	kc.Action(func(_ *kingpin.ParseContext) error {
+		db, err := gdb()
+		if err != nil {
+			return err
+		}
 		items, err := db.Scan(opts)
 		if err != nil {
 			fmt.Fprintln(errs, err)
@@ -221,11 +245,15 @@ func scan(parent *kingpin.Application, db *db.DB, out, errs io.Writer) {
 	})
 }
 
-func put(parent *kingpin.Application, db *db.DB, sp *spec.Spec, in io.Reader) {
+func put(parent *kingpin.Application, gdb gdb, in io.Reader) {
 	kc := parent.Command("put", "Reads a JSON-formated value from stdin and puts it into the database.")
 	id := kc.Arg("id", "id of the value to put").Required().String()
 	kc.Action(func(_ *kingpin.ParseContext) error {
-		v, err := jn.FromJSON(in, sp.GetDatabase(), jn.FromOptions{})
+		db, err := gdb()
+		if err != nil {
+			return err
+		}
+		v, err := jn.FromJSON(in, db.Noms(), jn.FromOptions{})
 		if err != nil {
 			return err
 		}
@@ -233,10 +261,14 @@ func put(parent *kingpin.Application, db *db.DB, sp *spec.Spec, in io.Reader) {
 	})
 }
 
-func del(parent *kingpin.Application, db *db.DB, sp *spec.Spec, out io.Writer) {
+func del(parent *kingpin.Application, gdb gdb, out io.Writer) {
 	kc := parent.Command("del", "Deletes an item from the database.")
 	id := kc.Arg("id", "id of the value to delete").Required().String()
 	kc.Action(func(_ *kingpin.ParseContext) error {
+		db, err := gdb()
+		if err != nil {
+			return err
+		}
 		ok, err := db.Del(*id)
 		if err != nil {
 			return err
@@ -248,26 +280,27 @@ func del(parent *kingpin.Application, db *db.DB, sp *spec.Spec, out io.Writer) {
 	})
 }
 
-func sync(parent *kingpin.Application, db *db.DB, sp *spec.Spec) {
+func sync(parent *kingpin.Application, gdb gdb) {
 	kc := parent.Command("sync", "Sync with a replicant server.")
 	remoteSpec := kp.DatabaseSpec(kc.Arg("remote", "Server to sync with. See https://github.com/attic-labs/noms/blob/master/doc/spelling.md#spelling-databases.").Required())
 
 	kc.Action(func(_ *kingpin.ParseContext) error {
+		db, err := gdb()
+		if err != nil {
+			return err
+		}
 		// TODO: progress
 		return db.Sync(*remoteSpec)
 	})
 }
 
-func serve(parent *kingpin.Application, sp *spec.Spec, origin *string, errs io.Writer) {
+func serve(parent *kingpin.Application, sp *spec.Spec, errs io.Writer) {
 	kc := parent.Command("serve", "Starts a local Replicant server.")
 	port := kc.Flag("port", "The port to run on").Default("7001").Int()
 	kc.Action(func(_ *kingpin.ParseContext) error {
 		ps := fmt.Sprintf(":%d", *port)
 		log.Printf("Listening on %s...", ps)
-		s, err := servepkg.NewServer(sp.NewChunkStore(), "", *origin)
-		if err != nil {
-			return err
-		}
+		s := servepkg.NewService("/", sp.DatabaseName)
 		http.Handle("/", s)
 		return http.ListenAndServe(fmt.Sprintf(":%d", *port), nil)
 	})

@@ -5,10 +5,10 @@
     "builds": [
         { "src": "landing/**", "use": "@now/static" },
         { "src": "doc/flutter/**", "use": "@now/static" },
-        { "src": "serve/now.go", "use": "@now/go" }
+        { "src": "serve/prod/prod.go", "use": "@now/go" }
     ],
     "routes": [
-        { "src": "/serve/.*", "dest": "/serve/now.go" },
+        { "src": "/serve/.*", "dest": "/serve/prod/prod.go" },
         { "src": "/(.*)", "dest": "/landing/$1" },
         { "src": "/doc/(.*)", "dest": "/doc/$1" }
     ],

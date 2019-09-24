@@ -89,7 +89,7 @@ func startTestServer(assert *assert.Assertions) *http.Server {
 		sp, err := spec.ForDatabase(serverDir)
 		assert.NoError(err)
 		// use same origin used in api_test.go so that hashes match up and any differences with it stand out
-		s, err := NewServer(sp.NewChunkStore(), "", "test")
+		s, err := newServer(sp.NewChunkStore(), "", "test")
 		assert.NoError(err)
 		hs := http.Server{
 			Addr:    ":8674",

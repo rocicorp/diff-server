@@ -1,11 +1,10 @@
-package serve
+// Package prod implements our top-level production server entrypoint for Zeit Now.
+package prod
 
 import (
 	"log"
 	"net/http"
 	"os"
-	"regexp"
-	"sync"
 
 	"github.com/attic-labs/noms/go/chunks"
 	"github.com/attic-labs/noms/go/nbs"
@@ -15,8 +14,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/s3"
 
+	"github.com/aboodman/replicant/serve"
 	"github.com/aboodman/replicant/util/chk"
-	rlog "github.com/aboodman/replicant/util/log"
 )
 
 const (
@@ -26,40 +25,16 @@ const (
 )
 
 var (
-	servers = map[string]*Server{}
-	sess    *session.Session
-	mu      sync.Mutex
+	sess       *session.Session
+	awsService = serve.NewServiceWithFactory("/serve/", awsChunkStore)
 )
 
 // Handler implements the Zeit Now entrypoint for our server.
 func Handler(w http.ResponseWriter, r *http.Request) {
-	rlog.Init(os.Stderr, rlog.Options{Prefix: true})
-
-	re, err := regexp.Compile("^/serve/([^/]+)/(.*)")
-	chk.NoError(err)
-
-	parts := re.FindStringSubmatch(r.URL.Path)
-	if parts == nil {
-		clientError(w, "invalid database name")
-		return
-	}
-	dbName := parts[1]
-	s, err := getServer(dbName)
-	if err != nil {
-		serverError(w, err)
-	}
-	s.ServeHTTP(w, r)
+	awsService.ServeHTTP(w, r)
 }
 
-func getServer(name string) (*Server, error) {
-	mu.Lock()
-	defer mu.Unlock()
-
-	s := servers[name]
-	if s != nil {
-		return s, nil
-	}
-
+func awsChunkStore(name string) (chunks.ChunkStore, error) {
 	var cs chunks.ChunkStore
 	if os.Getenv(aws_access_key_id) == "" {
 		chk.Fail("Cannot create server - no aws credentials in environment")
@@ -75,11 +50,5 @@ func getServer(name string) (*Server, error) {
 	const bucket = "aa-replicant2"
 	cs = nbs.NewAWSStore(table, name, bucket, s3.New(sess), dynamodb.New(sess), 1<<28)
 	log.Printf("Found AWS credentials in environment. Running against DynamoDB table: %s, bucket: %s, namespace: %s", table, bucket, name)
-	var err error
-	s, err = NewServer(cs, "/serve/"+name, "server")
-	servers[name] = s
-	if err != nil {
-		return nil, err
-	}
-	return s, nil
+	return cs, nil
 }

@@ -27,22 +27,22 @@ var (
 	commands = []string{"getRoot", "has", "get", "scan", "put", "del", "getBundle", "putBundle", "exec"}
 )
 
-// Server is a single Replicant instance. The Replicant service runs many such instances.
-type Server struct {
+// server is a single Replicant instance. The Replicant service runs many such instances.
+type server struct {
 	router *httprouter.Router
 	db     *db.DB
 	mu     sync.Mutex
 	api    *api.API
 }
 
-func NewServer(cs chunks.ChunkStore, urlPrefix, origin string) (*Server, error) {
+func newServer(cs chunks.ChunkStore, urlPrefix, origin string) (*server, error) {
 	router := datas.Router(cs, urlPrefix)
 	noms := datas.NewDatabase(cs)
 	db, err := db.New(noms, origin)
 	if err != nil {
 		return nil, err
 	}
-	s := &Server{router: router, db: db, api: api.New(db)}
+	s := &server{router: router, db: db, api: api.New(db)}
 	for _, method := range commands {
 		m := method
 		s.router.POST(fmt.Sprintf("%s/%s", urlPrefix, method), func(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
@@ -66,13 +66,13 @@ func NewServer(cs chunks.ChunkStore, urlPrefix, origin string) (*Server, error) 
 			w.Write([]byte{'\n'})
 		})
 	}
-	s.router.POST(urlPrefix+"/sync", func(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+	s.router.POST(urlPrefix+"/sync", func(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 		s.sync(w, req)
 	})
 	return s, nil
 }
 
-func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	verbose.SetVerbose(true)
 	log.Println("Handling request: ", r.URL.String())
 
@@ -88,7 +88,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.router.ServeHTTP(w, r)
 }
 
-func (s *Server) sync(w http.ResponseWriter, req *http.Request) {
+func (s *server) sync(w http.ResponseWriter, req *http.Request) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -121,15 +121,4 @@ func (s *Server) sync(w http.ResponseWriter, req *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 	io.Copy(w, strings.NewReader(mergedCommit.TargetHash().String()))
-}
-
-func clientError(w http.ResponseWriter, msg string) {
-	w.WriteHeader(http.StatusBadRequest)
-	log.Println(http.StatusBadRequest, msg)
-	io.Copy(w, strings.NewReader(msg))
-}
-
-func serverError(w http.ResponseWriter, err error) {
-	w.WriteHeader(http.StatusInternalServerError)
-	log.Println(err.Error())
 }

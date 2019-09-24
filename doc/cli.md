@@ -23,3 +23,13 @@ rep --db=https://replicate.to/serve/my-remote-db exec sellWidgets 42
 ```
 
 See `rep --help` for complete documentation.
+
+## Running a Development Server
+
+You can run a fully-functioning Replicant server against local disk using `rep`:
+
+```
+rep --db=~/replicant-storage serve
+```
+
+You can then point your Replicant clients (the CLI, using the `--db` flag, as well as the bindings) at http://localhost:7001/foo, where `foo` is a unique database name that you choose.

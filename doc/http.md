@@ -22,3 +22,7 @@ curl --data '{"name": "addTodo", "args": [42, "Take the trash out", false]}' htt
 # Scan a key range on a local server
 curl --data '{"prefix": "todo/", "limit": 500}' http://localhost:7001/scan
 ```
+
+## Development Server
+
+See the [CLI documentation](cli.md#running-a-development-server).
