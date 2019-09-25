@@ -30,6 +30,10 @@ cp -R Repm.framework replicant-flutter-sdk/ios/
 cp repm.aar replicant-flutter-sdk/android/
 zip -r replicant-flutter-sdk.zip replicant-flutter-sdk
 
+# react native bindings
+../bind/react-native/build.sh
+cp ../bind/react-native/build/replicant-react-native.tar.gz .
+
 # rep tool
 
 # turn modules back on to build cli :(
