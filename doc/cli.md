@@ -3,7 +3,7 @@
 The Replicant SDK includes a command-line program called `rep` which you can use to inspect and manipulate
 Replicant databases from the terminal.
 
-To install it, just copy the binary for your platform to someplace in your path and run it:
+To install it, just copy the binary for your platform [from the latest release](https://github.com/aboodman/replicant/releases/latest) to someplace in your path and run it:
 
 ```
 cp <sdk>/replicant-darwin-amd64 ~/bin/rep
