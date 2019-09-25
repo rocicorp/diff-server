@@ -21,14 +21,14 @@ mkdir build
 cd build
 gomobile bind -ldflags="-s -w" --target=ios ../repm/
 gomobile bind -ldflags="-s -w" --target=android ../repm/
-zip -r Repm.framework.zip Repm.framework
+tar -czvf Repm.framework.tar.gz Repm.framework
 
 # flutter bindings
 cp -R ../bind/flutter replicant-flutter-sdk
 rm -rf replicant-flutter-sdk/ios/Repm.framework
 cp -R Repm.framework replicant-flutter-sdk/ios/
 cp repm.aar replicant-flutter-sdk/android/
-zip -r replicant-flutter-sdk.zip replicant-flutter-sdk
+tar -czvf replicant-flutter-sdk.tar.gz replicant-flutter-sdk
 
 # react native bindings
 ../bind/react-native/build.sh

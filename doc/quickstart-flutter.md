@@ -2,10 +2,10 @@
 
 #### 1. Get the SDK
 
-Download the latest [replicant-flutter-sdk.zip](https://github.com/aboodman/replicant/releases), then unzip it.
+Download the latest [replicant-flutter-sdk.tar.gz](https://github.com/aboodman/replicant/releases), then unzip it.
 
 ```
-unzip replicant-flutter-sdk.zip
+tar xvzf replicant-flutter-sdk.tar.gz
 ```
 
 #### 2. Add the `replicant` dependency to your `pubspec.yaml`
