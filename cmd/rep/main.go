@@ -58,6 +58,10 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 		return *r, nil
 	}
 	app.Action(func(pc *kingpin.ParseContext) error {
+		if pc.SelectedCommand == nil {
+			return nil
+		}
+
 		// Init logging
 		logOptions := rlog.Options{}
 		if pc.SelectedCommand.Model().Name == "serve" {

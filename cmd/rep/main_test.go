@@ -218,3 +218,15 @@ func TestServe(t *testing.T) {
 	assert.NoError(err)
 	assert.Equal("bar", string(v.(types.String)))
 }
+
+func TestEmptyInput(t *testing.T) {
+	assert := assert.New(t)
+	db.LoadTempDB(assert)
+	var args []string
+
+	// Just testing that they don't crash.
+	// See https://github.com/aboodman/replicant/issues/120
+	impl(args, strings.NewReader(""), ioutil.Discard, ioutil.Discard, func(_ int) {})
+	args = []string{"--db=/tmp/foo"}
+	impl(args, strings.NewReader(""), ioutil.Discard, ioutil.Discard, func(_ int) {})
+}
