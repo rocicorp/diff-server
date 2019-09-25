@@ -50,6 +50,16 @@ $ rep --db=/tmp/mydb exec getUsersByColor orange
 
 See `rep --help` for complete documentation.
 
+## Interacting with Remote Replicant instances
+
+You can use the CLI to talk to remote replicants to. For example, if you have a server at https://replicate.to/serve/example, you could do:
+
+```
+$ echo 42 | rep --db=https://replicate.to/serve/example put foo
+$ rep --db=https://replicate.to/serve/example get foo
+42
+```
+
 ## Running a Development Server
 
 You can run a fully-functioning Replicant server against local disk using `rep`:
