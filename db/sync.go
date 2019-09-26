@@ -111,10 +111,6 @@ func remoteSync(remote spec.Spec, remoteDB *DB, commit Commit) (newHead types.Re
 // HandleSync implements the server-side of the sync protocol. It's not typical to call it
 // directly, and is exposed primarily so that the server implementation can call it.
 func HandleSync(dest *DB, commit Commit) (newHead types.Ref, err error) {
-	err = validate(dest, commit, types.Ref{})
-	if err != nil {
-		return newHead, err
-	}
 	rebased, err := rebase(dest, types.NewRef(dest.head.Original), time.DateTime(), commit, types.Ref{})
 	if err != nil {
 		return newHead, err

@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aboodman/replicant/util/noms/diff"
 	"github.com/attic-labs/noms/go/types"
 	"github.com/attic-labs/noms/go/util/datetime"
 	"github.com/stretchr/testify/assert"
@@ -127,7 +128,7 @@ func TestValidate(t *testing.T) {
 		noms.WriteValue(tx3.Original),
 		noms.WriteValue(eb),
 		noms.WriteValue(
-			types.NewMap(noms, types.String("foo"), list("bar", "quux"))))
+			types.NewMap(noms, types.String("foo"), list("bar", "baz", "quux"))))
 	noms.WriteValue(ro1c.Original)
 
 	rj1 := makeReject(
@@ -136,58 +137,43 @@ func TestValidate(t *testing.T) {
 		"o1",
 		epoch,
 		noms.WriteValue(tx3.Original),
+		types.Ref{},
 		"reason1",
 		noms.WriteValue(eb),
 		noms.WriteValue(
 			types.NewMap(noms, types.String("foo"), list("bar"))))
 	noms.WriteValue(rj1.Original)
-	rj1b := makeReject(
-		noms,
-		noms.WriteValue(tx1.Original),
-		"o1",
-		epoch,
-		noms.WriteValue(tx3.Original),
-		"reason1",
-		noms.WriteValue(eb),
-		noms.WriteValue(
-			types.NewMap(noms, types.String("foo"), list("bar", "quux")))) // incorrect
-	noms.WriteValue(rj1b.Original)
-	rj1c := makeReject(
-		noms,
-		noms.WriteValue(tx1b.Original), // incorrect basis
-		"o1",
-		epoch,
-		noms.WriteValue(tx3.Original),
-		"reason1",
-		noms.WriteValue(eb),
-		noms.WriteValue(
-			types.NewMap(noms, types.String("foo"), list("bar"))))
-	noms.WriteValue(rj1c.Original)
 
 	tc := []struct {
-		in  Commit
-		err string
+		in   Commit
+		diff string
+		err  string
 	}{
-		{tx1, ""},
-		{tx1b, "Invalid commit 4b8h3oa959g80efc75gnk53lqv4sugl6: diff: .value {\n-   data: #atbvqcfprt13l5sadlpohu48tuctgmt4\n+   data: #a7u0iuqarbmjs9dnrf7d0fcotjrhdaaf\n  }\n"},
-		{tx2, ""},
-		{tx2b, "Invalid commit 4b8h3oa959g80efc75gnk53lqv4sugl6: diff: .value {\n-   data: #atbvqcfprt13l5sadlpohu48tuctgmt4\n+   data: #a7u0iuqarbmjs9dnrf7d0fcotjrhdaaf\n  }\n"},
-		{tx3, ""},
-		{ro1, ""},
-		{ro1b, "Invalid commit 3qi8i0fq7j2v91m7oa5vh31mclt4rj3u: diff: .value {\n-   data: #1f3f1stoa9pit2jctse1svtl9vm01sbk\n+   data: #cdvf5afbdn7vpmj2ag7mhesrce5joob9\n  }\n"},
-		{ro1c, "Invalid commit 4b8h3oa959g80efc75gnk53lqv4sugl6: diff: .value {\n-   data: #atbvqcfprt13l5sadlpohu48tuctgmt4\n+   data: #a7u0iuqarbmjs9dnrf7d0fcotjrhdaaf\n  }\n"},
-		{rj1, ""},
-		{rj1b, "Invalid commit 1odrcdf7fgs5fmt9takdhkjktbqalogb: diff: .value {\n-   data: #cdvf5afbdn7vpmj2ag7mhesrce5joob9\n+   data: #a7u0iuqarbmjs9dnrf7d0fcotjrhdaaf\n  }\n"},
-		{rj1c, "Invalid commit 4b8h3oa959g80efc75gnk53lqv4sugl6: diff: .value {\n-   data: #atbvqcfprt13l5sadlpohu48tuctgmt4\n+   data: #a7u0iuqarbmjs9dnrf7d0fcotjrhdaaf\n  }\n"},
+		{tx1, "", ""},
+		{tx1b, ".value {\n-   data: #atbvqcfprt13l5sadlpohu48tuctgmt4\n+   data: #a7u0iuqarbmjs9dnrf7d0fcotjrhdaaf\n  }\n", ""},
+		{tx2, "", ""},
+		{tx2b, "", ""}, // validate is non-recursive, so even though the basis is wrong, it doesn't notice.
+		{tx3, "", ""},
+		{ro1, "", ""},
+		{ro1b, ".value {\n-   data: #1f3f1stoa9pit2jctse1svtl9vm01sbk\n+   data: #cdvf5afbdn7vpmj2ag7mhesrce5joob9\n  }\n", ""},
+		{ro1c, "", ""}, // again, we don't see the incorrect basis
+		{rj1, "", "Invalid commit type: CommitTypeReject"},
+		{g, "", "Invalid commit type: CommitTypeGenesis"},
 	}
 
 	for i, t := range tc {
-		err := validate(db, t.in, types.Ref{})
+		label := fmt.Sprintf("test case %d", i)
+		replayed, err := validate(db, t.in)
 		db.noms.Flush()
-		if t.err == "" {
-			assert.NoError(err, "test case %d", i)
+		if t.err != "" {
+			assert.EqualError(err, t.err, label)
+			continue
+		}
+		assert.NoError(err, label)
+		if t.diff == "" {
+			assert.True(t.in.Original.Equals(replayed.Original), label+"\ndiff: "+diff.Diff(t.in.Original, replayed.Original))
 		} else {
-			assert.EqualError(err, t.err, "test case %d", i)
+			assert.Equal(t.diff, diff.Diff(t.in.Original, replayed.Original), label)
 		}
 	}
 }
