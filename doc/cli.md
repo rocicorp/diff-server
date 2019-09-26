@@ -69,3 +69,46 @@ rep --db=~/replicant-storage serve
 ```
 
 You can then point your Replicant clients (the CLI, using the `--db` flag, as well as the bindings) at http://localhost:7001/foo, where `foo` is a unique database name that you choose.
+
+## Noms CLI
+
+Replicant is internally built on top of [Noms](https://github.com/attic-labs/noms). This is an implementation detail that we don't intend to expose to users. But while Replicant is young, it can ocassionally be useful to dive down into the guts and see what's going on.
+
+*** Warning! The Noms CLI is extremely user-unfriendly. This is not intended to be part of the long-term DX of Replicant, it's just a temporary stop-gap. ***
+
+Use the Noms CLI the same as `rep` - just copy it out of the release and run it.
+
+See the [Noms CLI Tour](https://github.com/attic-labs/noms/blob/master/doc/cli-tour.md) for an introduction to using the CLI.
+
+Here are some starting commands that will be useful to Replicant users:
+
+```
+# Prints out the current local state of the database.
+# You can also ask for "remote" which is analagous to Git's origin/master -- it is the last-known state of the remote.
+noms show /path/to/mydb::local
+
+# Page through the (local) history of the database.
+# Useful flags to this:
+# --show-value (show the entire value of each commit, not just the diff)
+# --max-lines
+# --graph
+# ... etc ... see --help for more.
+noms log /path/to/mydb::local
+
+# Prints out the entire current key/value store
+noms show /path/to/mydb::local.value.data@target
+
+# Prints out just the current value of "foo".
+# The allowed syntax for show is fairly rich. For details, see:
+# https://github.com/attic-labs/noms/blob/master/doc/spelling.md
+noms show '/path/to/mydb::local.value.data@target["foo"]'
+
+# Prints out the value of "foo" at a particular commit.
+noms show '/path/to/mydb::#ks3ug9d7bavt69g6hjlssgfp6mc4scl9.value.data@target["foo"]'
+
+# Prints the diff between two local commits (or arbitrary paths).
+noms diff /path/to/mydb::#ks3ug9d7bavt69g6hjlssgfp6mc4scl9 /path/to/mydb::local
+
+# Prints the diff between commits on different databases
+noms diff https://replicate.to/serve/mydb::local /path/to/mydb::local
+```
