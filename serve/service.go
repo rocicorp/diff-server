@@ -5,45 +5,36 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"path"
 	"regexp"
 	"strings"
 	"sync"
 
 	"github.com/aboodman/replicant/util/chk"
 	rlog "github.com/aboodman/replicant/util/log"
-	"github.com/attic-labs/noms/go/chunks"
 	"github.com/attic-labs/noms/go/spec"
 )
 
-type ChunkStoreFactory func(name string) (chunks.ChunkStore, error)
-
 // Service is a running instance of the Replicant service. A service handles one or more servers.
 type Service struct {
-	prefix  string
-	servers map[string]*server
-	mu      sync.Mutex
-	factory ChunkStoreFactory
+	storageRoot string
+	urlPrefix   string
+	servers     map[string]*server
+	mu          sync.Mutex
 }
 
-func NewService(prefix, devPath string) *Service {
-	chk.False(devPath == "", "devPath must be non-empty")
-	return NewServiceWithFactory(prefix, localFactory(devPath))
-}
-
-func NewServiceWithFactory(prefix string, factory ChunkStoreFactory) *Service {
+func NewService(storageRoot, urlPrefix string) *Service {
 	return &Service{
-		prefix:  prefix,
-		servers: map[string]*server{},
-		mu:      sync.Mutex{},
-		factory: factory,
+		storageRoot: storageRoot,
+		urlPrefix:   urlPrefix,
+		servers:     map[string]*server{},
+		mu:          sync.Mutex{},
 	}
 }
 
 func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	rlog.Init(os.Stderr, rlog.Options{Prefix: true})
 
-	re, err := regexp.Compile("^" + regexp.QuoteMeta(s.prefix) + "([^/]+)/(.*)")
+	re, err := regexp.Compile("^" + regexp.QuoteMeta(s.urlPrefix) + "/([^/]+)/(.*)")
 	chk.NoError(err)
 
 	parts := re.FindStringSubmatch(r.URL.Path)
@@ -68,32 +59,17 @@ func (s *Service) getServer(name string) (*server, error) {
 		return r, nil
 	}
 
-	cs, err := s.factory(name)
+	sp, err := spec.ForDatabase(s.storageRoot + "/" + name)
 	if err != nil {
 		return nil, err
 	}
 
-	server, err := newServer(cs, s.prefix+name, "server")
+	server, err := newServer(sp.NewChunkStore(), s.urlPrefix+"/"+name, "server")
 	s.servers[name] = server
 	if err != nil {
 		return nil, err
 	}
 	return server, nil
-}
-
-func localFactory(p string) ChunkStoreFactory {
-	return func(name string) (chunks.ChunkStore, error) {
-		fp := path.Join(p, name)
-		sp, err := spec.ForDatabase(fp)
-		if err != nil {
-			return nil, err
-		}
-		err = os.MkdirAll(fp, 0755)
-		if err != nil {
-			return nil, err
-		}
-		return sp.NewChunkStore(), nil
-	}
 }
 
 func clientError(w http.ResponseWriter, msg string) {
