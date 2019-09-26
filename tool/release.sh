@@ -42,3 +42,10 @@ export GO111MODULE=on
 cd $ROOT
 GOOS=darwin GOARCH=amd64 go build -o build/rep-darwin-amd64 ./cmd/rep
 GOOS=linux GOARCH=amd64 go build -o build/rep-linux-amd64 ./cmd/rep
+
+# noms tool
+
+NOMS_VERSION=`go mod graph | grep '^github.com/attic-labs/noms@' | cut -d' ' -f1 | head -n1`
+go get $NOMS_VERSION
+GOOS=darwin GOARCH=amd64 go build -o build/noms-darwin-amd64 github.com/attic-labs/noms/cmd/noms
+GOOS=linux GOARCH=amd64 go build -o build/noms-linux-amd64 github.com/attic-labs/noms/cmd/noms
