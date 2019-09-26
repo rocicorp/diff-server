@@ -34,14 +34,14 @@ tar -czvf replicant-flutter-sdk.tar.gz replicant-flutter-sdk
 ../bind/react-native/build.sh
 cp ../bind/react-native/build/replicant-react-native.tar.gz .
 
-# rep tool
+# repl tool
 
 # turn modules back on to build cli :(
 export GO111MODULE=on
 
 cd $ROOT
-GOOS=darwin GOARCH=amd64 go build -o build/rep-darwin-amd64 ./cmd/rep
-GOOS=linux GOARCH=amd64 go build -o build/rep-linux-amd64 ./cmd/rep
+GOOS=darwin GOARCH=amd64 go build -o build/repl-darwin-amd64 ./cmd/repl
+GOOS=linux GOARCH=amd64 go build -o build/repl-linux-amd64 ./cmd/repl
 
 # noms tool
 

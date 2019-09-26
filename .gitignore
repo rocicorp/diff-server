@@ -1,7 +1,7 @@
 .env
 .now
 .vscode
-rep
+repl
 
 # build artifacts
 build
