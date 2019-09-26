@@ -2,7 +2,7 @@
 
 # build artifacts
 build
-rep
+repl
 repm/repm-sources.jar
 repm/repm.aar
 

@@ -11,5 +11,5 @@ Choose your adventure:
   * Android/Java (soon)
 * [JavaScript Transacion API](./doc/transaction-api.md)
 * [HTTP API](./doc/http.md)
-* [`rep` CLI](./doc/cli.md)
+* [`repl` CLI](./doc/cli.md)
 * [Design Document](./doc/design.md)

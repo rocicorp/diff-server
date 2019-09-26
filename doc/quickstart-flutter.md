@@ -98,7 +98,7 @@ Download the above steps as a running sample. See [flutter/hello](../samples/flu
 - See [`flutter/redo`](../samples/flutter/redo) a fully functioning TODO app built on Flutter and Replicant
 - Review the [Flutter API](https://replicate.to/doc/flutter/)
 - Review the [JavaScript API for Replicant transactions](transaction-api.md)
-- Inspect your Replicant databases using [the `rep` tool](cli.md)
+- Inspect your Replicant databases using [the `repl` tool](cli.md)
 
 ## More questions?
 
