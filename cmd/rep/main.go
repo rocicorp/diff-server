@@ -42,15 +42,31 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 	app.UsageWriter(errs)
 	app.Terminate(exit)
 
-	sp := kp.DatabaseSpec(app.Flag("db", "The database to connect to. Both local and remote databases are supported. For local databases, specify a directory path to store the database in. For remote databases, specify the http(s) URL to the database (usually https://replicate.to/serve/<mydb>).").Required().PlaceHolder("/path/to/db"))
+	sps := app.Flag("db", "The database to connect to. Both local and remote databases are supported. For local databases, specify a directory path to store the database in. For remote databases, specify the http(s) URL to the database (usually https://replicate.to/serve/<mydb>).").PlaceHolder("/path/to/db").Required().String()
 	tf := app.Flag("trace", "Name of a file to write a trace to").OpenFile(os.O_RDWR|os.O_CREATE, 0644)
+
+	var sp *spec.Spec
+	getSpec := func() (spec.Spec, error) {
+		if sp != nil {
+			return *sp, nil
+		}
+		s, err := spec.ForDatabase(*sps)
+		if err != nil {
+			return spec.Spec{}, err
+		}
+		return s, nil
+	}
 
 	var rdb *db.DB
 	getDB := func() (db.DB, error) {
 		if rdb != nil {
 			return *rdb, nil
 		}
-		r, err := db.Load(*sp, "cli")
+		sp, err := getSpec()
+		if err != nil {
+			return db.DB{}, err
+		}
+		r, err := db.Load(sp, "cli")
 		if err != nil {
 			return db.DB{}, err
 		}
@@ -91,8 +107,8 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 	del(app, getDB, out)
 	exec(app, getDB, out)
 	sync(app, getDB)
-	serve(app, sp, errs)
-	drop(app, sp, in, out)
+	serve(app, sps, errs)
+	drop(app, getSpec, in, out)
 
 	bundle := app.Command("bundle", "Manage the currently registered bundle.")
 	getBundle(bundle, getDB, out)
@@ -111,6 +127,7 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 }
 
 type gdb func() (db.DB, error)
+type gsp func() (spec.Spec, error)
 
 func getBundle(parent *kingpin.CmdClause, gdb gdb, out io.Writer) {
 	kc := parent.Command("get", "Get the current JavaScript code bundle.")
@@ -298,19 +315,19 @@ func sync(parent *kingpin.Application, gdb gdb) {
 	})
 }
 
-func serve(parent *kingpin.Application, sp *spec.Spec, errs io.Writer) {
+func serve(parent *kingpin.Application, sps *string, errs io.Writer) {
 	kc := parent.Command("serve", "Starts a local Replicant server.")
 	port := kc.Flag("port", "The port to run on").Default("7001").Int()
 	kc.Action(func(_ *kingpin.ParseContext) error {
 		ps := fmt.Sprintf(":%d", *port)
 		log.Printf("Listening on %s...", ps)
-		s := servepkg.NewService("/", sp.DatabaseName)
+		s := servepkg.NewService(*sps, "")
 		http.Handle("/", s)
 		return http.ListenAndServe(fmt.Sprintf(":%d", *port), nil)
 	})
 }
 
-func drop(parent *kingpin.Application, sp *spec.Spec, in io.Reader, out io.Writer) {
+func drop(parent *kingpin.Application, gsp gsp, in io.Reader, out io.Writer) {
 	kc := parent.Command("drop", "Deletes a replicant database and its history.")
 
 	r := bufio.NewReader(in)
@@ -325,6 +342,10 @@ func drop(parent *kingpin.Application, sp *spec.Spec, in io.Reader, out io.Write
 		answer = strings.TrimSpace(answer)
 		if answer != "y" {
 			return nil
+		}
+		sp, err := gsp()
+		if err != nil {
+			return err
 		}
 		noms := sp.GetDatabase()
 		_, err = noms.Delete(noms.GetDataset(db.LOCAL_DATASET))
