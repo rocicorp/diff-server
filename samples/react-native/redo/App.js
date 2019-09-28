@@ -90,8 +90,14 @@ export default class App extends Component {
 
   _initBundle = async () => {
     const resource = require('./replicant.bundle');
-    const resolved = Image.resolveAssetSource(resource);
-    await this._replicant.putBundle(await (await fetch(resolved.uri)).text());
+    let resolved = Image.resolveAssetSource(resource).uri;
+
+    // EEP. I'm not sure why resolveAssertSource insists on adding an '/assets' dir.
+    // I think that it is stripped off internally when this is used with <Image>.
+    resolved = resolved.replace('/assets', '');
+
+    const resp = await (await fetch(resolved)).text();
+    await this._replicant.putBundle(resp);
   }
 
   _load = async () => {
