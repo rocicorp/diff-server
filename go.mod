@@ -7,7 +7,9 @@ require (
 	github.com/aws/aws-sdk-go v1.19.28
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/golang/protobuf v1.3.1 // indirect
+	github.com/google/uuid v1.1.1 // indirect
 	github.com/julienschmidt/httprouter v1.2.0
+	github.com/lithammer/shortuuid v3.0.0+incompatible
 	github.com/onsi/ginkgo v1.8.0 // indirect
 	github.com/onsi/gomega v1.5.0 // indirect
 	github.com/robertkrimen/otto v0.0.0-20180617131154-15f95af6e78d

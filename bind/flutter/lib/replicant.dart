@@ -12,15 +12,27 @@ class Replicant {
   ChangeHandler onChange;
   SyncHandler onSync;
 
+  String _name;
   String _remote;
   MethodChannel _platform;
   Future<String> _root;
   Timer _timer;
 
-  Replicant(this._remote) {
-     _platform = MethodChannel(CHANNEL_NAME);
-     _root = _getRoot();
-     this.sync();
+  /// Create or open a local Replicant database with named `name` synchronizing with `remote`.
+  /// If `name` is omitted, it defaults to `remote`.
+  Replicant(this._remote, {name = ""}) {
+    if (this._remote == "") {
+      throw new Exception("remote must be non-empty");
+    }
+    if (name == "") {
+      name = this._remote;
+    }
+    this._name = name;
+
+    _platform = MethodChannel(CHANNEL_NAME);
+    _invoke('open');
+    _root = _getRoot();
+    this.sync();
   }
 
   /// Adds new transactions to the db.
@@ -102,8 +114,12 @@ class Replicant {
   }
 
   Future<dynamic> _invoke(String name, [Map<String, dynamic> args = const {}]) async {
-    final r = await _platform.  invokeMethod(name, jsonEncode(args));
-    return r == '' ? null : jsonDecode(r);
+    try {
+      final r = await _platform.invokeMethod(name, [_name, jsonEncode(args)]);
+      return r == '' ? null : jsonDecode(r);
+    } catch (e) {
+      throw new Exception('Error invoking "' + name + '": ' + e.toString());
+    }
   }
 
   void _fireOnSync(bool syncing) {

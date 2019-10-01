@@ -1,4 +1,5 @@
 // Package repm implements an Android and iOS interface to Replicant via [Gomobile](https://github.com/golang/go/wiki/Mobile).
+// repm is not thread-safe. Callers must guarantee that it is not called concurrently on different threads/goroutines.
 package repm
 
 import (
@@ -17,54 +18,35 @@ import (
 	rlog "github.com/aboodman/replicant/util/log"
 )
 
-// Connection is a single open connection to Replicant.
-type Connection struct {
+var (
+	connections = map[string]*connection{}
+	repDir      string
+)
+
+type connection struct {
 	api *api.API
 	dir string
 }
 
-// Open a replicant database. The replicantRootDir is a directory that contains
-// zero or more named databases. Origin is the origin to use for all write
-// transactions executed by this connection. tmpDir can be the empty string, in
-// which case the OS default temp directory will be used.
-//
-// If the named database doesn't exist it is created. If the specified root
-// directory doesn't exist, it is created.
-func Open(replicantRootDir, dbName, origin, tmpDir string) (*Connection, error) {
+// Init initializes Replicant. If the specified storage directory doesn't exist, it
+// is created.
+func Init(storageDir, tempDir string) {
 	rlog.Init(os.Stderr, rlog.Options{Prefix: true})
 
-	if replicantRootDir == "" {
-		return nil, errors.New("replicantRootDir must be non-empty")
+	if storageDir == "" {
+		log.Print("storageDir must be non-empty")
+		return
+	}
+	if tempDir != "" {
+		os.Setenv("TMPDIR", tempDir)
 	}
 
-	if dbName == "" {
-		return nil, errors.New("dbName must be non-empty")
-	}
-
-	if origin == "" {
-		return nil, errors.New("origin must be non-empty")
-	}
-
-	dbPath := path.Join(replicantRootDir, base64.RawURLEncoding.EncodeToString([]byte(dbName)))
-	log.Printf("Opening Replicant database '%s' at '%s' for origin '%s'", dbName, dbPath, origin)
-	if tmpDir != "" {
-		os.Setenv("TMPDIR", tmpDir)
-	}
-	log.Println("Using tempdir: ", os.TempDir())
-	sp, err := spec.ForDatabase(dbPath)
-	if err != nil {
-		return nil, err
-	}
-	db, err := db.Load(sp, origin)
-	if err != nil {
-		return nil, err
-	}
-	return &Connection{api: api.New(db), dir: dbPath}, nil
+	repDir = storageDir
 }
 
 // Dispatch send an API request to Replicant, JSON-serialized parameters, and returns the response.
 // For the list of supported API requests and their parameters, see the api package.
-func (conn *Connection) Dispatch(rpc string, data []byte) (ret []byte, err error) {
+func Dispatch(dbName, rpc string, data []byte) (ret []byte, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			var msg string
@@ -78,20 +60,91 @@ func (conn *Connection) Dispatch(rpc string, data []byte) (ret []byte, err error
 			err = fmt.Errorf("Replicant panicked with: %s - see stderr for more", msg)
 		}
 	}()
+
 	switch rpc {
-	case "dropDatabase":
-		ret, err = nil, conn.dropDatabase()
+	case "open":
+		return nil, open(dbName)
+	case "close":
+		return nil, close(dbName)
+	case "drop":
+		return nil, drop(dbName)
 	default:
-		ret, err = conn.api.Dispatch(rpc, data)
+		conn := connections[dbName]
+		if conn == nil {
+			return nil, errors.New("specified database is not open")
+		}
+		return conn.api.Dispatch(rpc, data)
 	}
-	return
 }
 
-func (conn *Connection) dropDatabase() error {
-	err := os.RemoveAll(conn.dir)
+// Open a replicant database. If the named database doesn't exist it is created.
+func open(dbName string) error {
+	if repDir == "" {
+		return errors.New("Replicant is uninitialized - must call init first")
+	}
+	if dbName == "" {
+		return errors.New("dbName must be non-empty")
+	}
+
+	if _, ok := connections[dbName]; ok {
+		return errors.New("specified database is already open")
+	}
+
+	p := dbPath(repDir, dbName)
+	log.Printf("Opening Replicant database '%s' at '%s'", dbName, p)
+	log.Println("Using tempdir: ", os.TempDir())
+	sp, err := spec.ForDatabase(p)
 	if err != nil {
 		return err
 	}
-	*conn = Connection{}
+	origin, err := initClientID(sp.GetDatabase())
+	db, err := db.Load(sp, origin)
+	if err != nil {
+		return err
+	}
+
+	connections[dbName] = &connection{api: api.New(db), dir: p}
 	return nil
+}
+
+// Close releases the resources held by the specified open database.
+func close(dbName string) error {
+	if dbName == "" {
+		return errors.New("dbName must be non-empty")
+	}
+	conn := connections[dbName]
+	if conn == nil {
+		return errors.New("specified database is not open")
+	}
+	delete(connections, dbName)
+	return nil
+}
+
+type dropRequest struct {
+	ReplicantRootDir string `json:"replicantRootDir"`
+}
+
+// Drop closes and deletes the specified local database. Remote replicas in the group are not affected.
+func drop(dbName string) error {
+	if repDir == "" {
+		return errors.New("Replicant is uninitialized - must call init first")
+	}
+	if dbName == "" {
+		return errors.New("dbName must be non-empty")
+	}
+
+	conn := connections[dbName]
+	p := dbPath(repDir, dbName)
+	if conn != nil {
+		if conn.dir != p {
+			return fmt.Errorf("open database %s has directory %s, which is different than specified %s",
+				dbName, conn.dir, p)
+		}
+		close(dbName)
+	}
+	return os.RemoveAll(p)
+}
+
+func dbPath(root, name string) string {
+	return path.Join(root, base64.RawURLEncoding.EncodeToString([]byte(name)))
 }

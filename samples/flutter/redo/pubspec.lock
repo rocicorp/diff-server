@@ -126,7 +126,7 @@ packages:
   replicant:
     dependency: "direct main"
     description:
-      path: "../../../bind/flutter/build/replicant-flutter-sdk"
+      path: "../../../bind/flutter"
       relative: true
     source: path
     version: "0.0.1+a188349a"

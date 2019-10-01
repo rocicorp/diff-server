@@ -1,12 +1,10 @@
 package roci.dev.replicant;
 
 import android.content.Context;
-import android.content.SharedPreferences;
-import android.os.Bundle;
+import android.os.HandlerThread;
 import android.os.Handler;
 import android.os.Looper;
 
-import io.flutter.app.FlutterActivity;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
@@ -14,20 +12,18 @@ import io.flutter.plugin.common.MethodChannel.Result;
 import io.flutter.plugin.common.PluginRegistry.Registrar;
 
 import java.io.File;
-import java.util.Date;
-import java.util.UUID;
+import java.util.ArrayList;
 
 import android.util.Log;
 
 /** ReplicantPlugin */
 public class ReplicantPlugin implements MethodCallHandler {
   private static final String CHANNEL = "replicant.dev";
-  private static repm.Connection conn;
-  private static File tmpDir;
-  private static String clientID;
   private static Context appContext;
 
   private Handler uiThreadHandler;
+  private Handler generalHandler;
+  private Handler syncHandler;
 
   /** Plugin registration. */
   public static void registerWith(Registrar registrar) {
@@ -38,42 +34,58 @@ public class ReplicantPlugin implements MethodCallHandler {
 
   public ReplicantPlugin() {
     uiThreadHandler = new Handler(Looper.getMainLooper());
+
+    // Most Replicant operations happen serially, but not blocking UI thread.
+    HandlerThread generalThread = new HandlerThread("replicant.dev/general");
+    generalThread.start();
+    generalHandler = new Handler(generalThread.getLooper()); 
+
+    // Sync shouldn't block the UI or other Replicant operations.
+    HandlerThread syncThread = new HandlerThread("replicant.dev/sync");
+    syncThread.start();
+    syncHandler = new Handler(syncThread.getLooper()); 
+
+    generalHandler.post(new Runnable() {
+      public void run() {
+        Log.i("Replicant", "init");
+        initReplicant();
+      }
+    });
   }
 
   @Override
   public void onMethodCall(final MethodCall call, final Result result) {
-    // TODO: Do we maybe not want to create a new thread for every call?
-    // Tempting to use AsyncTask but I'm not sure how many threads the backing pool
-    // has and don't want sync(), which can block for a long time, to block other
-    // calls into Replicant which should be near-instant.
-    Log.i("Replicant", "Calling: " + call.method + " with arguments: " + (String)call.arguments);
-    new Thread(new Runnable() {
+    Log.i("Replicant", "Calling: " + call.method + " with arguments: " + (String)((ArrayList)call.arguments).get(1));
+
+    Handler handler;
+    if (call.method.equals("sync")) {
+      handler = syncHandler;
+    } else {
+      handler = generalHandler;
+    }
+
+    handler.post(new Runnable() {
       public void run() {
-        ReplicantPlugin.this.initClientID();
-        ReplicantPlugin.this.initConnection();
+        // The arguments passed from Flutter is a two-element array:
+        // 0th element is the name of the database to call on
+        // 1st element are the rpc arguments (JSON-encoded)
+        ArrayList args = (ArrayList)call.arguments;
 
-        if (conn == null) {
-          sendResult(result, new byte[0], new Exception("Could not open Replicant database"));
-          return;
-        }
-
+        String dbName = (String)args.get(0);
         // TODO: Avoid conversion here - can dart just send as bytes?
-        byte[] argData = new byte[0];
-        if (call.arguments != null) {
-          argData = ((String)call.arguments).getBytes();
-        }
+        byte[] argData = ((String)args.get(1)).getBytes();
 
         byte[] resultData = null;
         Exception exception = null;
         try {
-          resultData = conn.dispatch(call.method, argData);
+          resultData = repm.Repm.dispatch(dbName, call.method, argData);
         } catch (Exception e) {
           exception = e;
         }
 
         sendResult(result, resultData, exception);
       }
-    }).start();
+    });
   }
 
   private void sendResult(final Result result, final byte[] data, final Exception e) {
@@ -91,16 +103,7 @@ public class ReplicantPlugin implements MethodCallHandler {
     });
   }
 
-  private synchronized void initConnection() {
-    if (ReplicantPlugin.conn != null) {
-      return;
-    }
-
-    if (ReplicantPlugin.clientID == null) {
-      Log.e("Replicant", "clientID is null, cannot open database");
-      return;
-    }
-
+  private static void initReplicant() {
     File replicantDir = appContext.getFileStreamPath("replicant");
     File dataDir = new File(replicantDir, "data");
     File tmpDir = new File(replicantDir, "temp");
@@ -115,28 +118,9 @@ public class ReplicantPlugin implements MethodCallHandler {
     tmpDir.deleteOnExit();
 
     try {
-      ReplicantPlugin.conn = repm.Repm.open(dataDir.getAbsolutePath(), ReplicantPlugin.clientID, tmpDir.getAbsolutePath());
+      repm.Repm.init(dataDir.getAbsolutePath(), tmpDir.getAbsolutePath());
     } catch (Exception e) {
-      Log.e("Replicant", "Could not open Replicant database", e);
+      Log.e("Replicant", "Could not initialize Replicant", e);
     }
-  }
-
-  private synchronized void initClientID() {
-    if (ReplicantPlugin.clientID != null) {
-      return;
-    }
-
-    SharedPreferences sharedPref = appContext.getSharedPreferences("replicant", Context.MODE_PRIVATE);
-    ReplicantPlugin.clientID = sharedPref.getString("clientID", null);
-    if (ReplicantPlugin.clientID != null) {
-      return;
-    }
-
-    String cid = UUID.randomUUID().toString();
-    SharedPreferences.Editor editor = sharedPref.edit();
-    editor.putString("clientID", cid);
-    editor.commit();
-    Log.i("Replicant", "Generated and saved new clientID: " + cid);
-    ReplicantPlugin.clientID = cid;
   }
 }

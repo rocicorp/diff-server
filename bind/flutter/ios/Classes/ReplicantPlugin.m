@@ -4,9 +4,11 @@
 
 const NSString* CHANNEL_NAME = @"replicant.dev";
 
+NSString* replicantDir();
+
 @implementation ReplicantPlugin
-  RepmConnection* conn;
-  NSString* clientID;
+  dispatch_queue_t generalQueue;
+  dispatch_queue_t syncQueue;
 
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar>*)registrar {
   FlutterMethodChannel* channel = [FlutterMethodChannel
@@ -14,25 +16,37 @@ const NSString* CHANNEL_NAME = @"replicant.dev";
             binaryMessenger:[registrar messenger]];
   ReplicantPlugin* instance = [[ReplicantPlugin alloc] init];
   [registrar addMethodCallDelegate:instance channel:channel];
+
+  // Most Replicant operations happen serially, but not blocking UI thread.
+  generalQueue = dispatch_queue_create("dev.roci.Replicant", NULL);
+
+  // Sync uses a concurrent queue because we don't want it to block other Replicant operations.
+  syncQueue = dispatch_get_global_queue( DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+
+  dispatch_async(generalQueue, ^(void){
+    NSLog(@"Replicant: init");
+    RepmInit(replicantDir(), @"");
+  });
 }
 
 - (void)handleMethodCall:(FlutterMethodCall*)call result:(FlutterResult)result {
-  dispatch_async(dispatch_get_global_queue( DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(void){
-    [self ensureClientID];
-    [self ensureConnection];
-    if (conn == nil) {
-      result([NSError errorWithDomain:@"Replicant"
-                                  code:1
-                              userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString(@"Could not open Replicant database.", nil)}]);
-      return;
-    }
+  dispatch_queue_t queue;
+  if ([call.method isEqualToString:@"sync"]) {
+    queue = syncQueue;
+  } else {
+    queue = generalQueue;
+  }
 
-    NSError *err;
-    NSLog(@"Replicant: Calling: %@ with arguments: %@", call.method, call.arguments);
-    NSData* res = [conn dispatch:call.method
-                            data:[call.arguments dataUsingEncoding:NSUTF8StringEncoding]
-                            error:&err];
+  NSLog(@"Replicant: Handling: %@ with arguments: %@", call.method, call.arguments);
+  dispatch_async(queue, ^(void){
+    // The arguments passed from Flutter is a two-element array:
+    // 0th element is the name of the database to call on
+    // 1st element are the rpc arguments (JSON-encoded)
+    NSArray* args = (NSArray*)call.arguments;
+    NSError* err = nil;
+    NSData* res = RepmDispatch([args objectAtIndex:0], call.method, [[args objectAtIndex:1] dataUsingEncoding:NSUTF8StringEncoding], &err);
     dispatch_async(dispatch_get_main_queue(), ^(void){
+      NSLog(@"method: %@", call.method);
       if (err != nil) {
         result([FlutterError errorWithCode:@"UNAVAILABLE"
                                   message:[err localizedDescription]
@@ -45,65 +59,13 @@ const NSString* CHANNEL_NAME = @"replicant.dev";
   });
 };
 
-- (void)ensureConnection {
-  @synchronized (self) {
-    if (conn != nil) {
-      return;
-    }
-
-    if (clientID == nil) {
-      NSLog(@"Replicant: clientID is nil, cannot open database");
-      return;
-    }
-
-    NSString* repDir = [self replicantDir];
-    if (repDir == nil) {
-      return;
-    }
-
-    NSError *err;
-    conn = RepmOpen(repDir, clientID, @"", &err);
-    if (err != nil) {
-      NSLog(@"Replicant: Could not open database: %@", err);
-      return;
-    }
-  }
-}
-
-- (void)ensureClientID {
-  @synchronized (self) {
-    if (clientID != nil) {
-      return;
-    }
-
-    NSUserDefaults* defs = [NSUserDefaults standardUserDefaults];
-    clientID = [defs stringForKey:@"clientID"];
-    if (clientID != nil) {
-      return;
-    }
-
-    CFUUIDRef uuid = CFUUIDCreate(NULL);
-    NSString* uuidString = (NSString*)CFBridgingRelease(CFUUIDCreateString(NULL, uuid));
-    CFRelease(uuid);
-
-    [defs setValue:uuidString forKey:@"clientID"];
-    BOOL ok = [defs synchronize];
-    if (!ok) {
-      NSLog(@"Replicant: could not save clientID to userdefaults");
-      return;
-    }
-
-    clientID = uuidString;
-  }
-}
-
-- (NSString*)replicantDir {
+NSString* replicantDir() {
   NSFileManager* sharedFM = [NSFileManager defaultManager];
   NSArray* possibleURLs = [sharedFM URLsForDirectory:NSApplicationSupportDirectory
                                            inDomains:NSUserDomainMask];
   NSURL* appSupportDir = nil;
   NSURL* dataDir = nil;
-  
+
   if ([possibleURLs count] < 1) {
     NSLog(@"Replicant: Could not location application support directory: %@", dataDir);
     return nil;
@@ -114,14 +76,15 @@ const NSString* CHANNEL_NAME = @"replicant.dev";
   NSString* appBundleID = [[NSBundle mainBundle] bundleIdentifier];
   dataDir = [appSupportDir URLByAppendingPathComponent:appBundleID];
   dataDir = [dataDir URLByAppendingPathComponent:@"replicant"];
-  
-  NSError *err;
+
+  NSError* err;
   [sharedFM createDirectoryAtPath:[dataDir path] withIntermediateDirectories:TRUE attributes:nil error:&err];
   if (err != nil) {
     NSLog(@"Replicant: Could not create data directory: %@", dataDir);
     return nil;
   }
-  
+
   return [dataDir path];
 }
+
 @end
