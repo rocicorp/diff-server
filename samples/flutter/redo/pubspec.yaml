@@ -17,7 +17,7 @@ dependencies:
   # Then unzip it someplace, and insert that path here:
   replicant:
     path:
-      ../../../build/replicant-flutter-sdk/
+      ../../../bind/flutter/build/replicant-flutter-sdk
 
 dev_dependencies:
   flutter_test:
