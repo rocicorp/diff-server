@@ -11,6 +11,7 @@ cd build
 mkdir replicant-flutter-sdk
 ls ../ | grep -v build | xargs -I{} cp -R ../{} replicant-flutter-sdk/{}
 rm -rf replicant-flutter-sdk/ios/Repm.framework
+rm replicant-flutter-sdk/android/repm.aar
 cp -R ../../../repm/build/Repm.framework replicant-flutter-sdk/ios/
 cp ../../../repm/build/repm.aar replicant-flutter-sdk/android/
 tar -czvf replicant-flutter-sdk.tar.gz replicant-flutter-sdk
