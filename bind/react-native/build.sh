@@ -7,7 +7,7 @@ set -x
 rm -rf build
 mkdir build
 mkdir build/replicant-react-native
-ls | grep -v build | xargs -I{} cp -R {} build/replicant-react-native/
+ls | grep -v build | grep -v Frameworks | xargs -I{} cp -R {} build/replicant-react-native/
 mkdir build/replicant-react-native/ios/Frameworks
 cp -R $DIR/../../repm/build/Repm.framework $DIR/build/replicant-react-native/ios/Frameworks/
 cd build

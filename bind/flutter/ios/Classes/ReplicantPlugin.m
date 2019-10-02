@@ -4,7 +4,7 @@
 
 const NSString* CHANNEL_NAME = @"replicant.dev";
 
-NSString* replicantDir();
+NSString* replicantDir(void);
 
 @implementation ReplicantPlugin
   dispatch_queue_t generalQueue;

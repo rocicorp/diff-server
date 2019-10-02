@@ -5,9 +5,14 @@ const { Replicant: repm } = NativeModules;
 export default class Replicant {
   constructor(remote) {
       this._remote = remote;
-      this._root = this._getRoot();
       this.onChange = () => {};
-      this.sync();
+      this._root = this._invoke('open', {name: remote})
+        .then(() => this._getRoot())
+        // open can fail if the database is already open, which can
+        // happen especially during development when hot-reloading.
+        // just ignore this.
+        .catch(() => this._getRoot());
+      this._root.then(() => this.sync());
   }
 
   async root() {
@@ -75,7 +80,7 @@ export default class Replicant {
   }
 
   async _invoke(name, args) {
-    const r = await repm.dispatch(name, JSON.stringify(args));
+    const r = await repm.dispatch(this._remote, name, JSON.stringify(args));
     return r == '' ? null : JSON.parse(r);
   }
 

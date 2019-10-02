@@ -10,7 +10,7 @@
   "dependencies": {
     "react": "16.8.6",
     "react-native": "0.60.5",
-    "replicant-react-native": "../../../bind/react-native/build/replicant-react-native.tar.gz"
+    "replicant-react-native": "../../../bind/react-native"
   },
   "devDependencies": {
     "@babel/core": "^7.6.2",
