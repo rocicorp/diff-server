@@ -9,7 +9,7 @@ rm -rf build
 mkdir build
 cd build
 mkdir replicant-flutter-sdk
-ls ../ | grep -v build | xargs -I{} cp -R ../{} replicant-flutter-sdk/{}
+ls ../ | grep -v build | grep -v sample | xargs -I{} cp -R ../{} replicant-flutter-sdk/{}
 rm -rf replicant-flutter-sdk/ios/Repm.framework
 rm replicant-flutter-sdk/android/repm.aar
 cp -R ../../../repm/build/Repm.framework replicant-flutter-sdk/ios/
