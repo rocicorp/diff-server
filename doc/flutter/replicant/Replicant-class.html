@@ -72,6 +72,16 @@
   <div id="dartdoc-main-content" class="col-xs-12 col-sm-9 col-md-8 main-content">
       <div><h1><span class="kind-class">Replicant</span> class </h1></div>
 
+    <section class="desc markdown">
+      <p>Replicant is a connection to a local Replicant database. There can be multiple
+connections to the same database.</p>
+<p>Operations are generally async because they go to local storage. However on modern
+mobile devices this will typically be ~instant, and in most cases no progress UI
+should be necessary.</p>
+<p>Replicant operations are serialized per-connection, with the sole exception of
+sync(), which runs concurrently with other operations (and might take awhile, since
+it attempts to go to the network).</p>
+    </section>
     
 
     <section class="summary offset-anchor" id="constructors">
@@ -79,7 +89,7 @@
 
       <dl class="constructor-summary-list">
         <dt id="Replicant" class="callable">
-          <span class="name"><a href="replicant/Replicant/Replicant.html">Replicant</a></span><span class="signature">(<span class="parameter" id="-param-_remote"><span class="type-annotation">String</span> <span class="parameter-name">_remote</span>, {</span> <span class="parameter" id="-param-name"><span class="type-annotation">dynamic</span> <span class="parameter-name">name</span>: <span class="default-value">""</span></span> })</span>
+          <span class="name"><a href="replicant/Replicant/Replicant.html">Replicant</a></span><span class="signature">(<span class="parameter" id="-param-_remote"><span class="type-annotation">String</span> <span class="parameter-name">_remote</span>, {</span> <span class="parameter" id="-param-name"><span class="type-annotation">String</span> <span class="parameter-name">name</span>: <span class="default-value">""</span></span> })</span>
         </dt>
         <dd>
           Create or open a local Replicant database with named <code>name</code> synchronizing with <code>remote</code>.
@@ -92,6 +102,14 @@ If <code>name</code> is omitted, it defaults to <code>remote</code>.
       <h2>Properties</h2>
 
       <dl class="properties">
+        <dt id="name" class="property">
+          <span class="name"><a href="replicant/Replicant/name.html">name</a></span>
+          <span class="signature">&#8594; String</span>         
+        </dt>
+        <dd>
+          
+                  <div class="features">read-only</div>
+</dd>
         <dt id="onChange" class="property">
           <span class="name"><a href="replicant/Replicant/onChange.html">onChange</a></span>
           <span class="signature">&#8596; <a href="replicant/ChangeHandler.html">ChangeHandler</a></span>         
@@ -107,6 +125,14 @@ If <code>name</code> is omitted, it defaults to <code>remote</code>.
         <dd>
           
                   <div class="features">read / write</div>
+</dd>
+        <dt id="remote" class="property">
+          <span class="name"><a href="replicant/Replicant/remote.html">remote</a></span>
+          <span class="signature">&#8594; String</span>         
+        </dt>
+        <dd>
+          
+                  <div class="features">read-only</div>
 </dd>
         <dt id="hashCode" class="property inherited">
           <span class="name"><a href="replicant/Replicant/hashCode.html">hashCode</a></span>
@@ -130,8 +156,8 @@ If <code>name</code> is omitted, it defaults to <code>remote</code>.
     <section class="summary offset-anchor" id="instance-methods">
       <h2>Methods</h2>
       <dl class="callables">
-        <dt id="dropDatabase" class="callable">
-          <span class="name"><a href="replicant/Replicant/dropDatabase.html">dropDatabase</a></span><span class="signature">(<wbr>)
+        <dt id="close" class="callable">
+          <span class="name"><a href="replicant/Replicant/close.html">close</a></span><span class="signature">(<wbr>)
             <span class="returntype parameter">&#8594; Future<span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
           </span>
                   </dt>
@@ -232,6 +258,29 @@ sync are sent to the server, and new remote transactions are received and replay
     </section>
 
 
+    <section class="summary offset-anchor" id="static-methods">
+      <h2>Static Methods</h2>
+      <dl class="callables">
+        <dt id="drop" class="callable">
+          <span class="name"><a href="replicant/Replicant/drop.html">drop</a></span><span class="signature">(<wbr><span class="parameter" id="drop-param-name"><span class="type-annotation">String</span> <span class="parameter-name">name</span></span>)
+            <span class="returntype parameter">&#8594; Future<span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
+          </span>
+                  </dt>
+        <dd>
+          Completely delete a local database. Remote replicas in the group aren't affected.
+                  
+</dd>
+        <dt id="list" class="callable">
+          <span class="name"><a href="replicant/Replicant/list.html">list</a></span><span class="signature">(<wbr>)
+            <span class="returntype parameter">&#8594; Future<span class="signature">&lt;<wbr><span class="type-parameter">List<span class="signature">&lt;<wbr><span class="type-parameter"><a href="database_info/DatabaseInfo-class.html">DatabaseInfo</a></span>&gt;</span></span>&gt;</span></span>
+          </span>
+                  </dt>
+        <dd>
+          Lists information about available local databases.
+                  
+</dd>
+      </dl>
+    </section>
 
 
   </div> <!-- /.main-content -->
@@ -244,13 +293,15 @@ sync are sent to the server, and new remote transactions are received and replay
       <li class="section-title">
         <a href="replicant/Replicant-class.html#instance-properties">Properties</a>
       </li>
+      <li><a href="replicant/Replicant/name.html">name</a></li>
       <li><a href="replicant/Replicant/onChange.html">onChange</a></li>
       <li><a href="replicant/Replicant/onSync.html">onSync</a></li>
+      <li><a href="replicant/Replicant/remote.html">remote</a></li>
       <li class="inherited"><a href="replicant/Replicant/hashCode.html">hashCode</a></li>
       <li class="inherited"><a href="replicant/Replicant/runtimeType.html">runtimeType</a></li>
     
       <li class="section-title"><a href="replicant/Replicant-class.html#instance-methods">Methods</a></li>
-      <li><a href="replicant/Replicant/dropDatabase.html">dropDatabase</a></li>
+      <li><a href="replicant/Replicant/close.html">close</a></li>
       <li><a href="replicant/Replicant/exec.html">exec</a></li>
       <li><a href="replicant/Replicant/get.html">get</a></li>
       <li><a href="replicant/Replicant/put.html">put</a></li>
@@ -264,6 +315,9 @@ sync are sent to the server, and new remote transactions are received and replay
       <li class="inherited"><a href="replicant/Replicant/operator_equals.html">operator ==</a></li>
     
     
+      <li class="section-title"><a href="replicant/Replicant-class.html#static-methods">Static methods</a></li>
+      <li><a href="replicant/Replicant/drop.html">drop</a></li>
+      <li><a href="replicant/Replicant/list.html">list</a></li>
     
     </ol>
   </div><!--/.sidebar-offcanvas-->
