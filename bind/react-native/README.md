@@ -58,7 +58,7 @@ For now, you can use any name you want after `serve` in the URL.
 ```js
 var rep = new Replicant('https://replicate.to/serve/aa-react-native');
 
-// XXX - this is so grotty omg, so sorry, it will get better :'(.
+// Eep, so grotty. Working on it.
 const resource = require('./replicant.bundle');
 const resolved = Image.resolveAssetSource(resource).uri.replace('/assets', '');
 
