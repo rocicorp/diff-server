@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+	"path"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -55,4 +56,90 @@ func TestBasic(t *testing.T) {
 	fi, err := os.Stat(testFile.Name())
 	assert.Equal(nil, fi)
 	assert.True(os.IsNotExist(err))
+}
+
+func TestList(t *testing.T) {
+	assert := assert.New(t)
+
+	repDir = ""
+
+	rb, err := Dispatch("", "list", nil)
+	assert.EqualError(err, "must call init first")
+	assert.Nil(rb)
+
+	Init("/not/existent/dir", "")
+	rb, err = Dispatch("", "list", nil)
+	assert.NoError(err)
+	assert.Equal(`{"databases":[]}`, string(rb))
+
+	dir, err := ioutil.TempDir("", "")
+	assert.NoError(err)
+
+	Init(dir, "")
+	rb, err = Dispatch("", "list", nil)
+	assert.NoError(err)
+	assert.Equal(`{"databases":[]}`, string(rb))
+
+	rb, err = Dispatch("db1", "open", nil)
+	assert.Nil(rb)
+	assert.NoError(err)
+
+	rb, err = Dispatch("", "list", nil)
+	assert.NoError(err)
+	assert.Equal(`{"databases":[{"name":"db1"}]}`, string(rb))
+
+	rb, err = Dispatch("db1", "open", nil)
+	assert.Nil(rb)
+	assert.EqualError(err, "specified database is already open")
+
+	rb, err = Dispatch("", "list", nil)
+	assert.NoError(err)
+	assert.Equal(`{"databases":[{"name":"db1"}]}`, string(rb))
+
+	rb, err = Dispatch("db2", "open", nil)
+	assert.Nil(rb)
+	assert.NoError(err)
+
+	rb, err = Dispatch("", "list", nil)
+	assert.NoError(err)
+	assert.Equal(`{"databases":[{"name":"db1"},{"name":"db2"}]}`, string(rb))
+
+	rb, err = Dispatch("db1", "drop", nil)
+	assert.Nil(rb)
+	assert.NoError(err)
+
+	rb, err = Dispatch("", "list", nil)
+	assert.NoError(err)
+	assert.Equal(`{"databases":[{"name":"db2"}]}`, string(rb))
+
+	rb, err = Dispatch("db2", "drop", nil)
+	assert.Nil(rb)
+	assert.NoError(err)
+
+	rb, err = Dispatch("", "list", nil)
+	assert.NoError(err)
+	assert.Equal(`{"databases":[]}`, string(rb))
+
+	err = ioutil.WriteFile(path.Join(dir, "file.txt"), []byte("foo"), 0644)
+	assert.NoError(err)
+
+	rb, err = Dispatch("", "list", nil)
+	assert.NoError(err)
+	assert.Equal(`{"databases":[]}`, string(rb))
+
+	err = os.Mkdir(path.Join(dir, "-not-valid-base64"), 0755)
+	assert.NoError(err)
+
+	rb, err = Dispatch("", "list", nil)
+	assert.NoError(err)
+	assert.Equal(`{"databases":[]}`, string(rb))
+
+	rb, err = Dispatch("db1", "open", nil)
+	assert.Nil(rb)
+	assert.NoError(err)
+
+	// Should still return valid databases, skipping over other garbage directory entries.
+	rb, err = Dispatch("", "list", nil)
+	assert.NoError(err)
+	assert.Equal(`{"databases":[{"name":"db1"}]}`, string(rb))
 }

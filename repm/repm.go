@@ -4,8 +4,10 @@ package repm
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -62,6 +64,8 @@ func Dispatch(dbName, rpc string, data []byte) (ret []byte, err error) {
 	}()
 
 	switch rpc {
+	case "list":
+		return list()
 	case "open":
 		return nil, open(dbName)
 	case "close":
@@ -75,6 +79,52 @@ func Dispatch(dbName, rpc string, data []byte) (ret []byte, err error) {
 		}
 		return conn.api.Dispatch(rpc, data)
 	}
+}
+
+type DatabaseInfo struct {
+	Name string `json:"name"`
+}
+
+type ListResponse struct {
+	Databases []DatabaseInfo `json:"databases"`
+}
+
+func list() (resBytes []byte, err error) {
+	if repDir == "" {
+		return nil, errors.New("must call init first")
+	}
+
+	resp := ListResponse{
+		Databases: []DatabaseInfo{},
+	}
+
+	fi, err := os.Stat(repDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return json.Marshal(resp)
+		}
+		return nil, err
+	}
+	if !fi.IsDir() {
+		return nil, errors.New("Specified path is not a directory")
+	}
+	entries, err := ioutil.ReadDir(repDir)
+	if err != nil {
+		return nil, err
+	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			b, err := base64.RawURLEncoding.DecodeString(entry.Name())
+			if err != nil {
+				log.Printf("Could not decode directory name: %s, skipping", entry.Name())
+				continue
+			}
+			resp.Databases = append(resp.Databases, DatabaseInfo{
+				Name: string(b),
+			})
+		}
+	}
+	return json.Marshal(resp)
 }
 
 // Open a replicant database. If the named database doesn't exist it is created.
