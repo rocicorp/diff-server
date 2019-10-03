@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "react": "16.8.6",
+    "react-native-draggable-flatlist": "^1.1.9",
     "react-native": "0.60.5",
     "replicant-react-native": "../../../bind/react-native"
   },

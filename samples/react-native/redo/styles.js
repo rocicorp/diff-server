@@ -5,14 +5,11 @@ const viewPadding = 10;
 const styles =  StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: "flex-start",
+    alignItems: "stretch",
     backgroundColor: "#F5FCFF",
     padding: viewPadding,
-    paddingTop: 50
-  },
-  list: {
-    width: "100%"
+    paddingTop: 50,
   },
   listItem: {
     paddingTop: 10,
