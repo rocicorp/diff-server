@@ -137,7 +137,7 @@ func open(dbName string) error {
 	}
 
 	if _, ok := connections[dbName]; ok {
-		return errors.New("specified database is already open")
+		return nil
 	}
 
 	p := dbPath(repDir, dbName)
@@ -164,7 +164,7 @@ func close(dbName string) error {
 	}
 	conn := connections[dbName]
 	if conn == nil {
-		return errors.New("specified database is not open")
+		return nil
 	}
 	delete(connections, dbName)
 	return nil

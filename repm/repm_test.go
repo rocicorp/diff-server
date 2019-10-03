@@ -90,7 +90,7 @@ func TestList(t *testing.T) {
 
 	rb, err = Dispatch("db1", "open", nil)
 	assert.Nil(rb)
-	assert.EqualError(err, "specified database is already open")
+	assert.NoError(err)
 
 	rb, err = Dispatch("", "list", nil)
 	assert.NoError(err)

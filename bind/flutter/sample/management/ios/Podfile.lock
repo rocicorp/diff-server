@@ -1,0 +1,22 @@
+PODS:
+  - Flutter (1.0.0)
+  - replicant (0.0.1):
+    - Flutter
+
+DEPENDENCIES:
+  - Flutter (from `.symlinks/flutter/ios`)
+  - replicant (from `.symlinks/plugins/replicant/ios`)
+
+EXTERNAL SOURCES:
+  Flutter:
+    :path: ".symlinks/flutter/ios"
+  replicant:
+    :path: ".symlinks/plugins/replicant/ios"
+
+SPEC CHECKSUMS:
+  Flutter: 0e3d915762c693b495b44d77113d4970485de6ec
+  replicant: dd5b3daab4f8848c96e141e11c2eaf728205646b
+
+PODFILE CHECKSUM: 10ae9c18d12c9ffc2275c9a159a3b1e281990db0
+
+COCOAPODS: 1.7.5
