@@ -53,6 +53,7 @@ repositories {
 
 dependencies {
     implementation "com.facebook.react:react-native:${safeExtGet('reactnativeVersion', '+')}"
+    implementation files('./repm.aar')
 }
 
 def configureReactNativePom(def pom) {
