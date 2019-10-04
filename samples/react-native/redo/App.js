@@ -1,8 +1,8 @@
 import React, { Component } from 'react';
 import {
   Button,
-  Keyboard,
   Image,
+  Keyboard,
   Text,
   TextInput,
   TouchableOpacity,
@@ -15,7 +15,6 @@ import { styles, viewPadding } from './styles.js';
 export default class App extends Component {
  
   state = {
-    root: '',
     text: "",
     todos: [],
   };
@@ -23,14 +22,7 @@ export default class App extends Component {
   async componentDidMount() {
     this._replicant = new Replicant('https://replicate.to/serve/react-native-susan');
     await this._initBundle();
-
     this._replicant.onChange = this._load;
-
-    const root = await this._replicant.root();
-    this.setState({
-      root,
-    });
-
     this._load();
   
     Keyboard.addListener(
@@ -46,14 +38,14 @@ export default class App extends Component {
  
   renderItem = ({ item, index, move, moveEnd, isActive }) => {
     return (
-      <TouchableOpacity
-        onLongPress={move}
-        onPressOut={moveEnd}
-      >
+      <TouchableOpacity onLongPress={move} onPressOut={moveEnd}>
         <View key={item.id}>
           <View style={styles.listItemCont}>
-            <Text style={[styles.listItem, { textDecorationLine: this._setTextDecorationLine(item.value.done)}]}
-              onPress={() => this._handleDone(item.id, item.value.done)} >
+            <Text style={
+                [styles.listItem,
+                  { textDecorationLine:
+                    item.value.done ? 'line-through' : 'none' }]}
+              onPress={() => this._handleDone(item.id, item.value.done)}>
               {item.value.title}
             </Text>
           <Button title="X" onPress={() => this._deleteTodo(item.id)} />
@@ -107,7 +99,7 @@ export default class App extends Component {
     let todos = await this._replicant.exec('getAllTodos');   
     
     // Sort todos by order.
-    todos.sort(function(a, b){return a.value.order - b.value.order});
+    todos.sort((a, b) => a.value.order - b.value.order);
     
     this.setState({
       todos,
@@ -115,13 +107,13 @@ export default class App extends Component {
   }
 
   _handleTextChange = text => {
-    this.setState({ text: text });
+    this.setState({ text });
   };
 
   _addTodo = async () => {
-    let todos = this.state.todos;
-    let text = this.state.text;
-    let notEmpty = text.trim().length > 0;
+    const todos = this.state.todos;
+    const text = this.state.text;
+    const notEmpty = text.trim().length > 0;
 
     if (notEmpty) {
       const uid = await this._replicant.exec('uid');
@@ -153,25 +145,9 @@ export default class App extends Component {
     return order;
   }
 
-  // Calculates the order field when items are reordered.
-  _getReorder = (to, from) => {
-    const isMoveup = from > to ? true : false;
-    to = Math.min(to, this.state.todos.length - 1);
-    const order = isMoveup ? this._getOrder(to) : this._getOrder(to+1);
-    return order;
-  }
-
-  _setTextDecorationLine = (isDone) => {
-    let textDecoration = 'none';
-    if (isDone) textDecoration = 'line-through';
-
-    return textDecoration;
-  }
-
   _handleDone = async (key, prevDone) => {
     if (key != null) {
-      let isDone = !prevDone;
-      await this._replicant.exec('setDone', [key, isDone]);
+      await this._replicant.exec('setDone', [key, !prevDone]);
     }
   };
 
@@ -182,13 +158,14 @@ export default class App extends Component {
   };
 
   _handleReorder = async (to, from) => {
-    const todos = this.state.todos;
-    const id  = todos[from].id;
-    const order = this._getReorder(to, from);
-    await this._replicant.exec('setOrder', [id, order]);
-  }
+    // There is a bug in the dragdrop library where it can send us to destinations that exceed
+    // list length in the case where the items are removed.
+    to = Math.min(to, this.state.todos.length - 1);
 
-  _handleSync = async () => {
-    const result = this._replicant.sync('https://replicate.to/serve/react-native-test');
+    const todos = this.state.todos;
+    const id = todos[from].id;
+    const isMoveup = from > to ? true : false;
+    const order = this._getOrder(isMoveup ? to : to + 1);
+    await this._replicant.exec('setOrder', [id, order]);
   }
 }
