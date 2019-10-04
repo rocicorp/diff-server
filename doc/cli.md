@@ -95,6 +95,9 @@ noms show /path/to/mydb::local
 # ... etc ... see --help for more.
 noms log /path/to/mydb::local
 
+# Note: there are some bugs in `noms log` where some flag combinations can cause it to crash when paging through
+# logs. This doesn't indicate bad data or a deeper problem, it's just a bug in `log` :(.
+
 # Prints out the entire current key/value store
 noms show /path/to/mydb::local.value.data@target
 
