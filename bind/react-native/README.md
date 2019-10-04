@@ -10,6 +10,7 @@ In your project's directory:
 
 ```
 yarn add /path/to/replicant-react-native.tar.gz
+react-native link
 cd ios
 pod install
 ```
@@ -39,13 +40,21 @@ function getCount() {
 
 ```
 ...
-+  resolver: {
-+    assetExts: ['bundle'],
-+  },
+resolver: {
+  assetExts: ['png', 'jpeg', 'svg', 'bundle'],
+},
 ...
 ```
 
-#### 5. Instantiate Replicant
+#### 5. Import Replicant
+
+```js
+import Replicant from 'replicant-react-native';
+```
+
+For now, you can use any name you want after `serve` in the URL.
+
+#### 6. Instantiate Replicant
 
 ```js
 var rep = Replicant('https://replicate.to/serve/any-name-here');
@@ -53,7 +62,7 @@ var rep = Replicant('https://replicate.to/serve/any-name-here');
 
 For now, you can use any name you want after `serve` in the URL.
 
-#### 6. Register your bundle with Replicant
+#### 7. Register your bundle with Replicant
 
 ```js
 var rep = new Replicant('https://replicate.to/serve/aa-react-native');
@@ -65,13 +74,16 @@ const resolved = Image.resolveAssetSource(resource).uri.replace('/assets', '');
 await rep.putBundle(await (await fetch(resolved)).text());
 ```
 
-#### 7. Execute transactions
+#### 8. Execute transactions
 
 ```js
+rep.onChange = () => {
+  var count = await rep.exec('getCount');
+  print('The answer is ${count}');
+};
+
 await rep.exec('increment', [1]);
 await rep.exec('increment', [41]);
-var count = await rep.exec('getCount');
-print('The answer is ${count}');
 ```
 
 ### Whew! All done. Time for a cup of coffee ☕️.
