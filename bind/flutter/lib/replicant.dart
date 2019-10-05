@@ -56,7 +56,7 @@ class Replicant {
     this._name = name;
     _invoke(this._name, 'open');
     _root = _getRoot();
-    this.sync();
+    this._scheduleSync(0);
   }
 
   String get name => _name;
@@ -109,17 +109,21 @@ class Replicant {
       _timer.cancel();
       _timer = null;
       await _checkChange(await _invoke(this._name, "sync", {'remote': this._remote}));
+      _scheduleSync(5);
     } catch (e) {
-      print('ERROR DURING SYNC');
-      print(e);
       // We are seeing some consistency errors during sync -- we push commits,
       // then turn around and fetch them and expect to see them, but don't.
       // that is bad, but for now, just retry.
-      _timer = new Timer(new Duration(seconds: 1), sync);
+      print('ERROR DURING SYNC');
+      print(e);
+      _scheduleSync(1);
     } finally {
-      _timer = new Timer(new Duration(seconds: 5), sync);
       this._fireOnSync(false);
     }
+  }
+
+  void _scheduleSync(seconds) {
+      _timer = new Timer(new Duration(seconds: seconds), sync);
   }
 
   Future<void> close() async {
