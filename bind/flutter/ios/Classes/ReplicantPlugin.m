@@ -37,16 +37,16 @@ NSString* replicantDir(void);
     queue = generalQueue;
   }
 
-  NSLog(@"Replicant: Handling: %@ with arguments: %@", call.method, call.arguments);
+  // The arguments passed from Flutter is a two-element array:
+  // 0th element is the name of the database to call on
+  // 1st element are the rpc arguments (JSON-encoded)
+  NSArray* args = (NSArray*)call.arguments;
+
+  NSLog(@"Replicant: Handling: %@ with arguments: %@", call.method, [args objectAtIndex:1]);
   dispatch_async(queue, ^(void){
-    // The arguments passed from Flutter is a two-element array:
-    // 0th element is the name of the database to call on
-    // 1st element are the rpc arguments (JSON-encoded)
-    NSArray* args = (NSArray*)call.arguments;
     NSError* err = nil;
     NSData* res = RepmDispatch([args objectAtIndex:0], call.method, [[args objectAtIndex:1] dataUsingEncoding:NSUTF8StringEncoding], &err);
     dispatch_async(dispatch_get_main_queue(), ^(void){
-      NSLog(@"method: %@", call.method);
       if (err != nil) {
         result([FlutterError errorWithCode:@"UNAVAILABLE"
                                   message:[err localizedDescription]
