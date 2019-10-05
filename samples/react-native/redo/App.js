@@ -116,11 +116,9 @@ export default class App extends Component {
     const notEmpty = text.trim().length > 0;
 
     if (notEmpty) {
-      const uid = await this._replicant.exec('uid');
       const index = todos.length == 0 ? 0 : todos.length;
       const order = this._getOrder(index);
-      const done = false;
-      await this._replicant.exec('addTodo', [uid, text, order, done]);
+      await this._replicant.exec('addTodo', [text, order]);
       this._load();
     }
 

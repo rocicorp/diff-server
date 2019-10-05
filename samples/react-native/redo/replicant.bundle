@@ -1,11 +1,5 @@
 function codeVersion() {
-    return 6.3;
-}
-
-function uid() {
-    var next = db.get('uid') || 1;
-    db.put('uid', next+1);
-    return next;
+    return 6.5;
 }
 
 function init() {
@@ -16,8 +10,8 @@ function init() {
     }
 }
 
-function addTodo(id, title, order) {
-    _write(id, {
+function addTodo(title, order) {
+    _write(_uid(), {
         title: title,
         done: false,
         order: order,
@@ -75,4 +69,10 @@ function _fullid(tid) {
 
 function _tid(fullid) {
     return fullid.substr(prefix.length);
+}
+
+function _uid() {
+    var next = db.get('uid') || 1;
+    db.put('uid', next+1);
+    return next;
 }

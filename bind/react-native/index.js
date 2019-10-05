@@ -3,16 +3,21 @@ import { NativeModules } from 'react-native';
 const { Replicant: repm } = NativeModules;
 
 export default class Replicant {
+  onChange = () => {};
+  onSync = (syncing) => {};
+  _timerID = -1;
+
   constructor(remote) {
       this._remote = remote;
-      this.onChange = () => {};
       this._root = this._invoke('open', {name: remote})
         .then(() => this._getRoot())
         // open can fail if the database is already open, which can
         // happen especially during development when hot-reloading.
         // just ignore this.
         .catch(() => this._getRoot());
-      this._root.then(() => this.sync());
+
+        this._root
+        .then(() => this.sync());
   }
 
   async root() {
@@ -54,7 +59,22 @@ export default class Replicant {
   // Synchronizes the database with the server. New local transactions that have been executed since the last
   // sync are sent to the server, and new remote transactions are received and replayed.
   async sync() {
-    await this._checkChange(await this._invoke("sync", {'remote': this._remote}));
+    this._fireOnSync(true);
+    try {
+      if (this._timerID == 0) {
+        // Another call stack is already inside _sync();
+        return;
+      }
+
+      clearTimeout(this._timerID);
+      this._timerID = 0;
+      await this._checkChange(await this._invoke("sync", {'remote': this._remote}));
+    } catch (e) {
+      console.warn('ERROR DURING SYNC', e.toString());
+    } finally {
+      this._timerID = setTimeout(() => this.sync(), 5000);
+      this._fireOnSync(false);
+    }
   }
 
   async dropDatabase() {
@@ -88,6 +108,16 @@ export default class Replicant {
     if (this.onChange != null) {
       try {
         this.onChange();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  }
+
+  _fireOnSync(syncing) {
+    if (this.onSync != null) {
+      try {
+        this.onSync(syncing);
       } catch (e) {
         console.error(e);
       }
