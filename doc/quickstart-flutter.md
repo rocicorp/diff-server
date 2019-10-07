@@ -1,4 +1,4 @@
-# Conflict-Free Offline Sync in Less than 5 Minutes
+# Local-First Flutter Apps in Less than 5 Minutes
 
 #### 1. Get the SDK
 
