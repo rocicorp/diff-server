@@ -24,9 +24,9 @@ tar xvzf replicant-flutter-sdk.tar.gz
 
 #### 3. Create a transaction bundle
 
-You interact with Replicant by executing JavaScript _transactions_.
+You interact with Replicant by executing _transactions_, which are written in JavaScript.
 
-Create a new `lib/bundle.js` file inside your app to hold these transactions, then add this code to it:
+Create a new `lib/bundle.js` file inside your app to hold some transactions, then add this code to it:
 
 ```
 function codeVersion() {
