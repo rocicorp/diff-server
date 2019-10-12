@@ -10,6 +10,7 @@ require (
 	github.com/google/uuid v1.1.1 // indirect
 	github.com/julienschmidt/httprouter v1.2.0
 	github.com/lithammer/shortuuid v3.0.0+incompatible
+	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b
 	github.com/onsi/ginkgo v1.8.0 // indirect
 	github.com/onsi/gomega v1.5.0 // indirect
 	github.com/robertkrimen/otto v0.0.0-20180617131154-15f95af6e78d

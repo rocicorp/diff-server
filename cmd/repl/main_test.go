@@ -12,10 +12,12 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aboodman/replicant/db"
+	"github.com/aboodman/replicant/util/time"
 )
 
 func TestCommands(t *testing.T) {
 	assert := assert.New(t)
+	defer time.SetFake()()
 
 	tc := []struct {
 		label string
@@ -25,6 +27,14 @@ func TestCommands(t *testing.T) {
 		out   string
 		err   string
 	}{
+		{
+			"log empty",
+			"",
+			"log --no-pager",
+			0,
+			"",
+			"",
+		},
 		{
 			"bundle put good",
 			"function futz(k, v){ db.put(k, v) }; function echo(v) { return v; };",
@@ -39,6 +49,14 @@ func TestCommands(t *testing.T) {
 			"bundle get",
 			0,
 			"function futz(k, v){ db.put(k, v) }; function echo(v) { return v; };",
+			"",
+		},
+		{
+			"log bundle put",
+			"",
+			"log --no-pager",
+			0,
+			fmt.Sprintf("commit gedd9dnmlb2doi034ltrce8h18102n4m\nOrigin:      cli\nCreated:     %s\nStatus:      PENDING\nMerged:      %s\nTransaction: .putBundle(blob(a2gj33rbobbebq5r89c2vmr8k2so3mo0))\n\n", time.Now(), time.Now()),
 			"",
 		},
 		{
@@ -71,6 +89,14 @@ func TestCommands(t *testing.T) {
 			"exec futz foo bar",
 			0,
 			"",
+			"",
+		},
+		{
+			"log exec good",
+			"",
+			"log --no-pager",
+			0,
+			fmt.Sprintf("commit gekh5qruoqaq5nk9atkcqmru26qmj220\nOrigin:      cli\nCreated:     %s\nStatus:      PENDING\nMerged:      %s\nTransaction: futz(\"foo\", \"bar\")\n(root) {\n+   \"foo\": \"bar\"\n  }\n\ncommit gedd9dnmlb2doi034ltrce8h18102n4m\nOrigin:      cli\nCreated:     %s\nStatus:      PENDING\nMerged:      %s\nTransaction: .putBundle(blob(a2gj33rbobbebq5r89c2vmr8k2so3mo0))\n\n", time.Now(), time.Now(), time.Now(), time.Now()),
 			"",
 		},
 		{

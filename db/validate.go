@@ -14,7 +14,7 @@ func validate(db *DB, commit Commit) (replayed Commit, err error) {
 		return makeTx(db.noms, commit.BasisRef(), commit.Meta.Tx.Origin, commit.Meta.Tx.Date, commit.Meta.Tx.Code, commit.Meta.Tx.Name, commit.Meta.Tx.Args, newBundle, newData), nil
 
 	case CommitTypeReorder:
-		target, err := commit.FinalReorderTarget(db.noms)
+		target, err := commit.InitalCommit(db.noms)
 		if err != nil {
 			return Commit{}, err
 		}

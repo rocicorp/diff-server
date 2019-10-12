@@ -97,7 +97,7 @@ func rebase(db *DB, onto types.Ref, date datetime.DateTime, commit Commit, forkP
 	case CommitTypeReorder:
 		// Reorder transactions can be recursive. But at the end of the chain there will eventually be an original Tx function.
 		// Find it and re-run it against the new basis.
-		target, err := commit.FinalReorderTarget(db.noms)
+		target, err := commit.InitalCommit(db.noms)
 		if err != nil {
 			return Commit{}, err
 		}

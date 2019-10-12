@@ -220,20 +220,19 @@ func (c Commit) Target() types.Ref {
 	return types.Ref{}
 }
 
-func (c Commit) FinalReorderTarget(noms types.ValueReader) (Commit, error) {
+func (c Commit) InitalCommit(noms types.ValueReader) (Commit, error) {
 	switch c.Type() {
-	case CommitTypeTx:
+	case CommitTypeTx, CommitTypeGenesis:
 		return c, nil
-	case CommitTypeReorder:
+	case CommitTypeReorder, CommitTypeReject:
 		var t Commit
 		err := marshal.Unmarshal(c.Target().TargetValue(noms), &t)
 		if err != nil {
 			return Commit{}, err
 		}
-		return t.FinalReorderTarget(noms)
-	default:
-		return Commit{}, fmt.Errorf("Unexpected reorder target of type %v: %s", c.Type(), types.EncodedValue(c.Original))
+		return t.InitalCommit(noms)
 	}
+	return Commit{}, fmt.Errorf("Unexpected commit of type %v: %s", c.Type(), types.EncodedValue(c.Original))
 }
 
 func (c Commit) TargetValue(noms types.ValueReadWriter) types.Value {

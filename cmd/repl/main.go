@@ -10,17 +10,23 @@ import (
 	"runtime/trace"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/attic-labs/noms/go/diff"
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/attic-labs/noms/go/types"
 	jn "github.com/attic-labs/noms/go/util/json"
+	"github.com/attic-labs/noms/go/util/outputpager"
+	"github.com/mgutz/ansi"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/aboodman/replicant/db"
 	execpkg "github.com/aboodman/replicant/exec"
 	servepkg "github.com/aboodman/replicant/serve"
+	"github.com/aboodman/replicant/util/chk"
 	"github.com/aboodman/replicant/util/kp"
 	rlog "github.com/aboodman/replicant/util/log"
+	"github.com/aboodman/replicant/util/tbl"
 )
 
 const (
@@ -109,6 +115,7 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 	sync(app, getDB)
 	serve(app, sps, errs)
 	drop(app, getSpec, in, out)
+	logCmd(app, getDB, out)
 
 	bundle := app.Command("bundle", "Manage the currently registered bundle.")
 	getBundle(bundle, getDB, out)
@@ -351,4 +358,137 @@ func drop(parent *kingpin.Application, gsp gsp, in io.Reader, out io.Writer) {
 		_, err = noms.Delete(noms.GetDataset(db.LOCAL_DATASET))
 		return err
 	})
+}
+
+func logCmd(parent *kingpin.Application, gdb gdb, out io.Writer) {
+	kc := parent.Command("log", "Displays the history of a replicant database.")
+	np := kc.Flag("no-pager", "supress paging functionality").Bool()
+
+	kc.Action(func(_ *kingpin.ParseContext) error {
+		d, err := gdb()
+		if err != nil {
+			return err
+		}
+		c := d.Head()
+		r, err := d.RemoteHead()
+		if err != nil {
+			return err
+		}
+		inRemote := false
+
+		if !*np {
+			pgr := outputpager.Start()
+			defer pgr.Stop()
+			out = pgr.Writer
+		}
+
+		for {
+			if c.Type() == db.CommitTypeGenesis {
+				break
+			}
+
+			if c.Original.Equals(r.Original) {
+				inRemote = true
+			}
+
+			initialCommit, err := c.InitalCommit(d.Noms())
+
+			getStatus := func() (r string, mergedTime time.Time) {
+				if inRemote {
+					r = "MERGED"
+				} else {
+					r = "PENDING"
+				}
+
+				switch c.Type() {
+				case db.CommitTypeReject:
+					r += " (REJECT)"
+					mergedTime = c.Meta.Reject.Date.Time
+				case db.CommitTypeReorder:
+					r += " (REBASE)"
+					mergedTime = c.Meta.Reorder.Date.Time
+				case db.CommitTypeTx:
+					mergedTime = c.Meta.Tx.Date.Time
+				default:
+					chk.Fail("unexpected commit type")
+				}
+
+				return
+			}
+
+			getTx := func() string {
+				args := []string{}
+				it := initialCommit.Meta.Tx.Args.Iterator()
+				for {
+					v := it.Next()
+					if v == nil {
+						break
+					}
+					if v.Kind() == types.BlobKind {
+						args = append(args, fmt.Sprintf("blob(%s)", v.Hash().String()))
+					} else {
+						args = append(args, types.EncodedValue(v))
+					}
+				}
+				return fmt.Sprintf("%s(%s)", initialCommit.Meta.Tx.Name, strings.Join(args, ", "))
+			}
+
+			rejectReason := func() string {
+				if c.Meta.Reject.Reason.Fiat.Detail != "" {
+					return fmt.Sprintf("Fiat (%s)", c.Meta.Reject.Reason.Fiat.Detail)
+				}
+				return fmt.Sprintf("Nondeterminism (Expected %s, Got %s)", c.Meta.Reject.Reason.Nondeterm.Expected.TargetHash().String(), initialCommit.Original.Hash().String())
+			}
+
+			fmt.Fprintln(out, color("commit "+c.Original.Hash().String(), "red+h"))
+			table := (&tbl.Table{}).
+				Add("Origin: ", initialCommit.Meta.Tx.Origin).
+				Add("Created: ", initialCommit.Meta.Tx.Date.String())
+
+			status, t := getStatus()
+			table.Add("Status: ", status)
+			if t != (time.Time{}) {
+				table.Add("Merged: ", t.String())
+			}
+			if c.Type() == db.CommitTypeReject {
+				table.Add("Reject Reason: ", rejectReason())
+			}
+
+			if !initialCommit.Original.Equals(c.Original) {
+				initialBasis, err := initialCommit.Basis(d.Noms())
+				if err != nil {
+					return err
+				}
+				table.Add("Initial Basis: ", initialBasis.Original.Hash().String())
+			}
+			table.Add("Transaction: ", getTx())
+
+			_, err = table.WriteTo(out)
+			if err != nil {
+				return err
+			}
+
+			basis, err := c.Basis(d.Noms())
+			if err != nil {
+				return err
+			}
+
+			err = diff.PrintDiff(out, basis.Data(d.Noms()), c.Data(d.Noms()), false)
+			if err != nil {
+				return err
+			}
+
+			fmt.Fprintln(out, "")
+			c = basis
+		}
+
+		return nil
+	})
+}
+
+func color(text, color string) string {
+	if outputpager.IsStdoutTty() {
+		return ansi.Color(text, color)
+	}
+	return text
 }

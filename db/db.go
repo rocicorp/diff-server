@@ -85,6 +85,20 @@ func (db *DB) Noms() types.ValueReadWriter {
 	return db.noms
 }
 
+func (db *DB) Head() Commit {
+	return db.head
+}
+
+func (db *DB) RemoteHead() (c Commit, err error) {
+	ds := db.noms.GetDataset(REMOTE_DATASET)
+	if !ds.HasHead() {
+		// TODO: maybe setup the remote head at startup too.
+		return makeGenesis(db.noms), nil
+	}
+	err = marshal.Unmarshal(ds.Head(), &c)
+	return
+}
+
 func (db *DB) Hash() hash.Hash {
 	return db.head.Original.Hash()
 }
