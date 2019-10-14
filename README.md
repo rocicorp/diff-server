@@ -2,11 +2,11 @@
 
 Replicant makes it easy - pleasant, even - to create insanely fast, local-first, offline-enabled mobile applications.
 
-Replicant works along side your existing stack. It provides a simple primitive: an asynchronous bidirectional pipe that is accessible on both the client and server sides of your application.
+Replicant works along side your existing technology stack. It provides a simple primitive: an asynchronous bidirectional pipe that is accessible on both the client and server-side of your application.
 
 TODO: Diagram
 
-Any data you put on one side of the pipe shows up at the other side the next time the pipe is synchronized. Since the pipe is asynchronous, conflicts can occur if the same data is modified concurrently at both ends. Such conflicts are handled naturally and intuitively by expressing mutation as atomic transactions, written in JavaScript. Replicant rewinds and replays these transactions as necessary so that both sides of the pipe end up seeing the same sequence of changes. Since the transactions are pure functions, this guarantees that both ends of the pipe converge to the same state.
+Any data you put on one side of the pipe shows up at the other side the next time the client and server synchronize. Since the pipe is asynchronous, conflicts can occur if the same data is modified concurrently at both ends. Such conflicts are handled naturally and intuitively by expressing mutation as atomic transactions, written in JavaScript. Replicant rewinds and replays these transactions as necessary so that both sides of the pipe end up seeing the same sequence of changes. Since the transactions are pure functions, this guarantees that both ends of the pipe converge to the same state.
 
 This ends up being a really nice way to work with disconnected applications: in most cases you can completely ignore conflicts, and those that remain are far easier to reason about.
 
