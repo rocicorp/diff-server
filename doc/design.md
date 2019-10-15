@@ -49,7 +49,7 @@ the database as if it was a local database and synchronization happens behind th
 * **Standard Data Model**: The Replicant data model is a standard document database. From an API perspective, it's
 very similar to Google Cloud Firestore, MongoDB, Couchbase, FaunaDB, and many others. You don't need to learn anything new, 
 and can build arbitrarily complex data structures on this primitive that are still conflict-free.
-* **Easy to Adopt**: Replicant runs along side your existing stack. It's only job is to implement bidirectional conflict-free sync between clients and the server. You still use your existing server-side database and other infrastructure.
+* **Easy to Adopt**: Replicant runs along side your existing stack. Its only job is to provide bidirectional conflict-free sync between clients and your servers. This makes it very easy to adopt: you can try it for just a small piece of functionality, or a small slice of users, while leaving everything else the same.
 
 # Intuition
 
