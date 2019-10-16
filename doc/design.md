@@ -85,6 +85,8 @@ Replicant's internal data model is very similar to Git and related system:
 
 Each change to the database is represented by a _commit_ object that contains an immutable snapshot of the entire database as of that moment. Commits are identified using a cryptographic _hash_ of their serialization. Each commit also includes the hash of the previous commit (or commits, in the case of a merge), so that the entire history of a database is uniquely identified by a single hash. As in Git, Replicant nodes also contain one or more named _heads_, which are the only mutable state in the entire system. Each head contains the hash of a commit.
 
+TODO: Diagram
+
 Just like Git, Replicant makes extensive use of content-addressing and persistent data structures internally to avoid duplicating the entire database in each commmit. (For much more information on this, see [Noms](https://github.com/attic-labs/noms), which is the library Replicant uses internally for this functionality.)
 
 Unlike Git, a Replicant commit also includes a record of the exact function and parameters that created 
@@ -96,87 +98,120 @@ Periodically, the client _synchronizes_ with its server, sending its latest loca
 
 ## Schema
 
-These types describe the Noms data that is used to track history on both the client and server. They are written in [NomDL](https://github.com/attic-labs/noms/blob/master/go/nomdl/parser.go#L82), the type definition language for Noms. But you don't need to know Noms or NomDL in detail to be able to follow along.
+There are a handful of different commit _types_ used in Replicant. In Go/C++ -ish pseudocode, they are as follows:
+
+```
+type Commit = GenesisCommit | TxCommit | RebaseCommit | RejectCommit
+```
+
+### Genesis Commit
+
+TODO: diagram
+
+The Genesis commit is the initial commit in every database. It has no metadata, no basis, and always has an empty bundle and empty user data. Since every Replicant database starts with this commit, it is always possible to find at least one shared ancestor - the genesis commit - for any two Replicant database states.
+
+```
+type CommitValue struct {
+  Value struct {
+    // The currently registered transaction bundle
+    Code Blob
+    // Current user data
+    Data Map<String, JSONValue>
+  }
+}
+
+type GenesisCommit struct {
+  CommitValue
+}
+```
 
 ### Normal Commit
 
-This is the basic commit in Replicant that records a transaction having been run. To replay this transaction, execute the
-transaction specified by `.meta.tx` against the single parent commit, if any.
+TODO: Diagram
 
-```cpp
-struct Commit {
-  meta struct {
-    // The date that the commit was started on the origin.
-    // This is the date that is returned for any call to the current time in the transaction on any node.
-    // Random sources are also seeded from this.
-    date Date
-    // The details of the transaction that was executed and led to this commit
-    tx struct {
-      // Identifies the node the transaction was originally run on - useful for debugging
-      Origin String
-      // The bundle of code that contains the transaction function that was run
-      Code Ref<Blob>
-      // The name of the transaction function within `Code` that was run
-      Name String
-      // The arguments that were passed to the transaction function
-      Args List<Value>
-    }
-  }
-  // The previous commit. For Replicant "normal" commits, this will always be empty or size=1
-  parents Set<Ref<Cycle<Commit>>>
-  // The current state of the database
-  value struct {
-    // The currently registered transactions - see "registering transactions"
-    TxReg Ref<Set<Ref<Blob>>>
-    // All user data, maped by unique ID
-    Data Map<String, Value>
-  }
-}
+This is the basic commit in Replicant that records a transaction function execution. To validate this transaction, execute the
+transaction specified by `.Meta.Name` with arguments `.Meta.Args` against the commit in `Basis`.
+
 ```
-</details>
+type CommitBasis struct {
+  // The previous commit in history
+  Basis Hash<Commit>
+}
 
-TODO: Also need indexes somewhere. It's a bit tricky because they will *not* be synchronized, and might even be
-device specific, but ideally they move atomically with commits. Seems like they really need to be in another
-dataset and something else ensures they happen atomically with commit :-/.
+type MetaCommon struct {
+  // The date that the commit was originally created.
+  // This is informational only and is not used as part of synchronization.
+  // It's also the date that is returned for any call to Date.now() inside transaction functions.
+  Date Date
+  // The unique ID of the node the commit was created on.
+  ClientID String
+};
 
-### Merge Commit
-
-This commit records a fork in history being merged back together. `.parents` will always have two commits, and
-one of them will also be in `.meta.first`. To replay this transaction, first replay the commit at `.meta.first`,
-then replay the other commit in `parents`.
-
-```cpp
-struct Commit {
-  meta struct {
-    first Ref<Cycle<Commit>>
-  }
-  parents Set<Ref<Cycle<Commit>>>
-  value struct {
-    TxReg Ref<Set<Ref<Blob>>>
-    Data Map<String, Value>
+type TxCommit struct {
+  CommitBasis
+  CommitValue
+  Meta struct {
+    MetaCommon
+    // The transaction bundle that contains the function that was run
+    Blob Code
+    // The name of the transaction function exported from `Code` that was run
+    String Name
+    // The arguments that were passed to the transaction function
+    JSONList Args
   }
 }
 ```
 
-### Failed Commit
+### Rebase Commit
 
-This commit records a transaction that failed server-side validation (see "integration"). `.parents` has either
-zero or one entries, which is the commit that the failed commit would have been ordered after, had it succeeded.
-The `.meta.failed` field contains the commit that failed validation.
+TODO: Diagram
 
-To replay this transaction, do nothing. The data in `.value` should be identical to the data in the parent commit,
-if any. This commit type is used only to communicate to clients that a commit was rejected by the server without
-needing to modify that commit.
+This commit records a transaction that was reordered (or _rebased_) in order to resolve a fork.
 
-```cpp
-struct Commit {
-  meta struct {
-    failed Ref<Cycle<Commit>>
+Commits can be rebased either on the client or server, and can be rebased multiple times (so a Rebase commit's `Subject` can itself be a Rebase commit).
+
+To replay this transaction, dereference `Subject` recursively until a Normal Commit is found. Then execute that transaction against the Rebase Commit's basis.
+
+```
+type CommitSubject struct {
+  // A commit whose effects were ammended by another commit
+  Subject Hash<TxCommit|RebaseCommit>
+};
+
+type RebaseCommit struct {
+  CommitBasis
+  CommitSubject
+  CommitValue
+  type Meta struct {
+    MetaCommon
   }
-  parents Set<Ref<Cycle<Commit>>>
-  value struct {
-    TxReg Ref<Set<Ref<Blob>>>
-    Data Map<String, Value>
+}
+```
+
+### Reject Commit
+
+TODO: Diagram
+
+This commit records a transaction that was rejected by the server. A commit might be rejected for a few reasons:
+
+  1. The commit was _non-deterministic_. The commit stated that it executed a function with parameters against a basis commit, and arrived at a resulting commit, but when the server re-ran this transaction as part of sync, it arrived at a different answer.
+  2. The server decided to reject the transaction arbitrarily. The server can just decide in Replicant to not accept any commit it wants, for any reason it wants. Often, customer code will do additional validation on the server-side and determine a commit is invalid for reasons the client could not have known.
+
+To replay this transaction, set the new commit's `.Value` to this commit's `.Basis.Value`.
+
+```
+type RejectCommit struct {
+  CommitBasis
+  CommitSubject
+  CommitValue
+  type Meta struct {
+    MetaCommon
+  }
+  Reason union {
+    // When Replicant replayed the commit to validate it, it got `Expected`, not `Subject`
+    Expected Hash<TxCommit|RebaseCommit>
+    // An arbitrary reason the commit was rejected
+    Fiat string
   }
 }
 ```
