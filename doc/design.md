@@ -81,18 +81,16 @@ to handle correctly.
 
 # Data Model
 
-Replicant builds on [Noms](https://github.com/attic-labs/noms), a versioned, transactional, forkable database.
+Replicant's internal data model is very similar to Git and related system:
 
-Noms has a data model that is very similar to Git and related systems: Each change to the system is represented by a _commit_ object that contains an immutable snapshot of the system as of that moment. The previous change (or changes, in the case where a fork is merged) is referenced by a set of _parents_. As with Git, Noms makes use of content-addressing and persistent data structures to reduce duplication and facilitate fast diff and sync.
+Each change to the database is represented by a _commit_ object that contains an immutable snapshot of the entire database as of that moment. Commits are identified using a cryptographic _hash_ of their serialization. Each commit also includes the hash of the previous commit (or commits, in the case of a merge), so that the entire history of a database is uniquely identified by a single hash. As in Git, Replicant nodes also contain one or more named _heads_, which are the only mutable state in the entire system. Each head contains the hash of a commit.
 
-The main difference between Noms and Git is that Git stores mainly text and is intended to
-be used by humans, while Noms stores mainly data structures, and is intended to be used by software. But you could actually implement Replicant with Git instead of Noms — it would just be a lot slower and harder to build.
+Just like Git, Replicant makes extensive use of content-addressing and persistent data structures internally to avoid duplicating the entire database in each commmit. (For much more information on this, see [Noms](https://github.com/attic-labs/noms), which is the library Replicant uses internally for this functionality.)
 
-Replicant builds on the Noms data model by annotating each commit with the transaction function and parameters that created 
-it. Since transactions are pure functions, this means that any node can execute a commit's transaction against its parent 
-commit and arrive at the exact same commit.
+Unlike Git, a Replicant commit also includes a record of the exact function and parameters that created 
+it. Since transactions are pure functions, this means that two nodes that start at the same state and execute the same function with the same parameters will create the exact same commit, with the same hash.
 
-A replicant _client_ progresses by executing a transaction against its latest local commit. The transaction that was executed, including its parameters, are recorded in the new commit, and it becomes the new latest.
+A Replicant client progresses by executing a JavaScript function against the current state of one of its heads. The function that was executed, including its parameters and all dependent code, are recorded in the new commit, along with the references to the previous commit(s). The hash of the new commit is then atomically written to the head.
 
 Periodically, the client _synchronizes_ with its server, sending its latest local commits, receiving the rest of the merged history in exchange, and integrating it into its local state. See "Synchronization" for details.
 
