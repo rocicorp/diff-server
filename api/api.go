@@ -98,6 +98,10 @@ type ExecResponse struct {
 
 type SyncRequest struct {
 	Remote jsnoms.Spec `json:"remote"`
+
+	// Shallow causes only the head of the remote server to be downloaded, not all of its history.
+	// Currently this is incompatible with bidirectional sync.
+	Shallow bool `json:"shallow,omitempty"`
 }
 
 type SyncResponse struct {
@@ -317,7 +321,11 @@ func (api *API) dispatchSync(reqBytes []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	err = api.db.Sync(req.Remote.Spec)
+	if req.Shallow {
+		err = api.db.HackyShallowSync(req.Remote.Spec, func(p db.Progress) {})
+	} else {
+		err = api.db.Sync(req.Remote.Spec)
+	}
 	if err != nil {
 		return nil, err
 	}
