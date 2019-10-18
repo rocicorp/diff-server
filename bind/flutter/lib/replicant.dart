@@ -27,6 +27,10 @@ class Replicant {
   ChangeHandler onChange;
   SyncHandler onSync;
 
+  // If true, Replicant only syncs the head of the remote repository, which is
+  // must faster. Currently this disables bidirectional sync though :(.
+  bool hackyShallowSync;
+
   String _name;
   String _remote;
   Future<String> _root;
@@ -108,7 +112,7 @@ class Replicant {
 
       _timer.cancel();
       _timer = null;
-      await _checkChange(await _invoke(this._name, "sync", {'remote': this._remote}));
+      await _checkChange(await _invoke(this._name, "sync", {'remote': this._remote, 'shallow': this.hackyShallowSync}));
       _scheduleSync(5);
     } catch (e) {
       // We are seeing some consistency errors during sync -- we push commits,
