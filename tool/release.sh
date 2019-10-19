@@ -24,9 +24,10 @@ cp ../bind/react-native/build/replicant-react-native.tar.gz .
 # repl
 echo "Building repl..."
 
+REPL_VERSION=`git describe --tags`
 cd $ROOT
-GOOS=darwin GOARCH=amd64 go build -o build/repl-darwin-amd64 ./cmd/repl
-GOOS=linux GOARCH=amd64 go build -o build/repl-linux-amd64 ./cmd/repl
+GOOS=darwin GOARCH=amd64 go build -ldflags "-X github.com/aboodman/replicant/util/version.v=$REPL_VERSION" -o build/repl-darwin-amd64 ./cmd/repl
+GOOS=linux GOARCH=amd64 go build -ldflags "-X github.com/aboodman/replicant/util/version.v=$REPL_VERSION" -o build/repl-linux-amd64 ./cmd/repl
 
 # noms tool
 echo "Building noms..."
