@@ -1,6 +1,6 @@
 # Table of Contents
 
-* [Spinner-Free Mobile Applications](##spinner-free-mobile-applications)
+* [Spinner-Free Mobile Applications](#spinner-free-mobile-applications)
 * [Introducing Replicant](#introducing-replicant)
 * [Intuition](#intuition)
 * [Data Model](#data-model)
