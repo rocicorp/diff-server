@@ -12,10 +12,10 @@
 * [Conflicts](#conflicts)
 * [Other Ideas](#other-ideas)
 
-# Spinner-Free Mobile Applications
+# Offline-First: Spinner-Free Mobile Applications
 
-"[Offline-First](https://www.google.com/search?q=offline+first)" describes an application architecture where
-data is read and written from a local database on user devices, then synchronized lazily with servers whenever
+"[Offline-First](https://www.google.com/search?q=offline+first)" describes a client/server architecture where
+the application reads and writes to a local database on the device, any synchornizes with servers asynchronously whenever
 there is connectivity.
 
 These applications are highly desired by product teams and users because they are so much more responsive and
