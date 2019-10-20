@@ -24,7 +24,7 @@ applications are instantaneously responsive and reliable in any network conditio
 
 Unfortunately, offline-first applications are also really hard to build. Bidirectional
 sync is a famously difficult problem, and one which has elluded satisfying general
-solutions. Existing attempts to build general solutions (Apple CloudKit, Android Sync, Google FireStore, Realm, PouchDB) all have one or more of the following serious problems:
+solutions. Existing attempts to build general solutions (Apple CloudKit, Android Sync, Google Cloud Firestore, Realm, PouchDB) all have one or more of the following serious problems:
 
 * **Manual Conflict Resolution.** Consult the [Android Sync](http://www.androiddocs.com/training/cloudsave/conflict-res.html) or [PouchDB](https://pouchdb.com/guides/conflicts.html) docs for a taste of how difficult this is for even simple cases. Every single pair of operations in the application must be considered for conflicts, and the resulting conflict resolution code needs to be kept up to date as the application evolves. Developers are also responsible for ensuring the resulting merge is equivalent on all devices, otherwise the application ends up [split-brained](https://en.wikipedia.org/wiki/Split-brain_(computing)).
 * **Lack of Atomic Transactions.** Some solutions claim automatic conflict resolution, but lack atomic transactions. Without transactions, automatic merge means that any two sequences of writes might interleave. This is analogous to multithreaded programming without locks.
@@ -32,7 +32,7 @@ solutions. Existing attempts to build general solutions (Apple CloudKit, Android
 * **Difficult or non-existent incremental integration.** Some solutions effectively require a full committment to a non-standard or proprietary backend database or system design, which is not tractable for existing systems, and risky even for new systems.
 
 For these reasons, existing products are often not practical options for application developers, leaving them
-forced to develop their own sync protocol at the application layer if they want an offline-first app. Given how expensive and risky this is, most applications delay offline-first until the business is very large and successful.
+forced to develop their own sync protocol at the application layer if they want an offline-first app. Given how expensive and risky this is, most applications delay offline-first until the business is very large and successful. Even then, many attempts fail.
 
 # Introducing Replicant
 
@@ -43,13 +43,12 @@ The key features that contribute to Replicant's leap in usability are:
 * **Transactions**: Replicant supports full [ACID](https://en.wikipedia.org/wiki/ACID_(computer_science)) multikey read/write 
 transactions. Transactions in Replicant are expressed as arbitrary functions, which are executed serially and isolated from 
 each other.
-* **Conflict-free**: Replicant is [Convergent Causal Consistent](https://jepsen.io/consistency/models/causal): after synchronization, transactions are guaranteed to have run in the same order on all nodes, resulting in the same database state. This feature, combined with transaction atomicity,
-means that developers typically do not need to think about the fact that nodes are disconnected. They simply use 
-the database as if it was a local database and synchronization happens behind the scenes.
+* **Virtually Conflict-free**: Replicant is a [Convergent Causal Consistent](https://jepsen.io/consistency/models/causal) system: after synchronization, transactions are guaranteed to have run in the same order on all nodes, resulting in the same database state. This feature, combined with transaction atomicity,
+means that developers rarely need to think about conflicts. Conflicts do still happen, but in almost all cases conflict resolution is a natural side-effect of serialized atomic transactions.
 * **Standard Data Model**: The Replicant data model is a standard document database. From an API perspective, it's
 very similar to Google Cloud Firestore, MongoDB, Couchbase, FaunaDB, and many others. You don't need to learn anything new, 
 and can build arbitrarily complex data structures on this primitive that are still conflict-free.
-* **Easy to Adopt**: Replicant runs along side your existing stack. Its only job is to provide bidirectional conflict-free sync between clients and your servers. This makes it very easy to adopt: you can try it for just a small piece of functionality, or a small slice of users, while leaving everything else the same.
+* **Easy to Adopt**: Replicant is a simple primitive that runs along side any existing stack. Its only job is to provide bidirectional conflict-free sync between clients and servers. This makes it very easy to adopt: you can try it for just a small piece of functionality, or a small slice of users, while leaving the rest of your application the same.
 
 # Intuition
 
@@ -108,7 +107,7 @@ type Commit = GenesisCommit | TxCommit | RebaseCommit | RejectCommit
 
 TODO: diagram
 
-The Genesis commit is the initial commit in every database. It has no metadata, no basis, and always has an empty bundle and empty user data. Since every Replicant database starts with this commit, it is always possible to find at least one shared ancestor - the genesis commit - for any two Replicant database states.
+The Genesis commit is the initial commit in every Replicant database. It has no metadata, no basis, and always has an empty bundle and empty user data. Since every Replicant database starts with this commit, it is always possible to find at least one shared ancestor - the genesis commit - for any two Replicant database states.
 
 ```
 type CommitValue struct {
