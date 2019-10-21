@@ -1,6 +1,6 @@
 # Table of Contents
 
-* [Spinner-Free Mobile Applications](#spinner-free-mobile-applications)
+* [Spinner-Free Mobile Applications](#offline-first-spinner-free-mobile-applications)
 * [Introducing Replicant](#introducing-replicant)
 * [Intuition](#intuition)
 * [Data Model](#data-model)
@@ -233,11 +233,9 @@ One or more Replicant Servers are run by the Replicant Service. The Replicant Se
 
 A Replicant Client is embedded within a client-side application, typically a mobile app in iOS or Android, but also potentially a desktop or web app. The application, or _host_, uses the client as its local datastore.
 
-The client is updated by executing _transactions_, which are invocations of pure functions called _transaction functions_. Each _transaction function_ takes one or more parameters, plus a snapshot of the current state of the database, and returns as a result a new state of the database.
-
 ## Client State
 
-Replicant maintains two Noms _datasets_ (analagous to Git branches):
+The client maintains two heads:
 
 * _remote_ - the last-known state of the Replicant Server
 * _local_ - the current state exposed to the host application
@@ -246,48 +244,61 @@ Each dataset is either empty or has one of the Replicant `Commit` types (see "Sc
 
 ## User Data Model
 
-The data model exposed to user code is a fairly standard document database approach, like Google Firestore, Couchbase, RethinkDB, etc:
+The data model exposed to user code is a standard document database, like Google Firestore, Couchbase, RethinkDB, etc. The database allows storage of key/value pairs, where keys are arbitrary strings and values are JSON trees. Efficient sorted scans of the keys in lexicographic order are supported.
 
-- keys are byte arrays
-- values are JSON-like trees, except:
-  - special _class field supported to give json objects a "type", which type that they can later be queried by
-  - special _id field for unique id
-  - blobs supported
-- you can query into a subtree of a value using a path syntax
-- you can optionally declare indexes on any path
+***TODO:*** *In the future the user data model will also include first-class collections (can currently be emulated) and (non-synced) indexes*
 
-***TODO:*** *This needs a lot more work. I haven't thought a lot about it because it's not relevant to the core problem Replicant is solving, only the developer ergonomics (which is also important! but can be done a bit later).*
+## Client API
 
-## Transaction Language
+A Replicant client is interacted with via language/platform-specific bindings. For example, for iOS, there is a `Replicant.framework` which exposes high-level iOS/Swift bindings. For Android, there's a `replicant.aar` that does the same for Java/Kotlin.
 
-The key desired features for the transaction language are:
+In Java, this core of this API looks like:
 
-* *Determinism*: Every invocation with the same database state and parameters must result in the same output
-and effect on the database, on all platforms Replicant runs on.
-* *Popularity*: Replicant cannot be easy to use if it requires you to learn a new programming language. Also
-popularity on each target platform needs to be considered. For example, MATLAB is popular, but it's not popular
-with Android or iOS developers.
+```java
+public interface Listener {
+  // The database has changed in some way. The UI should probably re-render.
+  public void onChange();
+}
 
-I am currently thinking that the initial transaction language should be JavaScript. Determinism *could* be **enforced** a variety of ways:
+public class Replicant {
+  public Replicant(String dbName, String authToken, Listener listener) {}
 
-* Using an approach like [deterministic.js](https://deterministic.js.org/) - this is a blacklist approach, and so it's guaranteed to miss things
-* Running a JavaScript interpreter inside [wasmi](https://github.com/paritytech/wasmi) - this is a whitelist approach that was built from the ground-up for determinism, but it's slow
-* Running inside a forked [Otto](https://github.com/robertkrimen/otto) that enforced determinism - also slow
+  // Execute the named function from the current bundle with the specified arguments.
+  public JSONValue exec(String functionName, JSONList arguments) {}
+}
+```
 
-I think that we do not need determinism to be rock-solid because we will detect non-deterministic transactions automatically during sync. All we need to do is make non-deterministic transactions hard to trigger by accident, and the deterministic.js approach is sufficient for that while allowing us to use a modern JIT'd VM for performance.
+## Bundle API
 
-## API
+Transaction functions run in a clean ES6 environment. This means that the entire JavaScript language is available, but no browser or npm objects like window, document, process, etc. No state is preserved between invocations of transaction functions.
 
-A Replicant client can be interacted with either via language-specific bindings or via an IPC protocol (similar to the 
-existing Noms CLI). The API contains:
+Additionally, most sources of non-determinism are controlled. For example, `Math.random()` is derived from the current commit hash, and `Date.now()` is recorded in the commit so that it can be set correctly for replays.
 
-* The entire Noms API
-  * Note: `Commit()` can be used to commit arbitrary Noms data, which can break the Replicant client or make its transactions fail server-side validation. But `Commit` is also useful for debugging, and isn't dangerous to the system as a whole, so I see no reason to remove it.
-* A way to manage the currently registered set of transactions (see Registering Transactions)
-  * Note: servers will frequently whitelist allowed transactions though
-* A way to execute transactions and get their results
-* A way to listen for transactions or specific sets of transactions
-  * A way to listen for transactions synchronously, such that the listener can abort the transaction from committing. This is mostly used by the server (see "Integration"), but could be useful on the client too and has no downside.
+***Note:** Ensuring transactions are completely deterministic is not required for correctness, because the server will detect non-determinism and insert a `Reject` commit in that case. But it is important for the developer experience that it's difficult to accidentally create non-deterministic transaction functions.*
+
+Transaction functions can have any number of JSON-compatible parameters. Additionally, transaction functions have access to one non-standard global, called `db`, which is the current state of the Replicant database. It has the following (TypeScript) interface:
+
+```typescript
+type JSON = boolean | number | string | Array<JSON> | Record<String, JSON>;
+
+declare class Replicant {
+  put(key: string, value: JSON): void;
+  has(key: string): boolean;
+  get(key: string): JSON;
+  del(key: string): boolean;
+  scan({
+    prefix?: string;
+    startAtID?: string;
+    endAtID?: string;
+    startExclusive?: boolean;
+    endExclusive?: boolean;
+    limit?: number;
+  }): Array<{
+    id: string;
+    value: JSON;
+  }>;
+};
+```
 
 # Replicant Server
 
@@ -297,54 +308,43 @@ However, its role in the system is very different: a Replicant Server's main res
 
 Unlike clients, Replicant Servers do not ever rewind. The server is Truth, and the clients dance to its tune. Once a transaction is accepted by a server and written to its history, it is final, and clients will rewind and replay as necessary to match.
 
-This does not mean, however, that servers have to accept whatever clients write. Servers have full discretion over whether to accept any given transaction, and they validate all work clients do. See "synchronization" and "integration" for details.
-
 ## Consistency Requirements
 
 Each Replicant Server acts as a single strictly serialized logical database, even though they are typically a distributed system internally. In the event of a partition internal to the replicant server, it will become unavailable rather than give inconsistent results. This is required for correctness of clients and integrations, which are reliant on transactions that are marked finalized by the server remaining so.
 
 This requirement has no effect on client availability or performance, since interaction with the server is already in the background as connectivity allows.
 
-## Noms Schema
+## Server State
 
-The server uses the same schema as the client, except there's only a `local` dataset, since the server doesn't need to allow a separate branch to evolve while sync is in progress the way the client does.
-
-## Registering Transactions
-
-We expect that users will typically want to *register* transaction functions at the server-side, rather than let clients execute whatever transactions they want, for a few reasons:
-
-1. Without this, clients would have to include the transaction code in their packages, and then write it into their databases, which would double the amount of storage the clients would consume.
-2. We expect that developers will usually want to whitelist transaction functions that can run, based on known hashes of code bundles. Otherwise, malicious clients could attack good clients by way or the sync protocol.
-3. For many transaction types originating on clients, there will be server-side actions that need to happen -- either to actually execute the transaction in reality, or to validate the transaction (see "Integration"). It's natural to implement these server-side handlers nearby the place where registration happens.
-
-Registration is implemented as a special pair of transaction functions baked into all Replicant nodes: `registerTransaction` and `unregisterTransaction` that update the `value.txCode` field of the server's `local` dataset.
-
-# Replicant Service
-
-The Replicant Service is a horizontally scalable application server server written in Go that runs one or more Replicant servers. All state is stored persistently in S3/Dynamo (see [NBS-on-AWS](https://github.com/attic-labs/noms/blob/master/go/nbs/NBS-on-AWS.md)).
-
-Because each Replicant Server stores only a small amount of data (that is, just the data that should be replicated to user devices), there is no need to partition individual servers. However, it may be the case that for a variety of reasons there are multiple instances of the service hosting the same Replicant Server at once.
-
-Each NBS instance has its own isolated backing storage, meaning that for some applications, the Replicant Service might end
-up duplicating a lot of data server-side in separate Replicant Servers. To combat that, Replicant Service could be setup to
-share a single NBS instance across all users. The downside (in the current code) is that all commits to NBS serialized. This
-would probably still be fine up to lots of users, but at some point would need to be fixed.
+The Replicant server maintains only a single `local` head.
 
 ## API
 
-For each Replicant Server it hosts, the Replicant Service exposes an HTTP/REST API that exposes:
+Each Replicant server exposes an HTTP/REST API with the following functionality:
 
-* The entire Replicant client API (including the underlying Noms API)
+* The entire Replicant client API
+* A special synchronous form of the `onChange` API from the client that allows the receiver to mark the transaction as invalid
 * A special `Sync()` method used during synchronization (see "Synchronization" for details)
-* A special form of the notification API from the client that allows cancelation (see "Integration" for details)
+* A subset of the [Noms ChunkStore API](https://github.com/attic-labs/noms/blob/master/go/chunks/chunk_store.go):
+  * `Get`/`GetMany`
+  * `Has`/`HasMany`
+  * `Put`
+
+The ChunkStore API is required in order to use Noms to move data to and from the server. See Synchronization for details.
+
+# Replicant Service
+
+The Replicant Service is a horizontally scalable stateless application server written in Go that runs one or more Replicant servers. All state is stored persistently in S3/DynamoDB (see [NBS-on-AWS](https://github.com/attic-labs/noms/blob/master/go/nbs/NBS-on-AWS.md)). DynamoDB is used to store the value of each head, with [Strongly Cosnsistent Reads](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.ReadConsistency.html). DynamoDB's built-in support for conditional writes is used implement optimistic locking of each head.
+
+Because each Replicant Server stores only a small amount of data (that is, just the data that should be replicated to one user's devices), there is no need to partition individual servers.
 
 ## Integration
 
 Most Replicant Groups will not be self-contained. Creating and synchronizing data amongst themselves it not enough: they must
-interact with the outside world -- either with other existing parts of the service stack, or with other replicant groups. Examples include sending emails, billing customers, sending data to and from other users on the same service, updating and reflecting updates to the system of record, etc.
+interact with the outside world -- either with other existing parts of the service stack, or with other Replicant groups. Examples include sending emails, billing customers, sending data to and from other users on the same service, updating and reflecting updates to the system of record, etc.
 
-Integration with the outside world is done via the Replicant Service API. To push data into a Replicant Group, register a transaction that
-implements the change, and invoke that transaction. To pull data out of a Replicant Group, use the database API as normal.
+Integration with the outside world is done via the Replicant Server API. To push data into a Replicant Group, register a bundle that
+implements the necessary transaction function, and invoke that function. To pull data out of a Replicant Group, use the database API as normal.
 To be notified of new transactions, register for notifications. To validate, and potentially reject a transaction, use the synchronous notification API.
 
 # Synchronization
@@ -353,7 +353,11 @@ Synchronization is a four-step process that should feel familiar to anyone who h
 
 ## Step 1: Client pushes to server
 
-The client uses something similar to [`noms sync`](https://github.com/attic-labs/noms/blob/master/doc/cli-tour.md#noms-sync) to push all missing chunks from the client's `local` dataset to the server. At the end of the push, the client calls `Sync(newHead hash.Hash)`.
+The client _pushes_ the value from its `local` head to the server, along with all dependent data.
+
+This is implemented using Noms' (confusingly-named, in this case) [`Pull`](https://godoc.org/github.com/attic-labs/noms/go/datas#Pull) operation, which recursively explores a value, copying any missing chunks from the source to the sink.
+
+Once the push is complete, the client calls `Sync(newHead hash.Hash)` on the server.
 
 ## Step 2: Commit on the server
 
@@ -363,25 +367,29 @@ On the server-side, `Sync(newHead)` looks like:
 2. When the call continues:
   - Find the fork point between the client's commit and the server's latest commit
   - If the server commit is descendent from the client commit (the server already included these commits):
-    - Respond with the new head, there's nothing more to do
-  - Else:
-    - Validate each new commit (each commit after the fork point on the client side):
-      - Check that the specified transaction codebase is registered (exists in .value.txCode) and the function is known
-      - Execute the transaction
-      - If the resulting hash doesn't match the one the client specified, the client is badly behaved, return 40x
-      - If the transaction has a synchronous handler registered, run that handler (see integration)
-        - If the handler rejects the transaction, replace the transaction with a failed commit transaction
-    - Let _newHead_ equal the head of the validated chain
-    - Let _oldHead_ equal the current head of the `local` dataset
-    - If `newHead` is not descendant from `oldHead`
-      - Create a merge commit whose parents are `oldHead` and `newHead`, and with `first` set to `oldHead`
-      - Set _newHead_ to the merge commit
-    - Commit `newHead` to the `local` dataset
-    - Return `newHead`
+    - Respond with the new head
+    - Return
+  - Otherwise, rebase the client fork onto the current server head:
+    - For each novel client commit:
+      - `let nextServerCommit = nil`
+      - Validate the novel commit:
+        - Replay the transaction from the novel commit against its original basis
+        - If the resulting hash doesn't match the one the client specified:
+          - Append a `Reject` commit for this transaction to `local`
+          - Continue this loop
+      - `let nextServerCommit = nil`
+      - If the novel commit's basis is the same as the server's `local` head:
+        - set `nextServerCommit` to the novel commit
+      - Else:
+        - Replay the transaction against the current value of `local`
+        - Create a `Rebase` commit for this transaction and store it in `nextServerCommit`
+      - If the server has a synchronous handler registered, run that handler, passing it `nextServerCommit` (see integration). If the handler rejects the transaction:
+        - Create a `Reject` commit for this transaction and store it in `nextServerCommit`
+      - Set `head` to `nextServerCommit`
 
 ## Step 3: Client-Side Pull
 
-Back on the client-side, the `Sync()` call has just returned with a new head that should become the head of the `remote` dataset. This is trival. We trust the server and this makes no changes to our `local` dataset, so we just `noms sync` the server's `local` dataset to our `remote` dataset, which pulls all the relevant chunks and we're done.
+Back on the client-side, we again `pull`. This time from the server's `local` dataset to the client's `remote`. We trust the server so there's no need to revalidate anything.
 
 ## Step 4: Client-Side Rebase
 
@@ -492,11 +500,11 @@ This example maintains a sorted list for fast searching. This cannot be done eas
 
 This applies to all kinds of complex data structures like geoindices, text indices, etc.
 
-## Cases that do not work automatically
+## Cases that are a little tougher
 
 ### Arbitrary sequence manipulation
 
-Arbitrary sequence manipulation is not nicely addressed by Replicant as proposed above:
+Arbitrary sequence manipulation is not automatically addressed by serializing transactions. Consider:
 
 ```js
 function moveTodoItem(itemID, newIdx) {
@@ -510,35 +518,35 @@ function moveTodoItem(itemID, newIdx) {
   }
   const item = list.splice(currIdx, 1);
   list.splice(newIdx, 0, item);
+  db.put('todos', list);
 }
 ```
 
-Many cases, including the above, can be made to work by changing the parameters of the function such that more is done inside the transaction (in this case: finding the insert position). However, other more complex cases don't naturally work.
+However, an easy way to fix this is to use [Fractional Indexing](https://www.figma.com/blog/realtime-editing-of-ordered-sequences/#fractional-indexing). A quick and dirty implementation would look like:
 
-One way to improve Replicant to support these cases better would be to change the Noms `List` type to be backed by a sequence CRDT. It would not change the allowed operations, users would not even have to know the implementation details.
+```js
+function moveTodoItem(itemID, newIdx) {
+  const todos = db.get('todos');  // map id->todo
+  const sorted = Object.entries(todos).sort(e.value => e.value.position);
+  const currIdx = sorted.findIndex(item.value => item.key == itemID);
+  const left = newIdx == 0 ? 0 : sorted[newIdx - 1].position;
+  const right = newIdx == sorted.length-1 ? 1 : sorted[newIdx-1].position;
+  todos[item.ID] = left + (right - left) / 2;
+  db.put('todos', todos);
+}
+```
 
-Transactions would still run serially in the same order on every node. So in a sense, we'd not be using the full power of CRDTs, just the bit where they know how to adjust the semantics of a sequence edit operation to account for changes in op order.
+However, it will quickly run into floating point precision issues. A better implementation would use arbitrary precision numbers.
 
 ### Asking the user
 
 Replicant addresses the majority of merge cases quite naturally, but there are still bound to be the occasional reason to
 ask the user to merge a conflict.
 
-Such cases can naturally be located after merge has occurred by finding the merge commits and then applying a new transaction
+Such cases can naturally be located after the fact by finding the rebase commits and then applying a new transaction
 that performs whatever fixup the user specified.
 
 # Other Ideas
-
-## Host-Proof Hosting
-
-One challenge with the system as proposed is that customers must either run the Replicant Service inside their datacenter and 
-take on the ops burden for that, or else rely on replicate.to. This latter case is tempting, but means that replicate.to
-will see the customer's user data.
-
-A solution to this problem would be change the Replicant Service to store only an ordered log of transaction functions and
-arguments, not the actual data. This moves the work of merging transactions to the client, possibly slowing down sync. However 
-the advantage would be that the log can be encrypted using a key that only the client knows, dramatically improving privacy
-and security from the customer's point of view.
 
 ## Low-Latency/Edge Database
 
@@ -552,5 +560,4 @@ extremely low latency "transactional" database, with delayed finalization.
 
 ## P2P Database
 
-I think that consensus can also be determined in a purely peer-to-peer mode with no authoritative server. This would be
-interesting for peer-to-peer applications.
+It seems likely that this idea can be generalized to find consensus without an authoratative server, e.g., using RAFT or similar. This might be useful for P2P client-side applications.
