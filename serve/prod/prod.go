@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/aboodman/replicant/serve"
+	"github.com/aboodman/replicant/serve/accounts"
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -19,7 +20,7 @@ const (
 )
 
 var (
-	svc = serve.NewService("aws:replicant/aa-replicant2", "/serve")
+	svc = serve.NewService("aws:replicant/aa-replicant2", accounts.Accounts())
 )
 
 func init() {

@@ -23,6 +23,7 @@ import (
 	"github.com/aboodman/replicant/db"
 	execpkg "github.com/aboodman/replicant/exec"
 	servepkg "github.com/aboodman/replicant/serve"
+	"github.com/aboodman/replicant/serve/accounts"
 	"github.com/aboodman/replicant/util/chk"
 	"github.com/aboodman/replicant/util/kp"
 	rlog "github.com/aboodman/replicant/util/log"
@@ -337,7 +338,7 @@ func serve(parent *kingpin.Application, sps *string, errs io.Writer) {
 	kc.Action(func(_ *kingpin.ParseContext) error {
 		ps := fmt.Sprintf(":%d", *port)
 		log.Printf("Listening on %s...", ps)
-		s := servepkg.NewService(*sps, "")
+		s := servepkg.NewService(*sps, accounts.Accounts())
 		http.Handle("/", s)
 		return http.ListenAndServe(fmt.Sprintf(":%d", *port), nil)
 	})
