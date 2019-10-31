@@ -15,7 +15,7 @@
 # Offline-First: Spinner-Free Mobile Applications
 
 "[Offline-First](https://www.google.com/search?q=offline+first)" describes a client/server architecture where
-the application reads and writes to a local database on the device, any synchornizes with servers asynchronously whenever
+the application reads and writes to a local database on the device, and synchornizes with servers asynchronously whenever
 there is connectivity.
 
 These applications are highly desired by product teams and users because they are so much more responsive and
@@ -334,7 +334,7 @@ The ChunkStore API is required in order to use Noms to move data to and from the
 
 # Replicant Service
 
-The Replicant Service is a horizontally scalable stateless application server written in Go that runs one or more Replicant servers. All state is stored persistently in S3/DynamoDB (see [NBS-on-AWS](https://github.com/attic-labs/noms/blob/master/go/nbs/NBS-on-AWS.md)). DynamoDB is used to store the value of each head, with [Strongly Cosnsistent Reads](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.ReadConsistency.html). DynamoDB's built-in support for conditional writes is used implement optimistic locking of each head.
+The Replicant Service is a horizontally scalable stateless application server written in Go that runs one or more Replicant servers. All state is stored persistently in S3/DynamoDB (see [NBS-on-AWS](https://github.com/attic-labs/noms/blob/master/go/nbs/NBS-on-AWS.md)). DynamoDB is used to store the value of each head, with [Strongly Consistent Reads](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.ReadConsistency.html). DynamoDB's built-in support for conditional writes is used to implement optimistic locking of each head.
 
 Because each Replicant Server stores only a small amount of data (that is, just the data that should be replicated to one user's devices), there is no need to partition individual servers.
 
@@ -453,7 +453,7 @@ function moveKanbanCard(cardID, fromColumnID, toColumnID) {
 In this example, we modify two data items. Each write only makes sense if the other write succeeds. We need the card to end
 up in either one row or the other.
 
-This example is difficult to achieve reliably in existing solutions that use simple last-write-wins semantics or CRDTs because there is no easy way to guarantee that the two writes only happen together.
+This example is difficult to achieve reliably in existing solutions that use simple last-write-wins (LWW) semantics or CRDTs because there is no easy way to guarantee that the two writes only happen together.
 
 ### Arithmetic
 

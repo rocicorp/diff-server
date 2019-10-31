@@ -30,6 +30,8 @@ func TestShallowSync(t *testing.T) {
 	rspec, err := spec.ForDatabase(rdir)
 	assert.NoError(err)
 	err = local.HackyShallowSync(rspec, progress)
+	assert.Equal(remote.head.Original.Get("value").Hash(), local.head.Original.Get("value").Hash())
+	assert.NotEqual(remote.head.Original.Hash(), local.head.Original.Hash())
 	assert.NoError(err)
 	assert.True(count > 0)
 }

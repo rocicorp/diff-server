@@ -48,5 +48,5 @@ func (db *DB) HackyShallowSync(remote spec.Spec, progress func(p Progress)) erro
 	}
 
 	db.noms.SetHead(db.noms.GetDataset(LOCAL_DATASET), db.noms.WriteValue(marshal.MustMarshal(db.noms, c)))
-	return nil
+	return db.init()
 }

@@ -13,6 +13,8 @@ github.com/attic-labs/kingpin v2.2.7-0.20180312050558-442efcfac769+incompatible 
 github.com/attic-labs/kingpin v2.2.7-0.20180312050558-442efcfac769+incompatible/go.mod h1:Cp18FeDCvsK+cD2QAGkqerGjrgSXLiJWnjHeY2mneBc=
 github.com/attic-labs/noms v0.0.0-20190926121934-2bc4725919ed h1:C8KOYV5hiD91+ffk31arz9UELW2V+jKvXVx6LD+x5hU=
 github.com/attic-labs/noms v0.0.0-20190926121934-2bc4725919ed/go.mod h1:qhMSThkSBnQ2QGe2Y5QAlTNjPtpyV2abaKPJRVmpr4A=
+github.com/attic-labs/noms v0.0.0-20191030200831-02cbd663ed04 h1:vAMBnl7q5I2oxsnyIMv6Ba5CjqWnUQ/r2JCgo6czZh0=
+github.com/attic-labs/noms v0.0.0-20191030200831-02cbd663ed04/go.mod h1:qhMSThkSBnQ2QGe2Y5QAlTNjPtpyV2abaKPJRVmpr4A=
 github.com/aws/aws-sdk-go v1.19.26 h1:GavKlzJDfYQGoS4jn2F+KYYZlR8QEhrLPfpf8+oJhS4=
 github.com/aws/aws-sdk-go v1.19.26/go.mod h1:KmX6BPdI08NWTb3/sm4ZGu5ShLoqVDhKgpiN924inxo=
 github.com/aws/aws-sdk-go v1.19.28 h1:u0KMC+Qv0YVyz8YR6mREEtslSPkdUMzXgDJFD5196O8=
@@ -23,6 +25,8 @@ github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+github.com/dgrijalva/jwt-go v3.2.0+incompatible h1:7qlOGliEKZXTDg6OTjfoBKDXWrumCAMpl/TFQ4/5kLM=
+github.com/dgrijalva/jwt-go v3.2.0+incompatible/go.mod h1:E3ru+11k8xSBh+hMPgOLZmtrrCbhqsmaPHjLKYnJCaQ=
 github.com/dustin/go-humanize v1.0.0 h1:VSnTsYCnlFHaM2/igO1h6X3HA71jcobQuxemgkq4zYo=
 github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
 github.com/fsnotify/fsnotify v1.4.7 h1:IXs+QLmnXW2CcXuY+8Mzv/fWEsPGWxqefPtCP5CnV9I=

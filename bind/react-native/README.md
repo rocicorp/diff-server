@@ -52,8 +52,6 @@ resolver: {
 import Replicant from 'replicant-react-native';
 ```
 
-For now, you can use any name you want after `serve` in the URL.
-
 #### 6. Instantiate Replicant
 
 ```js
