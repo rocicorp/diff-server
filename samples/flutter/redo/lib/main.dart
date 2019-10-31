@@ -37,7 +37,7 @@ class _MyHomePageState extends State<MyHomePage> {
   bool _syncing = false;
 
   _MyHomePageState() {
-    _replicant = Replicant(db);
+    _replicant = Replicant(db, authToken: auth);
     _replicant.onChange = this._load;
     _replicant.onSync = this._handleSync;
     _init();
