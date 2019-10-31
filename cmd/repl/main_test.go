@@ -231,7 +231,7 @@ func TestServe(t *testing.T) {
 	args := append([]string{"--db=" + dir, "serve", "--port=8674"})
 	go impl(args, strings.NewReader(""), os.Stdout, os.Stderr, func(_ int) {})
 
-	sp, err := spec.ForDatabase("http://localhost:8674/serve/0/foo")
+	sp, err := spec.ForDatabase("http://localhost:8674/serve/sandbox/foo")
 	assert.NoError(err)
 	d, err := db.New(sp.GetDatabase(), "test")
 	assert.NoError(err)

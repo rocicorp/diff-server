@@ -72,7 +72,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Replicant _fromName(String name) {
-    return new Replicant('https://localhost:7001/serve/0/' + name, name: name);
+    return new Replicant('https://localhost:7001/serve/sandbox/' + name, name: name);
   }
 
   @override

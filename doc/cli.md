@@ -68,7 +68,7 @@ You can run a fully-functioning Replicant server against local disk using `repl`
 repl --db=~/replicant-storage serve
 ```
 
-You can then point your Replicant clients (the CLI, using the `--db` flag, as well as the bindings) at http://localhost:7001/serve/0/foo, where `foo` is a unique database name that you choose.
+You can then point your Replicant clients (the CLI, using the `--db` flag, as well as the bindings) at http://localhost:7001/serve/sandbox/foo, where `foo` is a unique database name that you choose.
 
 ## Noms CLI
 
