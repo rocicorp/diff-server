@@ -52,6 +52,7 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 
 	v := app.Flag("version", "Prints the version of Replicant - same as the 'version' command.").Short('v').Bool()
 	sps := app.Flag("db", "The database to connect to. Both local and remote databases are supported. For local databases, specify a directory path to store the database in. For remote databases, specify the http(s) URL to the database (usually https://replicate.to/serve/<mydb>).").PlaceHolder("/path/to/db").Required().String()
+	auth := app.Flag("auth", "The authorization token to pass to db when connecting.").String()
 	tf := app.Flag("trace", "Name of a file to write a trace to").OpenFile(os.O_RDWR|os.O_CREATE, 0644)
 
 	var sp *spec.Spec
@@ -63,6 +64,7 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 		if err != nil {
 			return spec.Spec{}, err
 		}
+		s.Options.Authorization = *auth
 		return s, nil
 	}
 
