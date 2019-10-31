@@ -89,7 +89,7 @@ it attempts to go to the network).</p>
 
       <dl class="constructor-summary-list">
         <dt id="Replicant" class="callable">
-          <span class="name"><a href="replicant/Replicant/Replicant.html">Replicant</a></span><span class="signature">(<span class="parameter" id="-param-_remote"><span class="type-annotation">String</span> <span class="parameter-name">_remote</span>, {</span> <span class="parameter" id="-param-name"><span class="type-annotation">String</span> <span class="parameter-name">name</span>: <span class="default-value">""</span></span> })</span>
+          <span class="name"><a href="replicant/Replicant/Replicant.html">Replicant</a></span><span class="signature">(<span class="parameter" id="-param-_remote"><span class="type-annotation">String</span> <span class="parameter-name">_remote</span>, {</span> <span class="parameter" id="-param-name"><span class="type-annotation">String</span> <span class="parameter-name">name</span>: <span class="default-value">""</span>, </span> <span class="parameter" id="-param-authToken"><span class="type-annotation">String</span> <span class="parameter-name">authToken</span>: <span class="default-value">""</span></span> })</span>
         </dt>
         <dd>
           Create or open a local Replicant database with named <code>name</code> synchronizing with <code>remote</code>.
@@ -102,6 +102,14 @@ If <code>name</code> is omitted, it defaults to <code>remote</code>.
       <h2>Properties</h2>
 
       <dl class="properties">
+        <dt id="authToken" class="property">
+          <span class="name"><a href="replicant/Replicant/authToken.html">authToken</a></span>
+          <span class="signature">&#8596; String</span>         
+        </dt>
+        <dd>
+          The authorization token to pass to the server during sync.
+                  <div class="features">read / write</div>
+</dd>
         <dt id="hackyShallowSync" class="property">
           <span class="name"><a href="replicant/Replicant/hackyShallowSync.html">hackyShallowSync</a></span>
           <span class="signature">&#8596; bool</span>         
@@ -302,6 +310,7 @@ sync are sent to the server, and new remote transactions are received and replay
       <li class="section-title">
         <a href="replicant/Replicant-class.html#instance-properties">Properties</a>
       </li>
+      <li><a href="replicant/Replicant/authToken.html">authToken</a></li>
       <li><a href="replicant/Replicant/hackyShallowSync.html">hackyShallowSync</a></li>
       <li><a href="replicant/Replicant/name.html">name</a></li>
       <li><a href="replicant/Replicant/onChange.html">onChange</a></li>
