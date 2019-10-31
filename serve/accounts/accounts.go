@@ -7,7 +7,7 @@ import (
 var (
 	a = []serve.Account{
 		serve.Account{
-			ID:     "0",
+			ID:     "sandbox",
 			Name:   "Sandbox",
 			Pubkey: nil,
 		},

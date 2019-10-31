@@ -59,7 +59,7 @@ flutter:
 #### 5. Instantiate Replicant
 
 ```
-var rep = Replicant('https://replicate.to/serve/0/any-name-here')
+var rep = Replicant('https://replicate.to/serve/sandbox/any-name-here')
 ```
 
 For now, you can use any name you want after `serve` in the URL.

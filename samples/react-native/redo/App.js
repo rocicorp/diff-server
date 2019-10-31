@@ -20,7 +20,7 @@ export default class App extends Component {
   };
 
   async componentDidMount() {
-    this._replicant = new Replicant('https://replicate.to/serve/0/samples-redo-react-native');
+    this._replicant = new Replicant('https://replicate.to/serve/sandbox/samples-redo-react-native');
     await this._initBundle();
     this._replicant.onChange = this._load;
     this._load();
