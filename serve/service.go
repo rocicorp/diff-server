@@ -18,7 +18,7 @@ import (
 
 var (
 	// /serve/<account>/<db>/<cmd>
-	pathRegex = regexp.MustCompile(`^/serve/(\d+)/(.+?)/(\w+)/?$`)
+	pathRegex = regexp.MustCompile(`^/serve/(\w+)/(\w+)/(\w+)/?$`)
 )
 
 // Service is a running instance of the Replicant service. A service handles one or more servers.
