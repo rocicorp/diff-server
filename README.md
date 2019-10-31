@@ -30,4 +30,5 @@ For more detail, see the full design doc.
 * [JavaScript Transaction API](./doc/transaction-api.md)
 * [HTTP API](./doc/http.md)
 * [`repl` CLI](./doc/cli.md)
+* [Authentication/Authorization](./doc/auth.md)
 * [Design Document](./doc/design.md)
