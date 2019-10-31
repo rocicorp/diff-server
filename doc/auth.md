@@ -27,6 +27,14 @@ language/environment. See [jwt.io](https://jwt.io/) to find a compatible impleme
 
 Replicant JWTs are signed with ES256.
 
+## Test Token
+
+If you are having trouble generating correctly signed tokens, you can create a test token with [jwt-go](https://github.com/dgrijalva/jwt-go):
+
+```
+echo "{\"db\":\"mydb\", \"exp\":2000000000}" | jwt -key /path/to/your/private-key.pem -alg ES256 -sign -
+```
+
 ## Sending Token to Replicant
 
 Pass the signed JWT to the `Replicant` constructor in your SDK. You can also update it from time to time via the public accessor:
