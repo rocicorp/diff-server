@@ -84,6 +84,7 @@ func remoteSync(remote spec.Spec, remoteDB *DB, commit Commit) (newHead types.Re
 		return newHead, err
 	}
 	req.Header.Set(datas.NomsVersionHeader, constants.NomsVersion)
+	req.Header.Set("Authorization", remote.Options.Authorization)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return newHead, err

@@ -31,6 +31,9 @@ class Replicant {
   /// must faster. Currently this disables bidirectional sync though :(.
   bool hackyShallowSync;
 
+  /// The authorization token to pass to the server during sync.
+  String authToken;
+
   String _name;
   String _remote;
   Future<String> _root;
@@ -50,7 +53,7 @@ class Replicant {
 
   /// Create or open a local Replicant database with named `name` synchronizing with `remote`.
   /// If `name` is omitted, it defaults to `remote`.
-  Replicant(this._remote, {String name = ""}) {
+  Replicant(this._remote, {String name = "", this.authToken = ""}) {
     if (this._remote == "") {
       throw new Exception("remote must be non-empty");
     }
@@ -112,7 +115,7 @@ class Replicant {
 
       _timer.cancel();
       _timer = null;
-      await _checkChange(await _invoke(this._name, "sync", {'remote': this._remote, 'shallow': this.hackyShallowSync}));
+      await _checkChange(await _invoke(this._name, "sync", {'remote': this._remote, 'shallow': this.hackyShallowSync, 'auth': this.authToken}));
       _scheduleSync(5);
     } catch (e) {
       // We are seeing some consistency errors during sync -- we push commits,
