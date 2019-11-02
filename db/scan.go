@@ -5,9 +5,9 @@ import (
 
 	"github.com/attic-labs/noms/go/types"
 
-	"github.com/aboodman/replicant/exec"
-	"github.com/aboodman/replicant/util/chk"
-	jsnoms "github.com/aboodman/replicant/util/noms/json"
+	"roci.dev/replicant/exec"
+	"roci.dev/replicant/util/chk"
+	jsnoms "roci.dev/replicant/util/noms/json"
 )
 
 const (

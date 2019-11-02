@@ -11,7 +11,7 @@ import (
 	"github.com/attic-labs/noms/go/util/datetime"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/aboodman/replicant/util/noms/diff"
+	"roci.dev/replicant/util/noms/diff"
 )
 
 func TestMarshal(t *testing.T) {

@@ -9,8 +9,8 @@ import (
 	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/aboodman/replicant/util/noms/diff"
-	"github.com/aboodman/replicant/util/time"
+	"roci.dev/replicant/util/noms/diff"
+	"roci.dev/replicant/util/time"
 )
 
 func TestSyncMerge(t *testing.T) {

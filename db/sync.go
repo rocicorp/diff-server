@@ -15,7 +15,7 @@ import (
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/attic-labs/noms/go/types"
 
-	"github.com/aboodman/replicant/util/time"
+	"roci.dev/replicant/util/time"
 )
 
 func (db *DB) Sync(remote spec.Spec) error {

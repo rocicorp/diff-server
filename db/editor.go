@@ -1,8 +1,9 @@
 package db
 
 import (
-	"github.com/aboodman/replicant/exec"
 	"github.com/attic-labs/noms/go/types"
+
+	"roci.dev/replicant/exec"
 )
 
 type editor struct {

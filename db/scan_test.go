@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aboodman/replicant/exec"
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
+
+	"roci.dev/replicant/exec"
 )
 
 func TestScan(t *testing.T) {

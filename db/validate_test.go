@@ -5,10 +5,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aboodman/replicant/util/noms/diff"
 	"github.com/attic-labs/noms/go/types"
 	"github.com/attic-labs/noms/go/util/datetime"
 	"github.com/stretchr/testify/assert"
+
+	"roci.dev/replicant/util/noms/diff"
 )
 
 func TestValidate(t *testing.T) {

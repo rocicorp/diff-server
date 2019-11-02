@@ -9,7 +9,7 @@ import (
 	"github.com/attic-labs/noms/go/types"
 	"github.com/attic-labs/noms/go/util/datetime"
 
-	"github.com/aboodman/replicant/util/noms/diff"
+	"roci.dev/replicant/util/noms/diff"
 )
 
 // rebase transforms a forked commit history into a linear one by moving one side

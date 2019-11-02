@@ -9,8 +9,8 @@ import (
 	"github.com/attic-labs/noms/go/types"
 	"github.com/attic-labs/noms/go/util/datetime"
 
-	"github.com/aboodman/replicant/util/chk"
-	"github.com/aboodman/replicant/util/noms/union"
+	"roci.dev/replicant/util/chk"
+	"roci.dev/replicant/util/noms/union"
 )
 
 var (
