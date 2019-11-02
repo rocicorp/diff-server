@@ -6,7 +6,7 @@ import (
 	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/aboodman/replicant/util/noms/memstore"
+	"roci.dev/replicant/util/noms/memstore"
 )
 
 func TestListUnmarshal(t *testing.T) {

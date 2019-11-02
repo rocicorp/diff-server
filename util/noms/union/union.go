@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/aboodman/replicant/util/chk"
 	"github.com/attic-labs/noms/go/marshal"
 	"github.com/attic-labs/noms/go/types"
+
+	"roci.dev/replicant/util/chk"
 )
 
 func Marshal(st interface{}, noms types.ValueReadWriter) (types.Value, error) {

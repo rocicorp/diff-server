@@ -6,7 +6,7 @@ import (
 	"github.com/attic-labs/noms/go/types"
 	nj "github.com/attic-labs/noms/go/util/json"
 
-	"github.com/aboodman/replicant/util/chk"
+	"roci.dev/replicant/util/chk"
 )
 
 type Value struct {

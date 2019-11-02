@@ -1,4 +1,4 @@
-module github.com/aboodman/replicant
+module roci.dev/replicant
 
 go 1.12
 
