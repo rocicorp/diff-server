@@ -20,15 +20,15 @@ import (
 	"github.com/mgutz/ansi"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
-	"github.com/aboodman/replicant/db"
-	execpkg "github.com/aboodman/replicant/exec"
-	servepkg "github.com/aboodman/replicant/serve"
-	"github.com/aboodman/replicant/serve/accounts"
-	"github.com/aboodman/replicant/util/chk"
-	"github.com/aboodman/replicant/util/kp"
-	rlog "github.com/aboodman/replicant/util/log"
-	"github.com/aboodman/replicant/util/tbl"
-	"github.com/aboodman/replicant/util/version"
+	"roci.dev/replicant/db"
+	execpkg "roci.dev/replicant/exec"
+	servepkg "roci.dev/replicant/serve"
+	"roci.dev/replicant/serve/accounts"
+	"roci.dev/replicant/util/chk"
+	"roci.dev/replicant/util/kp"
+	rlog "roci.dev/replicant/util/log"
+	"roci.dev/replicant/util/tbl"
+	"roci.dev/replicant/util/version"
 )
 
 const (
