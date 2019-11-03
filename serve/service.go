@@ -11,9 +11,9 @@ import (
 	"strings"
 	"sync"
 
-	rlog "github.com/aboodman/replicant/util/log"
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/dgrijalva/jwt-go"
+	rlog "roci.dev/replicant/util/log"
 )
 
 var (

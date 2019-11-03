@@ -5,12 +5,13 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/aboodman/replicant/serve"
-	"github.com/aboodman/replicant/serve/accounts"
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
+
+	"roci.dev/replicant/serve"
+	"roci.dev/replicant/serve/accounts"
 )
 
 const (

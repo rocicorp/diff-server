@@ -19,8 +19,8 @@ import (
 	"github.com/attic-labs/noms/go/util/verbose"
 	"github.com/julienschmidt/httprouter"
 
-	"github.com/aboodman/replicant/api"
-	"github.com/aboodman/replicant/db"
+	"roci.dev/replicant/api"
+	"roci.dev/replicant/db"
 )
 
 var (

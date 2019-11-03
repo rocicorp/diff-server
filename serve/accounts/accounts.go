@@ -1,7 +1,7 @@
 package accounts
 
 import (
-	"github.com/aboodman/replicant/serve"
+	"roci.dev/replicant/serve"
 )
 
 var (
