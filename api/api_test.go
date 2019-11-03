@@ -6,8 +6,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/aboodman/replicant/db"
-	"github.com/aboodman/replicant/util/time"
+	"roci.dev/replicant/db"
+	"roci.dev/replicant/util/time"
 )
 
 func TestBasics(t *testing.T) {
