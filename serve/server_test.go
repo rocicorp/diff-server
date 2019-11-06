@@ -56,7 +56,6 @@ func TestAPI(t *testing.T) {
 	}{
 		// Lifted mostly from api_test.go
 		// We don't need to test everything here, just a smoke test that api tests via http are working!
-		// These hashes should line up with those in api_test.go.
 		{"getRoot", `{}`, `{"root":"klra597i7o2u52k222chv2lqeb13v5sd"}`, ""},
 		{"put", `{"id": "foo", "value": "bar"}`, `{"root":"3aktuu35stgss7djb5famn6u7iul32nv"}`, ""},
 		{"has", `{"id": "foo"}`, `{"has":true}`, ""},
@@ -67,6 +66,8 @@ func TestAPI(t *testing.T) {
 		{"get", `{"id": "bar"}`, `{"has":true,"value":2}`, ""},
 		{"put", `{"id": "foopa", "value": "doopa"}`, `{"root":"bvb8b8o945cih7fvliq9s6n3pdd9l2qa"}`, ""},
 		{"scan", `{"prefix": "foo"}`, `[{"id":"foo","value":"bar"},{"id":"foopa","value":"doopa"}]`, ""},
+		{"execBatch", `[{"name": "add", "args": ["bar", 2]},{"name": "add", "args": ["bar", 2]}]`, `{"batch":[{"result":4},{"result":6}],"root":"csp63mgsrbg4v3t7psaiqhbl6s4rsv6h"}`, ""},
+		{"get", `{"id": "bar"}`, `{"has":true,"value":6}`, ""},
 	}
 
 	for i, t := range tc {
