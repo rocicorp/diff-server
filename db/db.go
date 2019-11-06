@@ -134,11 +134,68 @@ func (db *DB) PutBundle(b types.Blob) error {
 }
 
 func (db *DB) Exec(function string, args types.List) (types.Value, error) {
-	defer db.lock()()
-	if strings.HasPrefix(function, ".") {
-		return nil, fmt.Errorf("Cannot call system function: %s", function)
+	r, err := db.ExecBatch([]BatchItem{
+		BatchItem{
+			Function: function,
+			Args:     args,
+		},
+	})
+	if err != nil {
+		return nil, err
 	}
-	return db.execInternal(db.head.Bundle(db.noms), function, args)
+	return r[0].Result, nil
+}
+
+type BatchItem struct {
+	Function string
+	Args     types.List
+}
+
+type BatchItemResponse struct {
+	Result types.Value
+}
+
+func (db *DB) ExecBatch(batch []BatchItem) ([]BatchItemResponse, error) {
+	defer db.lock()()
+	r := make([]BatchItemResponse, 0, len(batch))
+	basis := db.head
+	basisRef := basis.Ref()
+	bundle := basis.Bundle(db.noms)
+	for _, item := range batch {
+		r = append(r, BatchItemResponse{})
+		itemRes := &r[len(r)-1]
+		if strings.HasPrefix(item.Function, ".") {
+			return r, fmt.Errorf("Cannot call system function: %s", item.Function)
+		}
+		newBundle, newData, output, isWrite, err := db.execImpl(basisRef, bundle, item.Function, item.Args)
+		if err != nil {
+			return r, err
+		}
+
+		itemRes.Result = output
+
+		// Do not add commits for read-only transactions.
+		if !isWrite {
+			continue
+		}
+
+		var bundleRef types.Ref
+		if bundle != (types.Blob{}) {
+			bundleRef = types.NewRef(bundle)
+		}
+
+		basis = makeTx(db.noms, basisRef, db.origin, time.DateTime(), bundleRef, item.Function, item.Args, newBundle, newData)
+		basisRef = db.noms.WriteValue(basis.Original)
+	}
+
+	// FastForward not strictly needed here because we should have already ensured that we were
+	// fast-forwarding outside of Noms, but it's a nice sanity check.
+	_, err := db.noms.FastForward(db.noms.GetDataset(LOCAL_DATASET), basisRef)
+	if err != nil {
+		return r, err
+	}
+	db.head = basis
+	return r, nil
 }
 
 func (db *DB) Reload() error {

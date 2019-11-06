@@ -96,6 +96,14 @@ type ExecResponse struct {
 	Root   jsnoms.Hash   `json:"root"`
 }
 
+type ExecBatchRequest struct {
+	Batch []ExecRequest `json:"batch"`
+}
+
+type ExecBatchResponse struct {
+	Batch []ExecResponse `json:"batch"`
+}
+
 type SyncRequest struct {
 	Remote jsnoms.Spec `json:"remote"`
 	Auth   string      `json:"auth,omitempty"`
@@ -137,6 +145,8 @@ func (api *API) Dispatch(name string, req []byte) ([]byte, error) {
 		return api.dispatchPutBundle(req)
 	case "exec":
 		return api.dispatchExec(req)
+	case "execBatch":
+		return api.dispatchExecBatch(req)
 	case "sync":
 		return api.dispatchSync(req)
 	}
@@ -311,6 +321,45 @@ func (api *API) dispatchExec(reqBytes []byte) ([]byte, error) {
 	}
 	if output != nil {
 		res.Result = jsnoms.New(api.db.Noms(), output)
+	}
+	return mustMarshal(res), nil
+}
+
+func (api *API) dispatchExecBatch(reqBytes []byte) ([]byte, error) {
+	count := []struct{}{}
+	err := json.Unmarshal(reqBytes, &count)
+	if err != nil {
+		return nil, err
+	}
+
+	req := ExecBatchRequest{}
+	req.Batch = make([]ExecRequest, 0, len(count))
+	for range count {
+		req.Batch = append(req.Batch, ExecRequest{
+			Args: jsnoms.MakeList(api.db.Noms(), nil),
+		})
+	}
+	err = json.Unmarshal(reqBytes, &req)
+	if err != nil {
+		return nil, err
+	}
+
+	res := ExecBatchResponse{}
+	res.Batch = make([]ExecResponse, 0, len(count))
+	for _, item := range req.Batch {
+		output, err := api.db.Exec(item.Name, item.Args.List())
+		if err != nil {
+			return nil, err
+		}
+		itemRes := ExecResponse{
+			Root: jsnoms.Hash{
+				Hash: api.db.Hash(),
+			},
+		}
+		if output != nil {
+			itemRes.Result = jsnoms.New(api.db.Noms(), output)
+		}
+		res.Batch = append(res.Batch, itemRes)
 	}
 	return mustMarshal(res), nil
 }
