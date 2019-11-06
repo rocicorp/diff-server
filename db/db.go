@@ -162,8 +162,6 @@ func (db *DB) ExecBatch(batch []BatchItem) ([]BatchItemResponse, error) {
 	basisRef := basis.Ref()
 	bundle := basis.Bundle(db.noms)
 	for _, item := range batch {
-		r = append(r, BatchItemResponse{})
-		itemRes := &r[len(r)-1]
 		if strings.HasPrefix(item.Function, ".") {
 			return r, fmt.Errorf("Cannot call system function: %s", item.Function)
 		}
@@ -172,6 +170,8 @@ func (db *DB) ExecBatch(batch []BatchItem) ([]BatchItemResponse, error) {
 			return r, err
 		}
 
+		r = append(r, BatchItemResponse{})
+		itemRes := &r[len(r)-1]
 		itemRes.Result = output
 
 		// Do not add commits for read-only transactions.

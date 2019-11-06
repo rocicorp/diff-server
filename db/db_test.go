@@ -195,6 +195,74 @@ func TestExec(t *testing.T) {
 	}
 }
 
+func TestExecBatch(t *testing.T) {
+	assert := assert.New(t)
+	db, dir := LoadTempDB(assert)
+
+	code := `function append(k, s) {
+	var val = db.get(k) || [];
+	val.push(s);
+	db.put(k, val);
+	return s;
+}
+`
+
+	db.PutBundle(types.NewBlob(db.noms, strings.NewReader(code)))
+
+	batch := []BatchItem{
+		BatchItem{"append", types.NewList(db.noms, types.String("log"), types.String("foo"))},
+		BatchItem{"append", types.NewList(db.noms, types.String("log"), types.String("bar"))},
+	}
+
+	out, err := db.ExecBatch(batch)
+	assert.NoError(err)
+	assert.Equal(2, len(out))
+	assert.Equal("foo", string(out[0].Result.(types.String)))
+	assert.Equal("bar", string(out[1].Result.(types.String)))
+
+	dbs := []*DB{db, reloadDB(assert, dir)}
+	for _, d := range dbs {
+		act, err := d.Get("log")
+		assert.NoError(err)
+		assert.True(types.NewList(d.noms, types.String("foo"), types.String("bar")).Equals(act))
+	}
+}
+
+func TestExecBatchError(t *testing.T) {
+	assert := assert.New(t)
+	db, dir := LoadTempDB(assert)
+
+	code := `function append(k, s) {
+	if (s == 'bar') {
+		throw new Error('error');
+	}
+	var val = db.get(k) || [];
+	val.push(s);
+	db.put(k, val);
+	return s;
+}
+`
+
+	db.PutBundle(types.NewBlob(db.noms, strings.NewReader(code)))
+
+	batch := []BatchItem{
+		BatchItem{"append", types.NewList(db.noms, types.String("log"), types.String("foo"))},
+		BatchItem{"append", types.NewList(db.noms, types.String("log"), types.String("bar"))},
+	}
+
+	out, err := db.ExecBatch(batch)
+	assert.EqualError(err, "Error: error\n    at append (bundle.js:3:13)\n    at apply (<native code>)\n    at recv (bootstrap.js:64:12)\n")
+	assert.Equal(1, len(out))
+	assert.Equal("foo", string(out[0].Result.(types.String)))
+
+	dbs := []*DB{db, reloadDB(assert, dir)}
+	for _, d := range dbs {
+		act, err := d.Get("log")
+		assert.NoError(err)
+		assert.Nil(act) // commit doesn't happen in the case of error
+	}
+}
+
 func TestReadTransaction(t *testing.T) {
 	assert := assert.New(t)
 	db, _ := LoadTempDB(assert)
