@@ -96,6 +96,21 @@ type ExecResponse struct {
 	Root   jsnoms.Hash   `json:"root"`
 }
 
+type BatchRequestItem ExecRequest
+
+type ExecBatchRequest struct {
+	Batch []BatchRequestItem `json:"batch"`
+}
+
+type BatchResponseItem struct {
+	Result *jsnoms.Value `json:"result,omitempty"`
+}
+
+type ExecBatchResponse struct {
+	Batch []BatchResponseItem `json:"batch"`
+	Root  jsnoms.Hash         `json:"root"`
+}
+
 type SyncRequest struct {
 	Remote jsnoms.Spec `json:"remote"`
 	Auth   string      `json:"auth,omitempty"`
@@ -137,6 +152,8 @@ func (api *API) Dispatch(name string, req []byte) ([]byte, error) {
 		return api.dispatchPutBundle(req)
 	case "exec":
 		return api.dispatchExec(req)
+	case "execBatch":
+		return api.dispatchExecBatch(req)
 	case "sync":
 		return api.dispatchSync(req)
 	}
@@ -313,6 +330,46 @@ func (api *API) dispatchExec(reqBytes []byte) ([]byte, error) {
 		res.Result = jsnoms.New(api.db.Noms(), output)
 	}
 	return mustMarshal(res), nil
+}
+
+func (api *API) dispatchExecBatch(reqBytes []byte) ([]byte, error) {
+	var raw []json.RawMessage
+	err := json.Unmarshal(reqBytes, &raw)
+	if err != nil {
+		return nil, err
+	}
+
+	batch := make([]db.BatchItem, 0, len(raw))
+	for _, b := range raw {
+		bri := BatchRequestItem{
+			Args: jsnoms.MakeList(api.db.Noms(), nil),
+		}
+		err = json.Unmarshal([]byte(b), &bri)
+		if err != nil {
+			return nil, err
+		}
+		batch = append(batch, db.BatchItem{
+			Function: bri.Name,
+			Args:     bri.Args.List(),
+		})
+	}
+
+	dbRes, err := api.db.ExecBatch(batch)
+	res := ExecBatchResponse{
+		Batch: make([]BatchResponseItem, 0, len(dbRes)),
+		Root: jsnoms.Hash{
+			Hash: api.db.Hash(),
+		},
+	}
+	for _, item := range dbRes {
+		res.Batch = append(res.Batch, BatchResponseItem{
+			Result: jsnoms.New(api.db.Noms(), item.Result),
+		})
+	}
+
+	// Return both available results *and* error.
+	// Note that in case of error, nothing has been committed.
+	return mustMarshal(res), err
 }
 
 func (api *API) dispatchSync(reqBytes []byte) ([]byte, error) {

@@ -75,6 +75,11 @@ func TestBasics(t *testing.T) {
 		// scan
 		{"put", `{"id": "foopa", "value": "doopa"}`, `{"root":"v075m8grpbm72rk31gbacf9one3q35ql"}`, ""},
 		{"scan", `{"prefix": "foo"}`, `[{"id":"foo","value":"bar"},{"id":"foopa","value":"doopa"}]`, ""},
+
+		// execBatch
+		{"execBatch", invalidRequest, ``, invalidRequestError},
+		{"execBatch", `[{"name": "add", "args": ["bar", 2]},{"name": "add", "args": ["bar", 2]}]`, `{"batch":[{"result":4},{"result":6}],"root":"hjt7tas5ii2pmrmid9n64eopmqutav70"}`, ""},
+		{"get", `{"id": "bar"}`, `{"has":true,"value":6}`, ""},
 		// TODO: other scan operators
 	}
 
