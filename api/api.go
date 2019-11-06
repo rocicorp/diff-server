@@ -98,6 +98,11 @@ type ExecResponse struct {
 
 type BatchRequestItem ExecRequest
 
+// ExecBatchRequest contains a batch of transactions to execute with the `execBatch` command.
+// This is much faster than executing them one-by-one via `exec`.
+//
+// If any transaction function returns an error, the entire batch is halted. Results from all
+// previous transactions in the batch are returned however, nothing from the batch is committed.
 type ExecBatchRequest struct {
 	Batch []BatchRequestItem `json:"batch"`
 }
