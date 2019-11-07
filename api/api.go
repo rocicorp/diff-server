@@ -367,9 +367,11 @@ func (api *API) dispatchExecBatch(reqBytes []byte) ([]byte, error) {
 		},
 	}
 	for _, item := range dbRes {
-		res.Batch = append(res.Batch, BatchResponseItem{
-			Result: jsnoms.New(api.db.Noms(), item.Result),
-		})
+		bri := BatchResponseItem{}
+		if item.Result != nil {
+			bri.Result = jsnoms.New(api.db.Noms(), item.Result)
+		}
+		res.Batch = append(res.Batch, bri)
 	}
 
 	// Return both available results *and* error.

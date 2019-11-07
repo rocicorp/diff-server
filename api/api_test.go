@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -20,7 +21,9 @@ func TestBasics(t *testing.T) {
 
 	const invalidRequest = ""
 	const invalidRequestError = "unexpected end of JSON input"
-	const code = `function add(key, d) { var v = db.get(key) || 0; v += d; db.put(key, v); return v; }`
+	code, err := json.Marshal(`function add(key, d) { var v = db.get(key) || 0; v += d; db.put(key, v); return v; }
+	function log(key, val) { var v = db.get(key) || []; v.push(val); db.put(key, v); }`)
+	assert.NoError(err)
 
 	_, remoteDir := db.LoadTempDB(assert)
 
@@ -57,28 +60,28 @@ func TestBasics(t *testing.T) {
 
 		// putBundle
 		{"putBundle", invalidRequest, ``, invalidRequestError},
-		{"putBundle", fmt.Sprintf(`{"code": "%s"}`, code), `{"root":"mrbevq1sg25j8t86f60oq88nis40ud01"}`, ""},
+		{"putBundle", fmt.Sprintf(`{"code": %s}`, string(code)), `{"root":"vsm77oo1c3r9m5p3r0dkc64imapu1ldm"}`, ""},
 
 		// getBundle
 		{"getBundle", invalidRequest, ``, invalidRequestError},
-		{"getBundle", `{}`, fmt.Sprintf(`{"code":"%s"}`, code), ""},
+		{"getBundle", `{}`, fmt.Sprintf(`{"code":%s}`, string(code)), ""},
 
 		// exec
 		{"exec", invalidRequest, ``, invalidRequestError},
-		{"exec", `{"name": "add", "args": ["bar", 2]}`, `{"result":2,"root":"lchcgvko3ou4ar43lhs23r30os01o850"}`, ""},
+		{"exec", `{"name": "add", "args": ["bar", 2]}`, `{"result":2,"root":"7iavk1o833kqplvrtn2rqc406dfvrf6c"}`, ""},
 		{"get", `{"id": "bar"}`, `{"has":true,"value":2}`, ""},
 
 		// sync
 		{"sync", invalidRequest, ``, invalidRequestError},
-		{"sync", fmt.Sprintf(`{"remote":"%s"}`, remoteDir), `{"root":"lchcgvko3ou4ar43lhs23r30os01o850"}`, ""},
+		{"sync", fmt.Sprintf(`{"remote":"%s"}`, remoteDir), `{"root":"7iavk1o833kqplvrtn2rqc406dfvrf6c"}`, ""},
 
 		// scan
-		{"put", `{"id": "foopa", "value": "doopa"}`, `{"root":"v075m8grpbm72rk31gbacf9one3q35ql"}`, ""},
+		{"put", `{"id": "foopa", "value": "doopa"}`, `{"root":"61hqku8sbqc76cgjjti99fhkjl3nq4r7"}`, ""},
 		{"scan", `{"prefix": "foo"}`, `[{"id":"foo","value":"bar"},{"id":"foopa","value":"doopa"}]`, ""},
 
 		// execBatch
 		{"execBatch", invalidRequest, ``, invalidRequestError},
-		{"execBatch", `[{"name": "add", "args": ["bar", 2]},{"name": "add", "args": ["bar", 2]}]`, `{"batch":[{"result":4},{"result":6}],"root":"hjt7tas5ii2pmrmid9n64eopmqutav70"}`, ""},
+		{"execBatch", `[{"name": "add", "args": ["bar", 2]},{"name": "add", "args": ["bar", 2]},{"name": "log", "args": ["log", "bar"]}]`, `{"batch":[{"result":4},{"result":6},{}],"root":"i3nidc5mep02popavl84u7kt3ged5i14"}`, ""},
 		{"get", `{"id": "bar"}`, `{"has":true,"value":6}`, ""},
 		// TODO: other scan operators
 	}
