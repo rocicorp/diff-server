@@ -58,6 +58,7 @@ func newServer(cs chunks.ChunkStore, urlPrefix, origin string) (*server, error) 
 				// Need to change API to be able to indicate user vs server error
 				clientError(w, err.Error()+"\n")
 			}
+			w.Header().Set("Content-type", "application/json")
 			_, err = io.Copy(w, bytes.NewReader(resp))
 			if err != nil {
 				serverError(w, err)

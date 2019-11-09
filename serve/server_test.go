@@ -74,6 +74,7 @@ func TestAPI(t *testing.T) {
 		msg := fmt.Sprintf("test case %d: %s: %s", i, t.rpc, t.req)
 		resp, err := http.Post(fmt.Sprintf("http://localhost:8674/%s", t.rpc), "application/json", strings.NewReader(t.req))
 		assert.NoError(err, msg)
+		assert.Equal("application/json", resp.Header.Get("Content-type"))
 		body := bytes.Buffer{}
 		_, err = io.Copy(&body, resp.Body)
 		assert.NoError(err, msg)
