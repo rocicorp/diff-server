@@ -52,11 +52,11 @@ See `repl --help` for complete documentation.
 
 ## Interacting with Remote Replicant instances
 
-You can use the CLI to talk to remote replicants to. For example, if you have a server at https://replicate.to/serve/example, you could do:
+You can use the CLI to talk to remote replicants to. For example, if you have a server at https://serve.replicate.to/example, you could do:
 
 ```
-$ echo 42 | repl --db=https://replicate.to/serve/example put foo
-$ repl --db=https://replicate.to/serve/example get foo
+$ echo 42 | repl --db=https://serve.replicate.to/example put foo
+$ repl --db=https://serve.replicate.to/example get foo
 42
 ```
 
@@ -113,5 +113,5 @@ noms show '/path/to/mydb::#ks3ug9d7bavt69g6hjlssgfp6mc4scl9.value.data@target["f
 noms diff /path/to/mydb::#ks3ug9d7bavt69g6hjlssgfp6mc4scl9 /path/to/mydb::local
 
 # Prints the diff between commits on different databases
-noms diff https://replicate.to/serve/mydb::local /path/to/mydb::local
+noms diff https://serve.replicate.to/mydb::local /path/to/mydb::local
 ```

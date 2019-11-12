@@ -8,4 +8,4 @@ If you delete a client database, the same will happen in reverse.
 To delete a replicant database, you have to delete it from all the nodes in the group:
 
 1. Uninstall the app (or clear the app's local storage) from all devices in the Replicant Group.
-2. Run `repl --db=https://replicate.to/serve/<yourdb> drop` using the [Replicant CLI](cli.md).
+2. Run `repl --db=https://serve.replicate.to/<yourdb> drop` using the [Replicant CLI](cli.md).

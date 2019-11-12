@@ -17,8 +17,8 @@ import (
 )
 
 var (
-	// /serve/<account>/<db>/<cmd>
-	pathRegex = regexp.MustCompile(`^\/serve\/([\w-]+)\/([\w-]+)\/([\w-]+)\/?$`)
+	// /<account>/<db>/<cmd>
+	pathRegex = regexp.MustCompile(`^\/([\w-]+)\/([\w-]+)\/([\w-]+)\/?$`)
 )
 
 // Service is a running instance of the Replicant service. A service handles one or more servers.
@@ -98,7 +98,7 @@ func (s *Service) getServer(req *http.Request) (r *server, clientError string, s
 		return nil, "", err
 	}
 
-	server, err := newServer(sp.NewChunkStore(), fmt.Sprintf("/serve/%s/%s", acc, db), "server")
+	server, err := newServer(sp.NewChunkStore(), fmt.Sprintf("/%s/%s", acc, db), "server")
 	s.servers[key] = server
 	if err != nil {
 		return nil, "", err

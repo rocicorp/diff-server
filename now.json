@@ -1,12 +1,12 @@
 {
     "version": 2,
     "name": "replicant",
-    "alias": "replicate.to",
+    "alias": "serve.replicate.to",
     "builds": [
         { "src": "serve/prod/prod.go", "use": "@now/go" }
     ],
     "routes": [
-        { "src": "/serve/.*", "dest": "/serve/prod/prod.go" }
+        { "src": "/.*", "dest": "/serve/prod/prod.go" }
     ],
     "env": {
         "REPLICANT_AWS_ACCESS_KEY_ID": "@aws_access_key_id",

@@ -40,7 +40,7 @@ echo "{\"db\":\"mydb\", \"exp\":2000000000}" | jwt -key /path/to/your/private-ke
 Pass the signed JWT to the `Replicant` constructor in your SDK. You can also update it from time to time via the public accessor:
 
 ```dart
-var rep = Replicant("https://replicate.to/serve/4/mydb", authToken);
+var rep = Replicant("https://serve.replicate.to/4/mydb", authToken);
 
 ... time passes, client refreshes auth token from server ...
 

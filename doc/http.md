@@ -17,7 +17,7 @@ For the detailed request and response payload on each available command, see [ap
 
 ```
 # Execute a transaction on 'mydb' on replicate.to
-curl --data '{"name": "addTodo", "args": [42, "Take the trash out", false]}' https://replicate.to/serve/mydb/exec
+curl --data '{"name": "addTodo", "args": [42, "Take the trash out", false]}' https://serve.replicate.to/mydb/exec
 
 # Scan a key range on a local server
 curl --data '{"prefix": "todo/", "limit": 500}' http://localhost:7001/scan
