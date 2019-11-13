@@ -16,6 +16,7 @@ import (
 	"github.com/attic-labs/noms/go/datas"
 	"github.com/attic-labs/noms/go/hash"
 	"github.com/attic-labs/noms/go/marshal"
+	"github.com/attic-labs/noms/go/types"
 	"github.com/attic-labs/noms/go/util/verbose"
 	"github.com/julienschmidt/httprouter"
 
@@ -48,6 +49,7 @@ func newServer(cs chunks.ChunkStore, urlPrefix, origin string) (*server, error) 
 		s.router.POST(fmt.Sprintf("%s/%s", urlPrefix, method), func(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 			body := bytes.Buffer{}
 			_, err := io.Copy(&body, req.Body)
+			logPayload(req, body.Bytes(), db)
 			if err != nil {
 				serverError(w, err)
 				return
@@ -122,4 +124,11 @@ func (s *server) sync(w http.ResponseWriter, req *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 	io.Copy(w, strings.NewReader(mergedCommit.TargetHash().String()))
+}
+
+func logPayload(req *http.Request, body []byte, d *db.DB) {
+	noms := d.Noms().(datas.Database)
+	r := noms.WriteValue(types.NewBlob(noms, bytes.NewReader(body)))
+	noms.Flush()
+	log.Printf("x-request-id: %s, payload: %s", req.Header.Get("X-Request-Id"), r.TargetHash())
 }

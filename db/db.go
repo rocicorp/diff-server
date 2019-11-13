@@ -169,7 +169,7 @@ type BatchError struct {
 func (db *DB) ExecBatch(batch []BatchItem) ([]BatchItemResponse, *BatchError, error) {
 	defer db.lock()()
 	ds := db.noms.GetDataset(LOCAL_DATASET)
-	oldHead := ds.Head()
+	oldHead := ds.HeadRef()
 	r := make([]BatchItemResponse, 0, len(batch))
 	basis := db.head
 	basisRef := basis.Ref()
@@ -206,7 +206,7 @@ func (db *DB) ExecBatch(batch []BatchItem) ([]BatchItemResponse, *BatchError, er
 	newDS, err := db.noms.FastForward(ds, basisRef)
 	if err != nil {
 		db.noms.Flush()
-		log.Printf("Conflict committing execBatch - old head: %s, attempted head: %s, current head: %s", oldHead, basisRef.TargetHash(), newDS.Head().Hash())
+		log.Printf("Conflict committing execBatch - old head: %s, attempted head: %s, current head: %s", oldHead.TargetHash(), basisRef.TargetHash(), newDS.Head().Hash())
 		return r, nil, err
 	}
 	db.head = basis
