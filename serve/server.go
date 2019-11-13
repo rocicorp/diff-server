@@ -48,7 +48,6 @@ func newServer(cs chunks.ChunkStore, urlPrefix, origin string) (*server, error) 
 		s.router.POST(fmt.Sprintf("%s/%s", urlPrefix, method), func(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 			body := bytes.Buffer{}
 			_, err := io.Copy(&body, req.Body)
-			log.Printf("POST payload: %s", body.String())
 			if err != nil {
 				serverError(w, err)
 				return
