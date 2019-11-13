@@ -103,9 +103,7 @@ type BatchRequestItem ExecRequest
 //
 // If any transaction function returns an error, the entire batch is halted. Results from all
 // previous transactions in the batch are returned however, nothing from the batch is committed.
-type ExecBatchRequest struct {
-	Batch []BatchRequestItem `json:"batch"`
-}
+type ExecBatchRequest []BatchRequestItem
 
 type BatchResponseItem struct {
 	Result *jsnoms.Value `json:"result,omitempty"`
