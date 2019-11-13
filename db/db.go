@@ -168,6 +168,7 @@ type BatchError struct {
 // index set correctly.
 func (db *DB) ExecBatch(batch []BatchItem) ([]BatchItemResponse, *BatchError, error) {
 	defer db.lock()()
+	ds := db.noms.GetDataset(LOCAL_DATASET)
 	r := make([]BatchItemResponse, 0, len(batch))
 	basis := db.head
 	basisRef := basis.Ref()
@@ -201,8 +202,9 @@ func (db *DB) ExecBatch(batch []BatchItem) ([]BatchItemResponse, *BatchError, er
 
 	// FastForward not strictly needed here because we should have already ensured that we were
 	// fast-forwarding outside of Noms, but it's a nice sanity check.
-	_, err := db.noms.FastForward(db.noms.GetDataset(LOCAL_DATASET), basisRef)
+	newDS, err := db.noms.FastForward(ds, basisRef)
 	if err != nil {
+		log.Printf("Conflict committing execBatch - old head: %s, attempted head: %s, current head: %s", ds.Head().Hash(), basisRef.TargetHash(), newDS.Head().Hash())
 		return r, nil, err
 	}
 	db.head = basis
