@@ -134,7 +134,7 @@ func (db *DB) PutBundle(b types.Blob) error {
 }
 
 func (db *DB) Exec(function string, args types.List) (types.Value, error) {
-	r, err := db.ExecBatch([]BatchItem{
+	r, be, err := db.ExecBatch([]BatchItem{
 		BatchItem{
 			Function: function,
 			Args:     args,
@@ -142,6 +142,9 @@ func (db *DB) Exec(function string, args types.List) (types.Value, error) {
 	})
 	if err != nil {
 		return nil, err
+	}
+	if be != nil {
+		return nil, be.error
 	}
 	return r[0].Result, nil
 }
@@ -155,19 +158,27 @@ type BatchItemResponse struct {
 	Result types.Value
 }
 
-func (db *DB) ExecBatch(batch []BatchItem) ([]BatchItemResponse, error) {
+type BatchError struct {
+	error
+	Index int
+}
+
+// ExecBatch executes zero  or more transactions against the database atomically.
+// If a transaction fails, the returned error will be BatchError with the corresponding
+// index set correctly.
+func (db *DB) ExecBatch(batch []BatchItem) ([]BatchItemResponse, *BatchError, error) {
 	defer db.lock()()
 	r := make([]BatchItemResponse, 0, len(batch))
 	basis := db.head
 	basisRef := basis.Ref()
 	bundle := basis.Bundle(db.noms)
-	for _, item := range batch {
+	for i, item := range batch {
 		if strings.HasPrefix(item.Function, ".") {
-			return r, fmt.Errorf("Cannot call system function: %s", item.Function)
+			return nil, &BatchError{fmt.Errorf("Cannot call system function: %s", item.Function), i}, nil
 		}
 		newBundle, newData, output, isWrite, err := db.execImpl(basisRef, bundle, item.Function, item.Args)
 		if err != nil {
-			return r, err
+			return nil, &BatchError{err, i}, nil
 		}
 
 		r = append(r, BatchItemResponse{})
@@ -192,10 +203,10 @@ func (db *DB) ExecBatch(batch []BatchItem) ([]BatchItemResponse, error) {
 	// fast-forwarding outside of Noms, but it's a nice sanity check.
 	_, err := db.noms.FastForward(db.noms.GetDataset(LOCAL_DATASET), basisRef)
 	if err != nil {
-		return r, err
+		return r, nil, err
 	}
 	db.head = basis
-	return r, nil
+	return r, nil, nil
 }
 
 func (db *DB) Reload() error {

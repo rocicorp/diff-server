@@ -81,6 +81,7 @@ func TestBasics(t *testing.T) {
 
 		// execBatch
 		{"execBatch", invalidRequest, ``, invalidRequestError},
+		{"execBatch", `[{"name": "add", "args": ["bar", 2]},{"name": ".putBundle", "args": []}]`, `{"error":{"index":1,"detail":"Cannot call system function: .putBundle"},"root":"61hqku8sbqc76cgjjti99fhkjl3nq4r7"}`, ""},
 		{"execBatch", `[{"name": "add", "args": ["bar", 2]},{"name": "add", "args": ["bar", 2]},{"name": "log", "args": ["log", "bar"]}]`, `{"batch":[{"result":4},{"result":6},{}],"root":"i3nidc5mep02popavl84u7kt3ged5i14"}`, ""},
 		{"get", `{"id": "bar"}`, `{"has":true,"value":6}`, ""},
 		// TODO: other scan operators

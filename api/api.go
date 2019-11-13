@@ -111,8 +111,15 @@ type BatchResponseItem struct {
 	Result *jsnoms.Value `json:"result,omitempty"`
 }
 
+type BatchError struct {
+	Index  int    `json:"index"`
+	Detail string `json:"detail"`
+}
+
+// ExecBatchResponse is the response for ExecBatchRequest. One of Batch or Error will be present.
 type ExecBatchResponse struct {
-	Batch []BatchResponseItem `json:"batch"`
+	Batch []BatchResponseItem `json:"batch,omitempty"`
+	Error *BatchError         `json:"error,omitempty"`
 	Root  jsnoms.Hash         `json:"root"`
 }
 
@@ -359,24 +366,35 @@ func (api *API) dispatchExecBatch(reqBytes []byte) ([]byte, error) {
 		})
 	}
 
-	dbRes, err := api.db.ExecBatch(batch)
+	dbRes, batchError, err := api.db.ExecBatch(batch)
+
+	if err != nil {
+		return nil, err
+	}
+
 	res := ExecBatchResponse{
-		Batch: make([]BatchResponseItem, 0, len(dbRes)),
 		Root: jsnoms.Hash{
 			Hash: api.db.Hash(),
 		},
 	}
-	for _, item := range dbRes {
-		bri := BatchResponseItem{}
-		if item.Result != nil {
-			bri.Result = jsnoms.New(api.db.Noms(), item.Result)
+
+	if batchError != nil {
+		res.Error = &BatchError{
+			Index:  batchError.Index,
+			Detail: batchError.Error(),
 		}
-		res.Batch = append(res.Batch, bri)
+	} else {
+		res.Batch = make([]BatchResponseItem, 0, len(dbRes))
+		for _, item := range dbRes {
+			bri := BatchResponseItem{}
+			if item.Result != nil {
+				bri.Result = jsnoms.New(api.db.Noms(), item.Result)
+			}
+			res.Batch = append(res.Batch, bri)
+		}
 	}
 
-	// Return both available results *and* error.
-	// Note that in case of error, nothing has been committed.
-	return mustMarshal(res), err
+	return mustMarshal(res), nil
 }
 
 func (api *API) dispatchSync(reqBytes []byte) ([]byte, error) {

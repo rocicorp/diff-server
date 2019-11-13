@@ -113,7 +113,8 @@ func benchmarkExecBatch(n int, http bool, b *testing.B) {
 	assert.Equal(n, len(batch))
 
 	for i := 0; i < b.N; i++ {
-		r, err := db.ExecBatch(batch)
+		r, be, err := db.ExecBatch(batch)
+		assert.NoError(be)
 		assert.NoError(err)
 		for _, res := range r {
 			assert.Nil(res.Result)
