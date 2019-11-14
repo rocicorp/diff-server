@@ -7,6 +7,10 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -90,5 +94,35 @@ func TestCheckAccess(t *testing.T) {
 		} else {
 			assert.EqualError(err, t.expectedError, label)
 		}
+	}
+}
+
+func TestConcurrentAccessUsingMultipleServices(t *testing.T) {
+	assert := assert.New(t)
+	td, _ := ioutil.TempDir("", "")
+
+	accounts := []Account{
+		Account{
+			ID:     "sandbox",
+			Name:   "Sandbox",
+			Pubkey: nil,
+		},
+	}
+
+	svc1 := NewService(td, accounts)
+	svc2 := NewService(td, accounts)
+
+	res := []*httptest.ResponseRecorder{
+		httptest.NewRecorder(),
+		httptest.NewRecorder(),
+		httptest.NewRecorder(),
+	}
+
+	svc1.ServeHTTP(res[0], httptest.NewRequest("POST", "/sandbox/foo/put", strings.NewReader(`{"id":"foo","value":"bar"}`)))
+	svc2.ServeHTTP(res[1], httptest.NewRequest("POST", "/sandbox/foo/put", strings.NewReader(`{"id":"foo","value":"bar"}`)))
+	svc1.ServeHTTP(res[2], httptest.NewRequest("POST", "/sandbox/foo/put", strings.NewReader(`{"id":"foo","value":"bar"}`)))
+
+	for i, r := range res {
+		assert.Equal(http.StatusOK, r.Code, fmt.Sprintf("response %d: %s", i, string(r.Body.Bytes())))
 	}
 }

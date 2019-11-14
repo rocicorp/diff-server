@@ -89,6 +89,10 @@ func (s *Service) getServer(req *http.Request) (r *server, clientError string, s
 	key := fmt.Sprintf("%s/%s", acc, db)
 	r = s.servers[key]
 	if r != nil {
+		err = r.db.Reload()
+		if err != nil {
+			return nil, "", err
+		}
 		return r, "", nil
 	}
 

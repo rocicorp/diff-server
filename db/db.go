@@ -206,7 +206,7 @@ func (db *DB) ExecBatch(batch []BatchItem) ([]BatchItemResponse, *BatchError, er
 	newDS, err := db.noms.FastForward(ds, basisRef)
 	if err != nil {
 		db.noms.Flush()
-		log.Printf("Conflict committing execBatch - old head: %s, attempted head: %s, current head: %s", oldHead.TargetHash(), basisRef.TargetHash(), newDS.Head().Hash())
+		log.Printf("Error committing execBatch - error: %s, old head: %s, attempted head: %s, current head: %s", err, oldHead.TargetHash(), basisRef.TargetHash(), newDS.Head().Hash())
 		return r, nil, err
 	}
 	db.head = basis

@@ -95,11 +95,6 @@ func (s *server) sync(w http.ResponseWriter, req *http.Request) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	err := s.db.Reload()
-	if err != nil {
-		serverError(w, err)
-		return
-	}
 	params := req.URL.Query()
 	clientHash, ok := hash.MaybeParse(params.Get("head"))
 	if !ok {
@@ -112,7 +107,7 @@ func (s *server) sync(w http.ResponseWriter, req *http.Request) {
 		clientError(w, "Specified hash not found")
 		return
 	}
-	err = marshal.Unmarshal(clientVal, &clientCommit)
+	err := marshal.Unmarshal(clientVal, &clientCommit)
 	if err != nil {
 		clientError(w, "Invalid client commit")
 		return
