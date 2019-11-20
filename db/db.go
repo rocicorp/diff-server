@@ -42,7 +42,7 @@ func Load(sp spec.Spec, origin string) (*DB, error) {
 		noms = sp.GetDatabase()
 	})
 	if err != nil {
-		return nil, errors.Unwrap(err)
+		err = err.(d.WrappedError).Cause()
 	}
 	return New(noms, origin)
 }
