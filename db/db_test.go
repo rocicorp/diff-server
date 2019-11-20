@@ -302,5 +302,5 @@ func TestLoadBadSpec(t *testing.T) {
 	assert.NoError(err)
 	db, err = Load(sp, "test")
 	assert.Nil(db)
-	assert.EqualError(err, "Unexpected response: Not Found")
+	assert.EqualError(err, "Unexpected response: Not Found: 404 page not found")
 }

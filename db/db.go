@@ -43,6 +43,7 @@ func Load(sp spec.Spec, origin string) (*DB, error) {
 	})
 	if err != nil {
 		err = err.(d.WrappedError).Cause()
+		return nil, err
 	}
 	return New(noms, origin)
 }
