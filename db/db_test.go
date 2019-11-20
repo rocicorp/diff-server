@@ -2,6 +2,8 @@ package db
 
 import (
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -284,4 +286,21 @@ func TestReadTransaction(t *testing.T) {
 
 	// Read-only transactions shouldn't add a commit
 	assert.True(h.Equals(db.head.Original))
+}
+
+func TestLoadBadSpec(t *testing.T) {
+	assert := assert.New(t)
+
+	sp, err := spec.ForDatabase("http://localhost:6666") // not running, presumably
+	assert.NoError(err)
+	db, err := Load(sp, "test")
+	assert.Nil(db)
+	assert.EqualError(err, "Get http://localhost:6666/root/: dial tcp [::1]:6666: connect: connection refused")
+
+	srv := httptest.NewServer(http.NotFoundHandler())
+	sp, err = spec.ForDatabase(srv.URL)
+	assert.NoError(err)
+	db, err = Load(sp, "test")
+	assert.Nil(db)
+	assert.EqualError(err, "Unexpected response: Not Found")
 }

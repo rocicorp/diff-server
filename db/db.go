@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/attic-labs/noms/go/d"
 	"github.com/attic-labs/noms/go/datas"
 	"github.com/attic-labs/noms/go/hash"
 	"github.com/attic-labs/noms/go/marshal"
@@ -36,7 +37,14 @@ func Load(sp spec.Spec, origin string) (*DB, error) {
 		return nil, errors.New("Invalid spec - must not specify a path")
 	}
 
-	return New(sp.GetDatabase(), origin)
+	var noms datas.Database
+	err := d.Try(func() {
+		noms = sp.GetDatabase()
+	})
+	if err != nil {
+		return nil, errors.Unwrap(err)
+	}
+	return New(noms, origin)
 }
 
 func New(noms datas.Database, origin string) (*DB, error) {
