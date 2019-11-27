@@ -79,7 +79,7 @@ func TestSyncFastForward(t *testing.T) {
 	assert.NoError(err)
 
 	noms := client.Noms()
-	c0 := makeGenesis(noms)
+	c0 := makeGenesis(noms, "")
 	c1 := makeTx(noms,
 		c0.Ref(),
 		client.origin,

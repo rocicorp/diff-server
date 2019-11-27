@@ -6,133 +6,19 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"strings"
 
+	"github.com/attic-labs/noms/go/hash"
 	"github.com/attic-labs/noms/go/types"
 
+	"roci.dev/replicant/api/shared"
 	"roci.dev/replicant/db"
 	"roci.dev/replicant/exec"
 	"roci.dev/replicant/util/chk"
 	jsnoms "roci.dev/replicant/util/noms/json"
 )
-
-type GetRootRequest struct {
-}
-
-type GetRootResponse struct {
-	Root jsnoms.Hash `json:"root"`
-}
-
-type HasRequest struct {
-	ID string `json:"id"`
-}
-
-type HasResponse struct {
-	Has bool `json:"has"`
-}
-
-type GetRequest struct {
-	ID string `json:"id"`
-}
-
-type GetResponse struct {
-	Has   bool          `json:"has"`
-	Value *jsnoms.Value `json:"value,omitempty"`
-}
-
-type ScanRequest exec.ScanOptions
-
-type ScanItem struct {
-	ID    string       `json:"id"`
-	Value jsnoms.Value `json:"value"`
-}
-
-type ScanResponse struct {
-	Values []ScanItem `json:"values"`
-	Done   bool       `json:"done"`
-}
-
-type PutRequest struct {
-	ID    string       `json:"id"`
-	Value jsnoms.Value `json:"value"`
-}
-
-type PutResponse struct {
-	Root jsnoms.Hash `json:"root"`
-}
-
-type DelRequest struct {
-	ID string `json:"id"`
-}
-
-type DelResponse struct {
-	Ok   bool        `json:"ok"`
-	Root jsnoms.Hash `json:"root"`
-}
-
-type GetBundleRequest struct {
-}
-
-type GetBundleResponse struct {
-	Code string `json:"code"`
-}
-
-type PutBundleRequest struct {
-	Code string `json:"code"`
-}
-
-type PutBundleResponse struct {
-	Root jsnoms.Hash `json:"root"`
-}
-
-type ExecRequest struct {
-	Name string      `json:name"`
-	Args jsnoms.List `json:"args"`
-}
-
-type ExecResponse struct {
-	Result *jsnoms.Value `json:"result,omitempty"`
-	Root   jsnoms.Hash   `json:"root"`
-}
-
-type BatchRequestItem ExecRequest
-
-// ExecBatchRequest contains a batch of transactions to execute with the `execBatch` command.
-// This is much faster than executing them one-by-one via `exec`.
-//
-// If any transaction function returns an error, the entire batch is halted. Results from all
-// previous transactions in the batch are returned however, nothing from the batch is committed.
-type ExecBatchRequest []BatchRequestItem
-
-type BatchResponseItem struct {
-	Result *jsnoms.Value `json:"result,omitempty"`
-}
-
-type BatchError struct {
-	Index  int    `json:"index"`
-	Detail string `json:"detail"`
-}
-
-// ExecBatchResponse is the response for ExecBatchRequest. One of Batch or Error will be present.
-type ExecBatchResponse struct {
-	Batch []BatchResponseItem `json:"batch,omitempty"`
-	Error *BatchError         `json:"error,omitempty"`
-	Root  jsnoms.Hash         `json:"root"`
-}
-
-type SyncRequest struct {
-	Remote jsnoms.Spec `json:"remote"`
-	Auth   string      `json:"auth,omitempty"`
-
-	// Shallow causes only the head of the remote server to be downloaded, not all of its history.
-	// Currently this is incompatible with bidirectional sync.
-	Shallow bool `json:"shallow,omitempty"`
-}
-
-type SyncResponse struct {
-	Root jsnoms.Hash `json:"root"`
-}
 
 type API struct {
 	db *db.DB
@@ -166,19 +52,21 @@ func (api *API) Dispatch(name string, req []byte) ([]byte, error) {
 		return api.dispatchExecBatch(req)
 	case "sync":
 		return api.dispatchSync(req)
+	case "handleSync":
+		return api.dispatchHandleSync(req)
 	}
 	chk.Fail("Unsupported rpc name: %s", name)
 	return nil, nil
 }
 
 func (api *API) dispatchGetRoot(reqBytes []byte) ([]byte, error) {
-	var req GetRootRequest
+	var req shared.GetRootRequest
 	err := json.Unmarshal(reqBytes, &req)
 	if err != nil {
 		return nil, err
 	}
 
-	res := GetRootResponse{
+	res := shared.GetRootResponse{
 		Root: jsnoms.Hash{
 			Hash: api.db.Hash(),
 		},
@@ -187,7 +75,7 @@ func (api *API) dispatchGetRoot(reqBytes []byte) ([]byte, error) {
 }
 
 func (api *API) dispatchHas(reqBytes []byte) ([]byte, error) {
-	var req HasRequest
+	var req shared.HasRequest
 	err := json.Unmarshal(reqBytes, &req)
 	if err != nil {
 		return nil, err
@@ -196,14 +84,14 @@ func (api *API) dispatchHas(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	res := HasResponse{
+	res := shared.HasResponse{
 		Has: ok,
 	}
 	return mustMarshal(res), nil
 }
 
 func (api *API) dispatchGet(reqBytes []byte) ([]byte, error) {
-	var req GetRequest
+	var req shared.GetRequest
 	err := json.Unmarshal(reqBytes, &req)
 	if err != nil {
 		return nil, err
@@ -212,7 +100,7 @@ func (api *API) dispatchGet(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	res := GetResponse{}
+	res := shared.GetResponse{}
 	if v == nil {
 		res.Has = false
 	} else {
@@ -223,7 +111,7 @@ func (api *API) dispatchGet(reqBytes []byte) ([]byte, error) {
 }
 
 func (api *API) dispatchScan(reqBytes []byte) ([]byte, error) {
-	var req ScanRequest
+	var req shared.ScanRequest
 	err := json.Unmarshal(reqBytes, &req)
 	if err != nil {
 		return nil, err
@@ -236,7 +124,7 @@ func (api *API) dispatchScan(reqBytes []byte) ([]byte, error) {
 }
 
 func (api *API) dispatchPut(reqBytes []byte) ([]byte, error) {
-	req := PutRequest{
+	req := shared.PutRequest{
 		Value: jsnoms.Make(api.db.Noms(), nil),
 	}
 	err := json.Unmarshal(reqBytes, &req)
@@ -250,7 +138,7 @@ func (api *API) dispatchPut(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	res := PutResponse{
+	res := shared.PutResponse{
 		Root: jsnoms.Hash{
 			Hash: api.db.Hash(),
 		},
@@ -259,7 +147,7 @@ func (api *API) dispatchPut(reqBytes []byte) ([]byte, error) {
 }
 
 func (api *API) dispatchDel(reqBytes []byte) ([]byte, error) {
-	req := DelRequest{}
+	req := shared.DelRequest{}
 	err := json.Unmarshal(reqBytes, &req)
 	if err != nil {
 		return nil, err
@@ -268,7 +156,7 @@ func (api *API) dispatchDel(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	res := DelResponse{
+	res := shared.DelResponse{
 		Ok: ok,
 		Root: jsnoms.Hash{
 			Hash: api.db.Hash(),
@@ -278,7 +166,7 @@ func (api *API) dispatchDel(reqBytes []byte) ([]byte, error) {
 }
 
 func (api *API) dispatchGetBundle(reqBytes []byte) ([]byte, error) {
-	var req GetBundleRequest
+	var req shared.GetBundleRequest
 	err := json.Unmarshal(reqBytes, &req)
 	if err != nil {
 		return nil, err
@@ -292,14 +180,14 @@ func (api *API) dispatchGetBundle(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	res := GetBundleResponse{
+	res := shared.GetBundleResponse{
 		Code: sb.String(),
 	}
 	return mustMarshal(res), nil
 }
 
 func (api *API) dispatchPutBundle(reqBytes []byte) ([]byte, error) {
-	var req PutBundleRequest
+	var req shared.PutBundleRequest
 	err := json.Unmarshal(reqBytes, &req)
 	if err != nil {
 		return nil, err
@@ -309,7 +197,7 @@ func (api *API) dispatchPutBundle(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, errors.New(err.Error())
 	}
-	res := PutBundleResponse{
+	res := shared.PutBundleResponse{
 		Root: jsnoms.Hash{
 			Hash: api.db.Hash(),
 		},
@@ -318,7 +206,7 @@ func (api *API) dispatchPutBundle(reqBytes []byte) ([]byte, error) {
 }
 
 func (api *API) dispatchExec(reqBytes []byte) ([]byte, error) {
-	req := ExecRequest{
+	req := shared.ExecRequest{
 		Args: jsnoms.List{
 			Value: jsnoms.Make(api.db.Noms(), nil),
 		},
@@ -331,7 +219,7 @@ func (api *API) dispatchExec(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	res := ExecResponse{
+	res := shared.ExecResponse{
 		Root: jsnoms.Hash{
 			Hash: api.db.Hash(),
 		},
@@ -351,7 +239,7 @@ func (api *API) dispatchExecBatch(reqBytes []byte) ([]byte, error) {
 
 	batch := make([]db.BatchItem, 0, len(raw))
 	for _, b := range raw {
-		bri := BatchRequestItem{
+		bri := shared.BatchRequestItem{
 			Args: jsnoms.MakeList(api.db.Noms(), nil),
 		}
 		err = json.Unmarshal([]byte(b), &bri)
@@ -370,21 +258,21 @@ func (api *API) dispatchExecBatch(reqBytes []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	res := ExecBatchResponse{
+	res := shared.ExecBatchResponse{
 		Root: jsnoms.Hash{
 			Hash: api.db.Hash(),
 		},
 	}
 
 	if batchError != nil {
-		res.Error = &BatchError{
+		res.Error = &shared.BatchError{
 			Index:  batchError.Index,
 			Detail: batchError.Error(),
 		}
 	} else {
-		res.Batch = make([]BatchResponseItem, 0, len(dbRes))
+		res.Batch = make([]shared.BatchResponseItem, 0, len(dbRes))
 		for _, item := range dbRes {
-			bri := BatchResponseItem{}
+			bri := shared.BatchResponseItem{}
 			if item.Result != nil {
 				bri.Result = jsnoms.New(api.db.Noms(), item.Result)
 			}
@@ -396,7 +284,7 @@ func (api *API) dispatchExecBatch(reqBytes []byte) ([]byte, error) {
 }
 
 func (api *API) dispatchSync(reqBytes []byte) ([]byte, error) {
-	var req SyncRequest
+	var req shared.SyncRequest
 	err := json.Unmarshal(reqBytes, &req)
 	if err != nil {
 		return nil, err
@@ -405,17 +293,43 @@ func (api *API) dispatchSync(reqBytes []byte) ([]byte, error) {
 	req.Remote.Options.Authorization = req.Auth
 
 	if req.Shallow {
-		err = api.db.HackyShallowSync(req.Remote.Spec, func(p db.Progress) {})
+		err = api.db.RequestSync(req.Remote.Spec)
 	} else {
 		err = api.db.Sync(req.Remote.Spec)
 	}
 	if err != nil {
 		return nil, err
 	}
-	res := SyncResponse{
+	res := shared.SyncResponse{
 		Root: jsnoms.Hash{
 			Hash: api.db.Hash(),
 		},
+	}
+	return mustMarshal(res), nil
+}
+
+func (api *API) dispatchHandleSync(reqBytes []byte) ([]byte, error) {
+	var req shared.HandleSyncRequest
+	err := json.Unmarshal(reqBytes, &req)
+	if err != nil {
+		return nil, err
+	}
+	var h hash.Hash
+	if req.Basis != "" {
+		var ok bool
+		h, ok = hash.MaybeParse(req.Basis)
+		if !ok {
+			return nil, fmt.Errorf("Invalid basis hash")
+		}
+	}
+	r, err := api.db.HandleSync(h)
+	if err != nil {
+		return nil, err
+	}
+	res := shared.HandleSyncResponse{
+		CommitID:     api.db.Head().Original.Hash().String(),
+		Patch:        r,
+		NomsChecksum: api.db.Head().Data(api.db.Noms()).Hash().String(),
 	}
 	return mustMarshal(res), nil
 }

@@ -71,6 +71,10 @@ func TestBasics(t *testing.T) {
 		{"exec", `{"name": "add", "args": ["bar", 2]}`, `{"result":2,"root":"7iavk1o833kqplvrtn2rqc406dfvrf6c"}`, ""},
 		{"get", `{"id": "bar"}`, `{"has":true,"value":2}`, ""},
 
+		// handleSync
+		{"handleSync", `{"basis":"vsm77oo1c3r9m5p3r0dkc64imapu1ldm"}`,
+			`{"patch":[{"op":"add","path":"/u/bar","value":2}],"commitID":"7iavk1o833kqplvrtn2rqc406dfvrf6c","checksum":"2jbp7674jqsv0553qkq0hr68na0tvku1"}`, ""},
+
 		// sync
 		{"sync", invalidRequest, ``, invalidRequestError},
 		{"sync", fmt.Sprintf(`{"remote":"%s"}`, remoteDir), `{"root":"7iavk1o833kqplvrtn2rqc406dfvrf6c"}`, ""},

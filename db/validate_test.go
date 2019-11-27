@@ -28,7 +28,7 @@ func TestValidate(t *testing.T) {
 	}
 
 	epoch := datetime.DateTime{}
-	g := makeGenesis(noms)
+	g := makeGenesis(noms, "")
 	eb := types.NewEmptyBlob(noms)
 	b1 := types.NewBlob(noms, strings.NewReader("function log(k, v) { var val = db.get(k) || []; val.push(v); db.put(k, val); }"))
 	d1 := types.NewMap(noms,

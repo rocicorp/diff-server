@@ -19,7 +19,7 @@ var (
 		serve.Account{
 			ID:     "2",
 			Name:   "Turtle Technologies, Inc.",
-			Pubkey: []byte("-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEwNhpc2KRnxQRq2YETuKJShSC623E\nFFlAf4j2fFDKkEDM0Py9HCd3UDmxLyF7HUv9GC9mA+78HahKQnF8F37jLQ==\n-----END PUBLIC KEY-----"),
+			Pubkey: nil,
 		},
 	}
 )

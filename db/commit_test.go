@@ -25,7 +25,7 @@ func TestMarshal(t *testing.T) {
 	br := noms.WriteValue(types.NewBlob(noms, strings.NewReader("blobdata")))
 	dr := noms.WriteValue(types.NewMap(noms, types.String("foo"), types.String("bar")))
 	args := types.NewList(noms, types.Bool(true), types.String("monkey"))
-	g := makeGenesis(noms)
+	g := makeGenesis(noms, "")
 	tx := makeTx(noms, types.NewRef(g.Original), "o1", d, emptyBlob, "func", args, br, dr)
 	noms.WriteValue(g.Original)
 	noms.WriteValue(tx.Original)
@@ -35,9 +35,22 @@ func TestMarshal(t *testing.T) {
 		exp types.Value
 	}{
 		{
-			makeGenesis(noms),
+			makeGenesis(noms, ""),
 			types.NewStruct("Commit", types.StructData{
 				"meta":    types.NewStruct("Genesis", types.StructData{}),
+				"parents": types.NewSet(noms),
+				"value": types.NewStruct("", types.StructData{
+					"code": emptyBlob,
+					"data": emptyMap,
+				}),
+			}),
+		},
+		{
+			makeGenesis(noms, "foo"),
+			types.NewStruct("Commit", types.StructData{
+				"meta": types.NewStruct("Genesis", types.StructData{
+					"serverCommitID": types.String("foo"),
+				}),
 				"parents": types.NewSet(noms),
 				"value": types.NewStruct("", types.StructData{
 					"code": emptyBlob,

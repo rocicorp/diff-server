@@ -33,7 +33,7 @@ func TestGenesis(t *testing.T) {
 	assert.False(b == types.Blob{})
 	assert.Equal(uint64(0), b.Len())
 
-	assert.True(db.head.Original.Equals(makeGenesis(db.noms).Original))
+	assert.True(db.head.Original.Equals(makeGenesis(db.noms, "").Original))
 }
 
 func TestData(t *testing.T) {

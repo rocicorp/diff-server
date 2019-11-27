@@ -20,6 +20,7 @@ Struct Commit {
 	// TODO: It would be cool to call this field "op" or something, but Noms requires a "meta"
 	// top-level field.
 	meta: Struct Genesis {
+		serverCommitID?: String,  // only used on client
 	} |
 	Struct Tx {
 		origin: String,
@@ -126,11 +127,16 @@ func (r Reject) MarshalNoms(vrw types.ValueReadWriter) (val types.Value, err err
 	return vs, nil
 }
 
+type Genesis struct {
+	ServerCommitID string `noms:"serverCommitID,omitempty"`
+}
+
 type Meta struct {
 	// At most one of these will be set. If none are set, then the commit is the genesis commit.
 	Tx      Tx      `noms:",omitempty"`
 	Reorder Reorder `noms:",omitempty"`
 	Reject  Reject  `noms:",omitempty"`
+	Genesis Genesis `noms:",omitempty"`
 }
 
 func (m Meta) MarshalNoms(vrw types.ValueReadWriter) (val types.Value, err error) {
@@ -145,9 +151,6 @@ func (m Meta) MarshalNoms(vrw types.ValueReadWriter) (val types.Value, err error
 }
 
 func (m *Meta) UnmarshalNoms(v types.Value) error {
-	if v.(types.Struct).Name() == "Genesis" {
-		return nil
-	}
 	return union.Unmarshal(v, m)
 }
 
@@ -292,8 +295,9 @@ func (c Commit) Basis(noms types.ValueReader) (Commit, error) {
 	return r, nil
 }
 
-func makeGenesis(noms types.ValueReadWriter) Commit {
+func makeGenesis(noms types.ValueReadWriter, serverCommitID string) Commit {
 	c := Commit{}
+	c.Meta.Genesis.ServerCommitID = serverCommitID
 	c.Value.Data = noms.WriteValue(types.NewMap(noms))
 	c.Value.Code = noms.WriteValue(types.NewBlob(noms))
 	c.Original = marshal.MustMarshal(noms, c).(types.Struct)

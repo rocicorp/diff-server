@@ -4,6 +4,7 @@ package serve
 
 import (
 	"bytes"
+	"compress/gzip"
 	"fmt"
 	"io"
 	"log"
@@ -25,7 +26,7 @@ import (
 )
 
 var (
-	commands = []string{"getRoot", "has", "get", "scan", "put", "del", "getBundle", "putBundle", "exec", "execBatch"}
+	commands = []string{"getRoot", "has", "get", "scan", "put", "del", "getBundle", "putBundle", "exec", "execBatch", "handleSync"}
 )
 
 // server is a single Replicant instance. The Replicant service runs many such instances.
@@ -46,27 +47,38 @@ func newServer(cs chunks.ChunkStore, urlPrefix, origin string) (*server, error) 
 	s := &server{router: router, db: db, api: api.New(db)}
 	for _, method := range commands {
 		m := method
-		s.router.POST(fmt.Sprintf("%s/%s", urlPrefix, method), func(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+		s.router.POST(fmt.Sprintf("%s/%s", urlPrefix, method), func(rw http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 			body := bytes.Buffer{}
 			_, err := io.Copy(&body, req.Body)
 			logPayload(req, body.Bytes(), db)
 			if err != nil {
-				serverError(w, err)
+				serverError(rw, err)
 				return
 			}
 			resp, err := s.api.Dispatch(m, body.Bytes())
 			if err != nil {
 				// TODO: this might not be a client (4xx) error
 				// Need to change API to be able to indicate user vs server error
-				clientError(w, err.Error()+"\n")
-			}
-			w.Header().Set("Content-type", "application/json")
-			_, err = io.Copy(w, bytes.NewReader(resp))
-			if err != nil {
-				serverError(w, err)
+				clientError(rw, err.Error()+"\n")
+				return
 			}
 
+			rw.Header().Set("Content-type", "application/json")
+			rw.Header().Set("Content-encoding", "gzip")
+
+			w := io.Writer(rw)
+			if strings.Contains(req.Header.Get("Accept-Encoding"), "gzip") {
+				w = gzip.NewWriter(w)
+			}
+
+			_, err = io.Copy(w, bytes.NewReader(resp))
+			if err != nil {
+				serverError(rw, err)
+			}
 			w.Write([]byte{'\n'})
+			if c, ok := w.(io.Closer); ok {
+				c.Close()
+			}
 		})
 	}
 	s.router.POST(urlPrefix+"/sync", func(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {

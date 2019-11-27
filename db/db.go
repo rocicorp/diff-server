@@ -65,7 +65,7 @@ func New(noms datas.Database, origin string) (*DB, error) {
 func (db *DB) init() error {
 	ds := db.noms.GetDataset(LOCAL_DATASET)
 	if !ds.HasHead() {
-		genesis := makeGenesis(db.noms)
+		genesis := makeGenesis(db.noms, "")
 		genRef := db.noms.WriteValue(genesis.Original)
 		_, err := db.noms.FastForward(ds, genRef)
 		if err != nil {
@@ -102,7 +102,7 @@ func (db *DB) RemoteHead() (c Commit, err error) {
 	ds := db.noms.GetDataset(REMOTE_DATASET)
 	if !ds.HasHead() {
 		// TODO: maybe setup the remote head at startup too.
-		return makeGenesis(db.noms), nil
+		return makeGenesis(db.noms, ""), nil
 	}
 	err = marshal.Unmarshal(ds.Head(), &c)
 	return

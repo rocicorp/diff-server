@@ -7,9 +7,12 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"runtime/pprof"
 	"runtime/trace"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/attic-labs/noms/go/diff"
@@ -54,6 +57,7 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 	auth := app.Flag("auth", "The authorization token to pass to db when connecting.").String()
 	sps := app.Flag("db", "The database to connect to. Both local and remote databases are supported. For local databases, specify a directory path to store the database in. For remote databases, specify the http(s) URL to the database (usually https://serve.replicate.to/<mydb>).").PlaceHolder("/path/to/db").Required().String()
 	tf := app.Flag("trace", "Name of a file to write a trace to").OpenFile(os.O_RDWR|os.O_CREATE, 0644)
+	cpu := app.Flag("cpu", "Name of file to write CPU profile to").OpenFile(os.O_RDWR|os.O_CREATE, 0644)
 
 	var sp *spec.Spec
 	getSpec := func() (spec.Spec, error) {
@@ -91,6 +95,20 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 		}
 		return nil
 	})
+
+	stopCPUProfile := func() {
+		if *cpu != nil {
+			pprof.StopCPUProfile()
+		}
+	}
+	stopTrace := func() {
+		if *tf != nil {
+			trace.Stop()
+		}
+	}
+	defer stopTrace()
+	defer stopCPUProfile()
+
 	app.Action(func(pc *kingpin.ParseContext) error {
 		if pc.SelectedCommand == nil {
 			return nil
@@ -109,14 +127,23 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 				return err
 			}
 		}
+		if *cpu != nil {
+			err := pprof.StartCPUProfile(*tf)
+			if err != nil {
+				return err
+			}
+		}
+		c := make(chan os.Signal)
+		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+		go func() {
+			<-c
+			stopTrace()
+			stopCPUProfile()
+			os.Exit(1)
+		}()
 
 		return nil
 	})
-	defer func() {
-		if *tf != nil {
-			trace.Stop()
-		}
-	}()
 
 	has(app, getDB, out)
 	get(app, getDB, out)
@@ -322,6 +349,7 @@ func del(parent *kingpin.Application, gdb gdb, out io.Writer) {
 
 func sync(parent *kingpin.Application, gdb gdb) {
 	kc := parent.Command("sync", "Sync with a replicant server.")
+	shallow := parent.Flag("shallow", "Use the new 'shallow' sync protocol").Bool()
 	remoteSpec := kp.DatabaseSpec(kc.Arg("remote", "Server to sync with. See https://github.com/attic-labs/noms/blob/master/doc/spelling.md#spelling-databases.").Required())
 
 	kc.Action(func(_ *kingpin.ParseContext) error {
@@ -330,7 +358,11 @@ func sync(parent *kingpin.Application, gdb gdb) {
 			return err
 		}
 		// TODO: progress
-		return db.Sync(*remoteSpec)
+		if *shallow {
+			return db.RequestSync(*remoteSpec)
+		} else {
+			return db.Sync(*remoteSpec)
+		}
 	})
 }
 

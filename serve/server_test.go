@@ -65,6 +65,8 @@ func TestAPI(t *testing.T) {
 		{"exec", `{"name": "add", "args": ["bar", 2]}`, `{"result":2,"root":"mcvqlfeba8olg9o1vakmar6o8cbp76m4"}`, ""},
 		{"get", `{"id": "bar"}`, `{"has":true,"value":2}`, ""},
 		{"put", `{"id": "foopa", "value": "doopa"}`, `{"root":"bvb8b8o945cih7fvliq9s6n3pdd9l2qa"}`, ""},
+		{"handleSync", `{"basis": "mcvqlfeba8olg9o1vakmar6o8cbp76m4"}`,
+			`{"patch":[{"op":"add","path":"/u/foopa","value":"doopa"}],"commitID":"bvb8b8o945cih7fvliq9s6n3pdd9l2qa","checksum":"kgrbb68en2h53f797jl1cpdt89a72rri"}`, ""},
 		{"scan", `{"prefix": "foo"}`, `[{"id":"foo","value":"bar"},{"id":"foopa","value":"doopa"}]`, ""},
 		{"execBatch", `[{"name": "add", "args": ["bar", 2]},{"name": "add", "args": ["bar", 2]}]`, `{"batch":[{"result":4},{"result":6}],"root":"csp63mgsrbg4v3t7psaiqhbl6s4rsv6h"}`, ""},
 		{"get", `{"id": "bar"}`, `{"has":true,"value":6}`, ""},
