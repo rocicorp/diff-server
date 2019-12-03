@@ -72,8 +72,11 @@ func TestBasics(t *testing.T) {
 		{"get", `{"id": "bar"}`, `{"has":true,"value":2}`, ""},
 
 		// handleSync
+		{"handleSync", `{"basis":""}`,
+			`{"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/u/bar","value":2},{"op":"add","path":"/u/foo","value":"bar"},{"op":"replace","path":"/s/code","value":"function add(key, d) { var v = db.get(key) || 0; v += d; db.put(key, v); return v; }\n\tfunction log(key, val) { var v = db.get(key) || []; v.push(val); db.put(key, v); }"}],"commitID":"7iavk1o833kqplvrtn2rqc406dfvrf6c","nomsChecksum":"2jbp7674jqsv0553qkq0hr68na0tvku1"}`, ""},
+		{"handleSync", `{"basis":"bonk"}`, ``, "Invalid basis hash"},
 		{"handleSync", `{"basis":"vsm77oo1c3r9m5p3r0dkc64imapu1ldm"}`,
-			`{"patch":[{"op":"add","path":"/u/bar","value":2}],"commitID":"7iavk1o833kqplvrtn2rqc406dfvrf6c","checksum":"2jbp7674jqsv0553qkq0hr68na0tvku1"}`, ""},
+			`{"patch":[{"op":"add","path":"/u/bar","value":2}],"commitID":"7iavk1o833kqplvrtn2rqc406dfvrf6c","nomsChecksum":"2jbp7674jqsv0553qkq0hr68na0tvku1"}`, ""},
 
 		// sync
 		{"sync", invalidRequest, ``, invalidRequestError},

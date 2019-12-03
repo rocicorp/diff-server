@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"strings"
 
@@ -23,7 +24,7 @@ func (db *DB) RequestSync(remote spec.Spec) error {
 	reqBody, err := json.Marshal(shared.HandleSyncRequest{
 		Basis: db.head.Meta.Genesis.ServerCommitID,
 	})
-	fmt.Println("Requesting basis: ", db.head.Meta.Genesis.ServerCommitID)
+	log.Printf("Syncing: %s from basis %s", url, db.head.Meta.Genesis.ServerCommitID)
 	chk.NoError(err)
 
 	req, err := http.NewRequest("POST", url, bytes.NewReader(reqBody))
@@ -31,7 +32,6 @@ func (db *DB) RequestSync(remote spec.Spec) error {
 		return err
 	}
 	req.Header.Add("Authorization", remote.Options.Authorization)
-	req.Header.Add("Content-Encoding", "gzip")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
@@ -51,16 +51,12 @@ func (db *DB) RequestSync(remote spec.Spec) error {
 	var respBody shared.HandleSyncResponse
 	err = json.NewDecoder(resp.Body).Decode(&respBody)
 	if err != nil {
-		return err
-	}
-
-	if len(respBody.Patch) == 0 {
-		return nil
+		return fmt.Errorf("Response from %s is not valid JSON: %s", url, err.Error())
 	}
 
 	var patch = respBody.Patch
 	head := makeGenesis(db.noms, respBody.CommitID)
-	if patch[0].Op == jsonpatch.OpRemove && patch[0].Path == "/" {
+	if len(patch) > 0 && patch[0].Op == jsonpatch.OpRemove && patch[0].Path == "/" {
 		patch = patch[1:]
 	} else {
 		head.Value = db.head.Value
@@ -73,17 +69,18 @@ func (db *DB) RequestSync(remote spec.Spec) error {
 			var code string
 			err = json.Unmarshal([]byte(op.Value), &code)
 			if err != nil {
-				return err
+				return fmt.Errorf("Cannot unmarshal /s/code: %s", err.Error())
 			}
 			head.Value.Code = db.noms.WriteValue(types.NewBlob(db.noms, strings.NewReader(code)))
 		case strings.HasPrefix(op.Path, "/u"):
 			if ed == nil {
 				ed = db.head.Data(db.noms).Edit()
 			}
+			origPath := op.Path
 			op.Path = op.Path[2:]
 			err = jsonpatch.ApplyOne(db.noms, ed, op)
 			if err != nil {
-				return err
+				return fmt.Errorf("Cannot unmarshal %s: %s", origPath, err.Error())
 			}
 		default:
 			return fmt.Errorf("Unsupported JSON Patch operation: %s with path: %s", op.Op, op.Path)

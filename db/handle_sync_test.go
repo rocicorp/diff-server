@@ -112,7 +112,7 @@ func TestHandleSync(t *testing.T) {
 			"",
 		},
 		{
-			"fresh",
+			"fresh-non-existing-commit",
 			func() {
 				db, dir = LoadTempDB(assert)
 				fmt.Println("newdir", dir)
@@ -120,6 +120,34 @@ func TestHandleSync(t *testing.T) {
 					err := db.Put(s, types.String(s))
 					assert.NoError(err)
 				}
+			},
+			[]jsonpatch.Operation{
+				jsonpatch.Operation{
+					Op:   jsonpatch.OpRemove,
+					Path: "/",
+				},
+				jsonpatch.Operation{
+					Op:    jsonpatch.OpAdd,
+					Path:  "/u/a",
+					Value: json.RawMessage([]byte(`"a"`)),
+				},
+				jsonpatch.Operation{
+					Op:    jsonpatch.OpAdd,
+					Path:  "/u/b",
+					Value: json.RawMessage([]byte(`"b"`)),
+				},
+				jsonpatch.Operation{
+					Op:    jsonpatch.OpAdd,
+					Path:  "/u/c",
+					Value: json.RawMessage([]byte(`"c"`)),
+				},
+			},
+			"",
+		},
+		{
+			"fresh-empty-commit",
+			func() {
+				fromID = hash.Hash{}
 			},
 			[]jsonpatch.Operation{
 				jsonpatch.Operation{

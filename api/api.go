@@ -327,8 +327,14 @@ func (api *API) dispatchHandleSync(reqBytes []byte) ([]byte, error) {
 		return nil, err
 	}
 	res := shared.HandleSyncResponse{
-		CommitID:     api.db.Head().Original.Hash().String(),
-		Patch:        r,
+		CommitID: api.db.Head().Original.Hash().String(),
+		Patch:    r,
+		// TODO: This is a bummer. The checksum doesn't include the code.
+		// Can't just easily add the code in because the keys in our data here aren't
+		// namespaced in any way. What we really want to do is move the code into the
+		// main map and namespace all the data so that we can just use the Noms checksum.
+		// Alternately, we could move to lthash which wouldn't require us to materialize
+		// the map in order to update the checksum.
 		NomsChecksum: api.db.Head().Data(api.db.Noms()).Hash().String(),
 	}
 	return mustMarshal(res), nil
