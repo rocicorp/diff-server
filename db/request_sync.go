@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strings"
 
@@ -16,6 +15,7 @@ import (
 	"github.com/attic-labs/noms/go/marshal"
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/attic-labs/noms/go/types"
+	"github.com/attic-labs/noms/go/util/verbose"
 )
 
 // RequestSync kicks off the new patch-based sync protocol from the client side.
@@ -24,7 +24,7 @@ func (db *DB) RequestSync(remote spec.Spec) error {
 	reqBody, err := json.Marshal(shared.HandleSyncRequest{
 		Basis: db.head.Meta.Genesis.ServerCommitID,
 	})
-	log.Printf("Syncing: %s from basis %s", url, db.head.Meta.Genesis.ServerCommitID)
+	verbose.Log("Syncing: %s from basis %s", url, db.head.Meta.Genesis.ServerCommitID)
 	chk.NoError(err)
 
 	req, err := http.NewRequest("POST", url, bytes.NewReader(reqBody))
