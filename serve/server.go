@@ -59,7 +59,7 @@ func newServer(cs chunks.ChunkStore, urlPrefix, origin string) (*server, error) 
 			if err != nil {
 				// TODO: this might not be a client (4xx) error
 				// Need to change API to be able to indicate user vs server error
-				clientError(rw, err.Error()+"\n")
+				clientError(rw, http.StatusBadRequest, err.Error()+"\n")
 				return
 			}
 
@@ -110,18 +110,18 @@ func (s *server) sync(w http.ResponseWriter, req *http.Request) {
 	params := req.URL.Query()
 	clientHash, ok := hash.MaybeParse(params.Get("head"))
 	if !ok {
-		clientError(w, "invalid value for head param")
+		clientError(w, http.StatusBadRequest, "invalid value for head param")
 		return
 	}
 	var clientCommit db.Commit
 	clientVal := s.db.Noms().ReadValue(clientHash)
 	if clientVal == nil {
-		clientError(w, "Specified hash not found")
+		clientError(w, http.StatusBadRequest, "Specified hash not found")
 		return
 	}
 	err := marshal.Unmarshal(clientVal, &clientCommit)
 	if err != nil {
-		clientError(w, "Invalid client commit")
+		clientError(w, http.StatusBadRequest, "Invalid client commit")
 		return
 	}
 	mergedCommit, err := db.HandleSync(s.db, clientCommit)

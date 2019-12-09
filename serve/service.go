@@ -51,9 +51,13 @@ func NewService(storageRoot string, accounts []Account) *Service {
 func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	rlog.Init(os.Stderr, rlog.Options{Prefix: true})
 
-	server, cErr, sErr := s.getServer(r)
+	server, cErr, authErr, sErr := s.getServer(r)
 	if cErr != "" {
-		clientError(w, cErr)
+		clientError(w, http.StatusBadRequest, cErr)
+		return
+	}
+	if authErr != nil {
+		clientError(w, http.StatusForbidden, authErr.Error())
 		return
 	}
 	if sErr != nil {
@@ -63,24 +67,27 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	server.ServeHTTP(w, r)
 }
 
-func (s *Service) getServer(req *http.Request) (r *server, clientError string, serverError error) {
+func (s *Service) getServer(req *http.Request) (r *server, clientError string, authError, serverError error) {
 	match := pathRegex.FindStringSubmatch(req.URL.Path)
 	if match == nil {
-		return nil, fmt.Sprintf("Invalid request path"), nil
+		return nil, fmt.Sprintf("Invalid request path"), nil, nil
 	}
 
 	acc, db := match[1], match[2]
 	if acc == "" {
-		return nil, "account parameter is required", nil
+		return nil, "account parameter is required", nil, nil
 	}
 	if db == "" {
-		return nil, "db parameter is required", nil
+		return nil, "db parameter is required", nil, nil
 	}
 
 	token := req.Header.Get("Authorization")
-	err := checkAccess(acc, db, token, s.accounts)
-	if err != nil {
-		return nil, err.Error(), nil
+	clientErr, authErr := checkAccess(acc, db, token, s.accounts)
+	if clientErr != nil {
+		return nil, clientErr.Error(), nil, nil
+	}
+	if authErr != nil {
+		return nil, "", authErr, nil
 	}
 
 	s.mu.Lock()
@@ -89,25 +96,25 @@ func (s *Service) getServer(req *http.Request) (r *server, clientError string, s
 	key := fmt.Sprintf("%s/%s", acc, db)
 	r = s.servers[key]
 	if r != nil {
-		err = r.db.Reload()
+		err := r.db.Reload()
 		if err != nil {
-			return nil, "", err
+			return nil, "", nil, err
 		}
-		return r, "", nil
+		return r, "", nil, nil
 	}
 
 	ss := s.storageRoot + "/" + key
 	sp, err := spec.ForDatabase(ss)
 	if err != nil {
-		return nil, "", err
+		return nil, "", nil, err
 	}
 
 	server, err := newServer(sp.NewChunkStore(), fmt.Sprintf("/%s/%s", acc, db), "server")
 	s.servers[key] = server
 	if err != nil {
-		return nil, "", err
+		return nil, "", nil, err
 	}
-	return server, "", nil
+	return server, "", nil, nil
 }
 
 // Claims are the JWT claims Replicant uses for authentication.
@@ -116,51 +123,51 @@ type Claims struct {
 	DB string `json:"db,omitempty"`
 }
 
-func checkAccess(accountID, dbName, token string, accounts []Account) error {
-	acc, err := lookupAccount(accountID, accounts)
-	if err != nil {
-		return err
+func checkAccess(accountID, dbName, token string, accounts []Account) (clientError, authError error) {
+	acc, ok := lookupAccount(accountID, accounts)
+	if !ok {
+		return fmt.Errorf("No such account: '%s'", accountID), nil
 	}
 
 	// If account has no public key, it's publicly available.
 	if acc.Pubkey == nil {
-		return nil
+		return nil, nil
 	}
 
 	if token == "" {
-		return errors.New("authorization header is required")
+		return nil, errors.New("Authorization header is required")
 	}
 
 	var claims Claims
-	_, err = jwt.ParseWithClaims(token, &claims, func(token *jwt.Token) (interface{}, error) {
+	_, err := jwt.ParseWithClaims(token, &claims, func(token *jwt.Token) (interface{}, error) {
 		pk, err := jwt.ParseECPublicKeyFromPEM(acc.Pubkey)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("Invalid JWT: %s", err.Error())
 		}
 		return pk, nil
 	})
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("Invalid JWT: %s", err.Error())
 	}
 	if claims.DB != dbName {
-		return errors.New("token does not grant access to specified database")
+		return nil, errors.New("Token does not grant access to specified database")
 	}
-	return nil
+	return nil, nil
 }
 
-func lookupAccount(accountID string, accounts []Account) (Account, error) {
+func lookupAccount(accountID string, accounts []Account) (acc Account, ok bool) {
 	for _, a := range accounts {
 		if a.ID == accountID {
-			return a, nil
+			return a, true
 		}
 	}
-	return Account{}, fmt.Errorf("No such account: '%s'", accountID)
+	return Account{}, false
 }
 
-func clientError(w http.ResponseWriter, msg string) {
-	w.WriteHeader(http.StatusBadRequest)
-	log.Println(http.StatusBadRequest, msg)
-	io.Copy(w, strings.NewReader(msg))
+func clientError(w http.ResponseWriter, code int, body string) {
+	w.WriteHeader(code)
+	log.Printf("Client error: HTTP %d: %s", code, body)
+	io.Copy(w, strings.NewReader(body))
 }
 
 func serverError(w http.ResponseWriter, err error) {
