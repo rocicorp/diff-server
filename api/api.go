@@ -292,18 +292,25 @@ func (api *API) dispatchSync(reqBytes []byte) ([]byte, error) {
 
 	req.Remote.Options.Authorization = req.Auth
 
+	res := shared.SyncResponse{}
 	if req.Shallow {
 		err = api.db.RequestSync(req.Remote.Spec)
+		if _, ok := err.(db.SyncAuthError); ok {
+			res.Error = &shared.SyncResponseError{
+				BadAuth: err.Error(),
+			}
+			err = nil
+		}
 	} else {
 		err = api.db.Sync(req.Remote.Spec)
 	}
 	if err != nil {
 		return nil, err
 	}
-	res := shared.SyncResponse{
-		Root: jsnoms.Hash{
+	if res.Error == nil {
+		res.Root = jsnoms.Hash{
 			Hash: api.db.Hash(),
-		},
+		}
 	}
 	return mustMarshal(res), nil
 }

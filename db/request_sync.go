@@ -18,6 +18,10 @@ import (
 	"github.com/attic-labs/noms/go/util/verbose"
 )
 
+type SyncAuthError struct {
+	error
+}
+
 // RequestSync kicks off the new patch-based sync protocol from the client side.
 func (db *DB) RequestSync(remote spec.Spec) error {
 	url := fmt.Sprintf("%s/handleSync", remote.String())
@@ -45,7 +49,14 @@ func (db *DB) RequestSync(remote spec.Spec) error {
 		} else {
 			s = err.Error()
 		}
-		return fmt.Errorf("%s: %s", resp.Status, s)
+		err = fmt.Errorf("%s: %s", resp.Status, s)
+		if resp.StatusCode == http.StatusForbidden {
+			return SyncAuthError{
+				err,
+			}
+		} else {
+			return err
+		}
 	}
 
 	var respBody shared.HandleSyncResponse

@@ -19,16 +19,17 @@ func TestRequestSync(t *testing.T) {
 	assert := assert.New(t)
 
 	tc := []struct {
-		label         string
-		initialState  map[string]string
-		initialBasis  string
-		reqError      bool
-		respCode      int
-		respBody      string
-		expectedError string
-		expectedCode  string
-		expectedData  map[string]string
-		expectedBasis string
+		label                    string
+		initialState             map[string]string
+		initialBasis             string
+		reqError                 bool
+		respCode                 int
+		respBody                 string
+		expectedError            string
+		expectedErrorIsAuthError bool
+		expectedCode             string
+		expectedData             map[string]string
+		expectedBasis            string
 	}{
 		{
 			"ok-nop",
@@ -38,6 +39,7 @@ func TestRequestSync(t *testing.T) {
 			http.StatusOK,
 			`{"patch":[],"commitID":"11111111111111111111111111111111","nomsChecksum":"t13tdcmq2d3pkpt9avk4p4nbt1oagaa3"}`,
 			"",
+			false,
 			"",
 			map[string]string{},
 			"11111111111111111111111111111111",
@@ -50,6 +52,7 @@ func TestRequestSync(t *testing.T) {
 			http.StatusOK,
 			`{"patch":[{"op":"add","path":"/u/foo","value":"bar"}],"commitID":"11111111111111111111111111111111","nomsChecksum":"am8lvhrbscqkngg75jaiubirapurghv9"}`,
 			"",
+			false,
 			"",
 			map[string]string{"foo": "bar"},
 			"11111111111111111111111111111111",
@@ -62,6 +65,7 @@ func TestRequestSync(t *testing.T) {
 			http.StatusOK,
 			`{"patch":[{"op":"add","path":"/u/foo","value":"bar"}],"commitID":"22222222222222222222222222222222","nomsChecksum":"am8lvhrbscqkngg75jaiubirapurghv9"}`,
 			"",
+			false,
 			"",
 			map[string]string{"foo": "bar"},
 			"22222222222222222222222222222222",
@@ -74,6 +78,7 @@ func TestRequestSync(t *testing.T) {
 			http.StatusOK,
 			`{"patch":[{"op":"add","path":"/u/foo","value":"bar"},{"op":"replace","path":"/s/code","value":"function foo(){}"}],"commitID":"22222222222222222222222222222222","nomsChecksum":"am8lvhrbscqkngg75jaiubirapurghv9"}`,
 			"",
+			false,
 			"function foo(){}",
 			map[string]string{"foo": "bar"},
 			"22222222222222222222222222222222",
@@ -86,6 +91,7 @@ func TestRequestSync(t *testing.T) {
 			http.StatusOK,
 			``,
 			`Post http://127.0.0.1:\d+/handleSync: dial tcp 127.0.0.1:\d+: connect: connection refused`,
+			false,
 			"",
 			map[string]string{"foo": "bar"},
 			"11111111111111111111111111111111",
@@ -98,6 +104,7 @@ func TestRequestSync(t *testing.T) {
 			http.StatusBadRequest,
 			"You have made an invalid request",
 			"400 Bad Request: You have made an invalid request",
+			false,
 			"",
 			map[string]string{"foo": "bar"},
 			"11111111111111111111111111111111",
@@ -110,6 +117,7 @@ func TestRequestSync(t *testing.T) {
 			http.StatusOK,
 			"this isn't valid json!",
 			`Response from http://127.0.0.1:\d+/handleSync is not valid JSON: invalid character 'h' in literal true \(expecting 'r'\)`,
+			false,
 			"",
 			map[string]string{"foo": "bar"},
 			"11111111111111111111111111111111",
@@ -122,6 +130,7 @@ func TestRequestSync(t *testing.T) {
 			http.StatusOK,
 			"",
 			`Response from http://127.0.0.1:\d+/handleSync is not valid JSON: EOF`,
+			false,
 			"",
 			map[string]string{"foo": "bar"},
 			"11111111111111111111111111111111",
@@ -134,6 +143,7 @@ func TestRequestSync(t *testing.T) {
 			http.StatusOK,
 			`{"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/u/foo","value":"baz"}],"commitID":"22222222222222222222222222222222","nomsChecksum":"e4ankqlqffbmkl8bek60auevqti3gbgi"}`,
 			"",
+			false,
 			"",
 			map[string]string{"foo": "baz"},
 			"22222222222222222222222222222222",
@@ -146,6 +156,7 @@ func TestRequestSync(t *testing.T) {
 			http.StatusOK,
 			`{"patch":[{"op":"add","path":"/u/foo","value":"baz"},{"op":"remove","path":"/"}],"commitID":"22222222222222222222222222222222","nomsChecksum":"am8lvhrbscqkngg75jaiubirapurghv9"}`,
 			"Unsupported JSON Patch operation: remove with path: /",
+			false,
 			"",
 			map[string]string{"foo": "bar"},
 			"11111111111111111111111111111111",
@@ -158,6 +169,7 @@ func TestRequestSync(t *testing.T) {
 			http.StatusOK,
 			`{"patch":[{"op":"add","path":"/s/code","value":42}],"commitID":"22222222222222222222222222222222","nomsChecksum":"am8lvhrbscqkngg75jaiubirapurghv9"}`,
 			"Cannot unmarshal /s/code: json: cannot unmarshal number into Go value of type string",
+			false,
 			"",
 			map[string]string{"foo": "bar"},
 			"11111111111111111111111111111111",
@@ -170,6 +182,7 @@ func TestRequestSync(t *testing.T) {
 			http.StatusOK,
 			`{"patch":[{"op":"add","path":"/u/foo"}],"commitID":"22222222222222222222222222222222","nomsChecksum":"am8lvhrbscqkngg75jaiubirapurghv9"}`,
 			"Cannot unmarshal /u/foo: EOF",
+			false,
 			"",
 			map[string]string{"foo": "bar"},
 			"11111111111111111111111111111111",
@@ -182,6 +195,7 @@ func TestRequestSync(t *testing.T) {
 			http.StatusOK,
 			`{"patch":[{"op":"monkey"}],"commitID":"22222222222222222222222222222222","nomsChecksum":"am8lvhrbscqkngg75jaiubirapurghv9"}`,
 			"Unsupported JSON Patch operation: monkey with path: ",
+			false,
 			"",
 			map[string]string{"foo": "bar"},
 			"11111111111111111111111111111111",
@@ -194,9 +208,23 @@ func TestRequestSync(t *testing.T) {
 			http.StatusOK,
 			`{"patch":[{"op":"add","path":"/u/foo","value":"bar"}],"commitID":"22222222222222222222222222222222","nomsChecksum":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}`,
 			"Checksum mismatch!",
+			false,
 			"",
 			map[string]string{},
 			"11111111111111111111111111111111",
+		},
+		{
+			"auth-error",
+			map[string]string{},
+			"",
+			false,
+			http.StatusForbidden,
+			`Bad auth token`,
+			"Forbidden: Bad auth token",
+			true,
+			"",
+			map[string]string{},
+			"",
 		},
 	}
 
@@ -236,6 +264,8 @@ func TestRequestSync(t *testing.T) {
 			assert.NoError(err, t.label)
 		} else {
 			assert.Regexp(t.expectedError, err.Error(), t.label)
+			_, ok := err.(SyncAuthError)
+			assert.Equal(t.expectedErrorIsAuthError, ok, t.label)
 		}
 
 		ee := types.NewMap(db.noms).Edit()

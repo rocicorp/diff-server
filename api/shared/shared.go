@@ -122,8 +122,13 @@ type SyncRequest struct {
 	Shallow bool `json:"shallow,omitempty"`
 }
 
+type SyncResponseError struct {
+	BadAuth string `json:"badAuth,omitempty"`
+}
+
 type SyncResponse struct {
-	Root jsnoms.Hash `json:"root"`
+	Error *SyncResponseError `json:"error,omitempty"`
+	Root  jsnoms.Hash        `json:"root,omitempty"`
 }
 
 type HandleSyncRequest struct {
