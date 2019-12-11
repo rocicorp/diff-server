@@ -11,7 +11,7 @@ type Spec struct {
 }
 
 func (s Spec) MarshalJSON() ([]byte, error) {
-	return []byte(s.String()), nil
+	return json.Marshal(s.Spec.String())
 }
 
 func (s *Spec) UnmarshalJSON(data []byte) error {

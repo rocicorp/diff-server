@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync/atomic"
 
 	"github.com/attic-labs/noms/go/hash"
 	"github.com/attic-labs/noms/go/types"
@@ -21,11 +22,18 @@ import (
 )
 
 type API struct {
-	db *db.DB
+	db      *db.DB
+	sp      syncProgress
+	syncing int32
+}
+
+type syncProgress struct {
+	bytesReceived uint64
+	bytesExpected uint64
 }
 
 func New(db *db.DB) *API {
-	return &API{db}
+	return &API{db: db}
 }
 
 func (api *API) Dispatch(name string, req []byte) ([]byte, error) {
@@ -52,6 +60,8 @@ func (api *API) Dispatch(name string, req []byte) ([]byte, error) {
 		return api.dispatchExecBatch(req)
 	case "sync":
 		return api.dispatchSync(req)
+	case "syncProgress":
+		return api.dispatchSyncProgress(req)
 	case "handleSync":
 		return api.dispatchHandleSync(req)
 	}
@@ -290,11 +300,22 @@ func (api *API) dispatchSync(reqBytes []byte) ([]byte, error) {
 		return nil, err
 	}
 
+	if !atomic.CompareAndSwapInt32(&api.syncing, 0, 1) {
+		return nil, errors.New("There is already a sync in progress")
+	}
+
+	defer chk.True(atomic.CompareAndSwapInt32(&api.syncing, 1, 0), "UNEXPECTED STATE: Overlapping syncs somehow!")
+
 	req.Remote.Options.Authorization = req.Auth
 
 	res := shared.SyncResponse{}
 	if req.Shallow {
-		err = api.db.RequestSync(req.Remote.Spec, nil)
+		err = api.db.RequestSync(req.Remote.Spec, func(received, expected uint64) {
+			api.sp = syncProgress{
+				bytesReceived: received,
+				bytesExpected: expected,
+			}
+		})
 		if _, ok := err.(db.SyncAuthError); ok {
 			res.Error = &shared.SyncResponseError{
 				BadAuth: err.Error(),
@@ -311,6 +332,19 @@ func (api *API) dispatchSync(reqBytes []byte) ([]byte, error) {
 		res.Root = jsnoms.Hash{
 			Hash: api.db.Hash(),
 		}
+	}
+	return mustMarshal(res), nil
+}
+
+func (api *API) dispatchSyncProgress(reqBytes []byte) ([]byte, error) {
+	var req shared.SyncProgressRequest
+	err := json.Unmarshal(reqBytes, &req)
+	if err != nil {
+		return nil, err
+	}
+	res := shared.SyncProgressResponse{
+		BytesReceived: api.sp.bytesReceived,
+		BytesExpected: api.sp.bytesExpected,
 	}
 	return mustMarshal(res), nil
 }

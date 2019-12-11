@@ -131,6 +131,14 @@ type SyncResponse struct {
 	Root  jsnoms.Hash        `json:"root,omitempty"`
 }
 
+type SyncProgressRequest struct {
+}
+
+type SyncProgressResponse struct {
+	BytesReceived uint64 `json:"bytesReceived"`
+	BytesExpected uint64 `json:"bytesExpected"`
+}
+
 type HandleSyncRequest struct {
 	Basis string `'json:"basis"`
 }
