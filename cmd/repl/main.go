@@ -359,7 +359,7 @@ func sync(parent *kingpin.Application, gdb gdb) {
 		}
 		// TODO: progress
 		if *shallow {
-			return db.RequestSync(*remoteSpec)
+			return db.RequestSync(*remoteSpec, nil)
 		} else {
 			return db.Sync(*remoteSpec)
 		}

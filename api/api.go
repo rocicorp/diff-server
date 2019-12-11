@@ -294,7 +294,7 @@ func (api *API) dispatchSync(reqBytes []byte) ([]byte, error) {
 
 	res := shared.SyncResponse{}
 	if req.Shallow {
-		err = api.db.RequestSync(req.Remote.Spec)
+		err = api.db.RequestSync(req.Remote.Spec, nil)
 		if _, ok := err.(db.SyncAuthError); ok {
 			res.Error = &shared.SyncResponseError{
 				BadAuth: err.Error(),

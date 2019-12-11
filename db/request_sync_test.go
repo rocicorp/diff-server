@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/attic-labs/noms/go/marshal"
 	"github.com/attic-labs/noms/go/spec"
@@ -259,7 +260,7 @@ func TestRequestSync(t *testing.T) {
 		sp, err := spec.ForDatabase(server.URL)
 		assert.NoError(err, t.label)
 
-		err = db.RequestSync(sp)
+		err = db.RequestSync(sp, nil)
 		if t.expectedError == "" {
 			assert.NoError(err, t.label)
 		} else {
@@ -280,5 +281,91 @@ func TestRequestSync(t *testing.T) {
 		assert.Equal(t.expectedCode, string(b), t.label)
 
 		assert.Equal(t.expectedBasis, db.head.Meta.Genesis.ServerCommitID, t.label)
+	}
+}
+
+func TestProgress(t *testing.T) {
+	oneChunk := [][]byte{[]byte(`"foo"`)}
+	twoChunks := [][]byte{[]byte(`"foo`), []byte(`bar"`)}
+
+	total := func(chunks [][]byte) uint64 {
+		t := uint64(0)
+		for _, c := range chunks {
+			t += uint64(len(c))
+		}
+		return t
+	}
+
+	tc := []struct {
+		hasProgressHandler bool
+		sendContentLength  bool
+		chunks             [][]byte
+	}{
+		{true, true, oneChunk},
+		{true, true, twoChunks},
+		{true, false, twoChunks},
+		{false, true, twoChunks},
+		{false, false, twoChunks},
+	}
+
+	assert := assert.New(t)
+	db, dir := LoadTempDB(assert)
+	fmt.Println("dir", dir)
+
+	for i, t := range tc {
+		label := fmt.Sprintf("test case %d", i)
+
+		type report struct {
+			received uint64
+			expected uint64
+		}
+		reports := []report{}
+		var progress Progress
+		if t.hasProgressHandler {
+			progress = func(bytesReceived, bytesExpected uint64) {
+				reports = append(reports, report{bytesReceived, bytesExpected})
+			}
+		}
+
+		totalLen := total(t.chunks)
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if t.sendContentLength {
+				w.Header().Set("Content-length", fmt.Sprintf("%d", totalLen))
+			}
+
+			for _, c := range t.chunks {
+				_, err := w.Write(c)
+				assert.NoError(err, label)
+				w.(http.Flusher).Flush()
+				// This is a little ghetto. Doing fancier things with channel locking was too hard.
+				time.Sleep(time.Millisecond)
+			}
+		}))
+
+		sp, err := spec.ForDatabase(server.URL)
+		assert.NoError(err, label)
+		err = db.RequestSync(sp, progress)
+		assert.Regexp(`Response from http://[\d\.\:]+/handleSync is not valid JSON`, err)
+
+		expected := []report{}
+		if t.hasProgressHandler {
+			soFar := uint64(0)
+			for _, c := range t.chunks {
+				soFar += uint64(len(c))
+				expectedLen := soFar
+				if t.sendContentLength {
+					expectedLen = totalLen
+				}
+				expected = append(expected, report{
+					received: soFar,
+					expected: expectedLen,
+				})
+			}
+			// If there's no content length, the reader gets called one extra time to figure out it's at the end.
+			if !t.sendContentLength {
+				expected = append(expected, expected[len(expected)-1])
+			}
+		}
+		assert.Equal(expected, reports, label)
 	}
 }

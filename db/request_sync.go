@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
 
 	"roci.dev/replicant/api/shared"
 	"roci.dev/replicant/util/chk"
+	"roci.dev/replicant/util/countingreader"
 	"roci.dev/replicant/util/noms/jsonpatch"
 
 	"github.com/attic-labs/noms/go/marshal"
@@ -22,8 +24,10 @@ type SyncAuthError struct {
 	error
 }
 
+type Progress func(bytesReceived, bytesExpected uint64)
+
 // RequestSync kicks off the new patch-based sync protocol from the client side.
-func (db *DB) RequestSync(remote spec.Spec) error {
+func (db *DB) RequestSync(remote spec.Spec, progress Progress) error {
 	url := fmt.Sprintf("%s/handleSync", remote.String())
 	reqBody, err := json.Marshal(shared.HandleSyncRequest{
 		Basis: db.head.Meta.Genesis.ServerCommitID,
@@ -60,7 +64,23 @@ func (db *DB) RequestSync(remote spec.Spec) error {
 	}
 
 	var respBody shared.HandleSyncResponse
-	err = json.NewDecoder(resp.Body).Decode(&respBody)
+	var r io.Reader = resp.Body
+	if progress != nil {
+		cr := &countingreader.Reader{
+			R: resp.Body,
+		}
+		cr.Callback = func() {
+			var expected uint64
+			if resp.ContentLength <= 0 {
+				expected = cr.Count
+			} else {
+				expected = uint64(resp.ContentLength)
+			}
+			progress(cr.Count, expected)
+		}
+		r = cr
+	}
+	err = json.NewDecoder(r).Decode(&respBody)
 	if err != nil {
 		return fmt.Errorf("Response from %s is not valid JSON: %s", url, err.Error())
 	}
