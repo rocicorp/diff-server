@@ -299,13 +299,25 @@ func TestProgress(t *testing.T) {
 	tc := []struct {
 		hasProgressHandler bool
 		sendContentLength  bool
+		sendEntityLength   bool
 		chunks             [][]byte
 	}{
-		{true, true, oneChunk},
-		{true, true, twoChunks},
-		{true, false, twoChunks},
-		{false, true, twoChunks},
-		{false, false, twoChunks},
+		{false, false, false, oneChunk},
+		{true, false, false, oneChunk},
+		{false, true, false, oneChunk},
+		{false, false, true, oneChunk},
+		{true, true, false, oneChunk},
+		{true, false, true, oneChunk},
+		{false, true, true, oneChunk},
+		{true, true, true, oneChunk},
+		{false, false, false, twoChunks},
+		{true, false, false, twoChunks},
+		{false, true, false, twoChunks},
+		{false, false, true, twoChunks},
+		{true, true, false, twoChunks},
+		{true, false, true, twoChunks},
+		{false, true, true, twoChunks},
+		{true, true, true, twoChunks},
 	}
 
 	assert := assert.New(t)
@@ -329,6 +341,9 @@ func TestProgress(t *testing.T) {
 
 		totalLen := total(t.chunks)
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if t.sendEntityLength {
+				w.Header().Set("Entity-length", fmt.Sprintf("%d", totalLen))
+			}
 			if t.sendContentLength {
 				w.Header().Set("Content-length", fmt.Sprintf("%d", totalLen))
 			}
@@ -353,7 +368,7 @@ func TestProgress(t *testing.T) {
 			for _, c := range t.chunks {
 				soFar += uint64(len(c))
 				expectedLen := soFar
-				if t.sendContentLength {
+				if t.sendEntityLength || t.sendContentLength {
 					expectedLen = totalLen
 				}
 				expected = append(expected, report{

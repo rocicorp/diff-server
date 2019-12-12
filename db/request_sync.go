@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"roci.dev/replicant/api/shared"
@@ -63,20 +64,40 @@ func (db *DB) RequestSync(remote spec.Spec, progress Progress) error {
 		}
 	}
 
+	getExpectedLength := func() (r int64, err error) {
+		var s = resp.Header.Get("Entity-length")
+		if s != "" {
+			r, err = strconv.ParseInt(s, 10, 64)
+			if err != nil {
+				return 0, fmt.Errorf("Non-integral value for Entity-length header: %s", s)
+			}
+			return r, nil
+		}
+		if resp.ContentLength >= 0 {
+			return resp.ContentLength, nil
+		}
+		return 0, nil
+	}
+
 	var respBody shared.HandleSyncResponse
 	var r io.Reader = resp.Body
 	if progress != nil {
 		cr := &countingreader.Reader{
 			R: resp.Body,
 		}
+		expected, err := getExpectedLength()
+		if err != nil {
+			return err
+		}
 		cr.Callback = func() {
-			var expected uint64
-			if resp.ContentLength <= 0 {
-				expected = cr.Count
-			} else {
-				expected = uint64(resp.ContentLength)
+			rec := cr.Count
+			exp := uint64(expected)
+			if exp == 0 {
+				exp = rec
+			} else if rec > exp {
+				rec = exp
 			}
-			progress(cr.Count, expected)
+			progress(rec, exp)
 		}
 		r = cr
 	}
