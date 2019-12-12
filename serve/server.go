@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"runtime/debug"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -65,6 +66,7 @@ func newServer(cs chunks.ChunkStore, urlPrefix, origin string) (*server, error) 
 
 			rw.Header().Set("Content-type", "application/json")
 			rw.Header().Set("Content-encoding", "gzip")
+			rw.Header().Set("Entity-length", strconv.Itoa(len(resp)))
 
 			w := io.Writer(rw)
 			if strings.Contains(req.Header.Get("Accept-Encoding"), "gzip") {
