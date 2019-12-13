@@ -31,10 +31,12 @@ func (ufe UnknownFunctionError) Error() string {
 }
 
 type ScanOptions struct {
-	Prefix       string `json:"prefix,omitempty"`
-	StartAtID    string `json:"startAtID,omitempty"`
-	StartAfterID string `json:"startAfterID,omitempty"`
-	Limit        int    `json:"limit,omitempty"`
+	Prefix          string `json:"prefix,omitempty"`
+	StartAtIndex    uint64 `json:"startAtIndex,omitempty"`
+	StartAfterIndex uint64 `json:"startAfterIndex,omitempty"`
+	StartAtID       string `json:"startAtID,omitempty"`
+	StartAfterID    string `json:"startAfterID,omitempty"`
+	Limit           int    `json:"limit,omitempty"`
 	// Future: EndAtID, EndBeforeID
 }
 
