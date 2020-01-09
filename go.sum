@@ -11,8 +11,8 @@ github.com/attic-labs/graphql v0.0.0-20190507195614-b6552d20145f h1:WMEteRGdJItA
 github.com/attic-labs/graphql v0.0.0-20190507195614-b6552d20145f/go.mod h1:1U3eDKPYQXn3o4jpC2rAlH9THIo+ZOKWSI0FyeG1SEI=
 github.com/attic-labs/kingpin v2.2.7-0.20180312050558-442efcfac769+incompatible h1:wd5mq8xSfwCYd1JpQ309s+3tTlP/gifcG2awOA3x5Vk=
 github.com/attic-labs/kingpin v2.2.7-0.20180312050558-442efcfac769+incompatible/go.mod h1:Cp18FeDCvsK+cD2QAGkqerGjrgSXLiJWnjHeY2mneBc=
-github.com/attic-labs/noms v0.0.0-20191120090945-2420b9965afb h1:gVBTGvZJlYqyzuGwc0jQTN4w/rDlC5zUOp8IJNixydc=
-github.com/attic-labs/noms v0.0.0-20191120090945-2420b9965afb/go.mod h1:qhMSThkSBnQ2QGe2Y5QAlTNjPtpyV2abaKPJRVmpr4A=
+github.com/attic-labs/noms v0.0.0-20191214023511-2a57d6783c14 h1:C5eSE1iNyi1Oqon7wS4wYA+FIubvGbgJFuuAaQyLSv4=
+github.com/attic-labs/noms v0.0.0-20191214023511-2a57d6783c14/go.mod h1:qhMSThkSBnQ2QGe2Y5QAlTNjPtpyV2abaKPJRVmpr4A=
 github.com/aws/aws-sdk-go v1.19.26 h1:GavKlzJDfYQGoS4jn2F+KYYZlR8QEhrLPfpf8+oJhS4=
 github.com/aws/aws-sdk-go v1.19.26/go.mod h1:KmX6BPdI08NWTb3/sm4ZGu5ShLoqVDhKgpiN924inxo=
 github.com/aws/aws-sdk-go v1.19.28 h1:u0KMC+Qv0YVyz8YR6mREEtslSPkdUMzXgDJFD5196O8=

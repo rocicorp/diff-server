@@ -1,6 +1,7 @@
 package db
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -28,50 +29,79 @@ func TestScan(t *testing.T) {
 	put("ba")
 	put("bb")
 
-	// TODO: limit, startAt
+	index := func(v int) *uint64 {
+		vv := uint64(v)
+		return &vv
+	}
+
 	tc := []struct {
-		startAtID       string
-		startAfterID    string
-		prefix          string
-		startAtIndex    uint64
-		startAfterIndex uint64
-		limit           int
-		expected        []string
-		expectedError   error
+		opts          exec.ScanOptions
+		expected      []string
+		expectedError error
 	}{
-		{"", "", "a", 0, 0, 0, []string{"a"}, nil},
-		{"", "", "b", 0, 0, 0, []string{"ba", "bb"}, nil},
-		{"", "", "", 0, 0, 0, []string{"", "a", "ba", "bb"}, nil},
-		{"", "", "", 0, 0, 2, []string{"", "a"}, nil},
-		{"a", "", "", 0, 0, 0, []string{"a", "ba", "bb"}, nil},
-		{"", "a", "", 0, 0, 0, []string{"ba", "bb"}, nil},
-		{"", "", "ba", 0, 0, 0, []string{"ba"}, nil},
-		{"", "", "bb", 0, 0, 0, []string{"bb"}, nil},
-		{"", "", "", 1, 0, 0, []string{"a", "ba", "bb"}, nil},
-		{"", "", "", 1, 0, 1, []string{"a"}, nil},
-		{"", "", "", 0, 1, 0, []string{"ba", "bb"}, nil},
-		{"", "", "", 0, 1, 1, []string{"ba"}, nil},
-		{"a", "a", "", 0, 0, 0, nil, ErrConflictingStartConstraints},
-		{"a", "", "a", 0, 0, 0, nil, ErrConflictingStartConstraints},
-		{"a", "", "", 1, 0, 0, nil, ErrConflictingStartConstraints},
-		{"a", "", "", 0, 1, 0, nil, ErrConflictingStartConstraints},
-		{"", "a", "a", 0, 0, 0, nil, ErrConflictingStartConstraints},
-		{"", "a", "", 1, 0, 0, nil, ErrConflictingStartConstraints},
-		{"", "a", "", 0, 1, 0, nil, ErrConflictingStartConstraints},
-		{"", "", "a", 1, 0, 0, nil, ErrConflictingStartConstraints},
-		{"", "", "a", 0, 1, 0, nil, ErrConflictingStartConstraints},
-		{"", "", "", 1, 1, 0, nil, ErrConflictingStartConstraints},
+		// no options
+		{exec.ScanOptions{}, []string{"", "a", "ba", "bb"}, nil},
+		{exec.ScanOptions{Start: &exec.ScanBound{}}, []string{"", "a", "ba", "bb"}, nil},
+		{exec.ScanOptions{Start: &exec.ScanBound{Key: &exec.ScanKey{}}}, []string{"", "a", "ba", "bb"}, nil},
+
+		// prefix alone
+		{exec.ScanOptions{Prefix: "a"}, []string{"a"}, nil},
+		{exec.ScanOptions{Prefix: "b"}, []string{"ba", "bb"}, nil},
+		{exec.ScanOptions{Prefix: "b", Limit: 1}, []string{"ba"}, nil},
+		{exec.ScanOptions{Prefix: "b", Limit: 100}, []string{"ba", "bb"}, nil},
+		{exec.ScanOptions{Prefix: "c"}, []string{}, nil},
+
+		// start.key alone
+		{exec.ScanOptions{Start: &exec.ScanBound{Key: &exec.ScanKey{Value: "a"}}}, []string{"a", "ba", "bb"}, nil},
+		{exec.ScanOptions{Start: &exec.ScanBound{Key: &exec.ScanKey{Value: "a", Exclusive: true}}}, []string{"ba", "bb"}, nil},
+		{exec.ScanOptions{Start: &exec.ScanBound{Key: &exec.ScanKey{Value: "aa"}}}, []string{"ba", "bb"}, nil},
+		{exec.ScanOptions{Start: &exec.ScanBound{Key: &exec.ScanKey{Value: "aa", Exclusive: true}}}, []string{"ba", "bb"}, nil},
+		{exec.ScanOptions{Start: &exec.ScanBound{Key: &exec.ScanKey{Value: "a"}}, Limit: 2}, []string{"a", "ba"}, nil},
+		{exec.ScanOptions{Start: &exec.ScanBound{Key: &exec.ScanKey{Value: "bb"}}}, []string{"bb"}, nil},
+		{exec.ScanOptions{Start: &exec.ScanBound{Key: &exec.ScanKey{Value: "bb", Exclusive: true}}}, []string{}, nil},
+		{exec.ScanOptions{Start: &exec.ScanBound{Key: &exec.ScanKey{Value: "c"}}}, []string{}, nil},
+
+		// start.key and prefix together
+		{exec.ScanOptions{Prefix: "a", Start: &exec.ScanBound{Key: &exec.ScanKey{Value: "a"}}}, []string{"a"}, nil},
+		{exec.ScanOptions{Prefix: "a", Start: &exec.ScanBound{Key: &exec.ScanKey{Value: "b"}}}, []string{}, nil},
+		{exec.ScanOptions{Prefix: "b", Start: &exec.ScanBound{Key: &exec.ScanKey{Value: "a"}}}, []string{"ba", "bb"}, nil},
+		{exec.ScanOptions{Prefix: "c", Start: &exec.ScanBound{Key: &exec.ScanKey{Value: "a"}}}, []string{}, nil},
+		{exec.ScanOptions{Prefix: "a", Start: &exec.ScanBound{Key: &exec.ScanKey{Value: "c"}}}, []string{}, nil},
+
+		// start.index alone
+		{exec.ScanOptions{Start: &exec.ScanBound{Index: index(0)}}, []string{"", "a", "ba", "bb"}, nil},
+		{exec.ScanOptions{Start: &exec.ScanBound{Index: index(1)}}, []string{"a", "ba", "bb"}, nil},
+		{exec.ScanOptions{Start: &exec.ScanBound{Index: index(1)}, Limit: 2}, []string{"a", "ba"}, nil},
+		{exec.ScanOptions{Start: &exec.ScanBound{Index: index(4)}}, []string{}, nil},
+		{exec.ScanOptions{Start: &exec.ScanBound{Index: index(100)}}, []string{}, nil},
+
+		// start.index and start.key together
+		{exec.ScanOptions{Start: &exec.ScanBound{Index: index(1), Key: &exec.ScanKey{Value: "b"}}}, []string{"ba", "bb"}, nil},
+		{exec.ScanOptions{Start: &exec.ScanBound{Index: index(1), Key: &exec.ScanKey{Value: "b", Exclusive: true}}}, []string{"ba", "bb"}, nil},
+		{exec.ScanOptions{Start: &exec.ScanBound{Index: index(1), Key: &exec.ScanKey{Value: "ba"}}}, []string{"ba", "bb"}, nil},
+		{exec.ScanOptions{Start: &exec.ScanBound{Index: index(1), Key: &exec.ScanKey{Value: "ba", Exclusive: true}}}, []string{"bb"}, nil},
+		{exec.ScanOptions{Start: &exec.ScanBound{Index: index(2), Key: &exec.ScanKey{Value: "a"}}}, []string{"ba", "bb"}, nil},
+		{exec.ScanOptions{Start: &exec.ScanBound{Index: index(2), Key: &exec.ScanKey{Value: "a", Exclusive: true}}}, []string{"ba", "bb"}, nil},
+		{exec.ScanOptions{Start: &exec.ScanBound{Index: index(4), Key: &exec.ScanKey{Value: "a"}}}, []string{}, nil},
+		{exec.ScanOptions{Start: &exec.ScanBound{Index: index(1), Key: &exec.ScanKey{Value: "bb", Exclusive: true}}}, []string{}, nil},
+		{exec.ScanOptions{Start: &exec.ScanBound{Index: index(1), Key: &exec.ScanKey{Value: "c"}}}, []string{}, nil},
+		{exec.ScanOptions{Start: &exec.ScanBound{Index: index(1), Key: &exec.ScanKey{Value: "z"}}}, []string{}, nil},
+
+		// prefix, start.index, and start.key together
+		{exec.ScanOptions{Prefix: "b", Start: &exec.ScanBound{Index: index(1), Key: &exec.ScanKey{Value: "b"}}}, []string{"ba", "bb"}, nil},
+		{exec.ScanOptions{Prefix: "a", Start: &exec.ScanBound{Index: index(1), Key: &exec.ScanKey{Value: "b"}}}, []string{}, nil},
+		{exec.ScanOptions{Prefix: "a", Start: &exec.ScanBound{Index: index(0), Key: &exec.ScanKey{Value: "b"}}}, []string{}, nil},
+		{exec.ScanOptions{Prefix: "a", Start: &exec.ScanBound{Index: index(0), Key: &exec.ScanKey{Value: "a"}}}, []string{"a"}, nil},
+		{exec.ScanOptions{Prefix: "c", Start: &exec.ScanBound{Index: index(0), Key: &exec.ScanKey{Value: "a"}}}, []string{}, nil},
+		{exec.ScanOptions{Prefix: "a", Start: &exec.ScanBound{Index: index(100), Key: &exec.ScanKey{Value: "a"}}}, []string{}, nil},
+		{exec.ScanOptions{Prefix: "a", Start: &exec.ScanBound{Index: index(0), Key: &exec.ScanKey{Value: "z"}}}, []string{}, nil},
 	}
 
 	for i, t := range tc {
-		msg := fmt.Sprintf("case %d, prefix: %s", i, t.prefix)
-		res, err := d.Scan(exec.ScanOptions{
-			StartAtID:       t.startAtID,
-			StartAfterID:    t.startAfterID,
-			Prefix:          t.prefix,
-			StartAtIndex:    t.startAtIndex,
-			StartAfterIndex: t.startAfterIndex,
-			Limit:           t.limit})
+		js, err := json.Marshal(t.opts)
+		assert.NoError(err)
+		msg := fmt.Sprintf("case %d: %s", i, js)
+		res, err := d.Scan(t.opts)
 		if t.expectedError != nil {
 			assert.Error(t.expectedError, err, msg)
 			assert.Nil(res, msg)

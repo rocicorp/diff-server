@@ -1,7 +1,6 @@
 package db
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/attic-labs/noms/go/types"
@@ -15,45 +14,48 @@ const (
 	defaultScanLimit = 50
 )
 
-var (
-	ErrConflictingStartConstraints = errors.New("Only one of the startAtID, startAfterID, startAtIndex, startAfterIndex, and prefix fields may be present")
-)
-
 func (db *DB) Scan(opts exec.ScanOptions) ([]exec.ScanItem, error) {
 	return scan(db.head.Data(db.noms), opts)
 }
 
 func scan(data types.Map, opts exec.ScanOptions) ([]exec.ScanItem, error) {
-	var startID string
-	var startIndex uint64
-	startFields := 0
-	skipNext := false
+	var it *types.MapIterator
 
-	if opts.StartAtID != "" {
-		startID = opts.StartAtID
-		startFields++
+	updateIter := func(cand *types.MapIterator) {
+		if it == nil {
+			it = cand
+		} else if !it.Valid() {
+			// the current iterator is at the end, no value could be greater
+		} else if !cand.Valid() {
+			// the candidate is at the end, all values are less
+			it = cand
+		} else if it.Key().Less(cand.Key()) {
+			it = cand
+		} else {
+			// the current iterator is >= the candidate
+		}
 	}
-	if opts.StartAfterID != "" {
-		startID = opts.StartAfterID
-		startFields++
-		skipNext = true
-	}
+
 	if opts.Prefix != "" {
-		startID = opts.Prefix
-		startFields++
-	}
-	if opts.StartAtIndex > 0 {
-		startIndex = opts.StartAtIndex
-		startFields++
-	}
-	if opts.StartAfterIndex > 0 {
-		startIndex = opts.StartAfterIndex
-		startFields++
-		skipNext = true
+		updateIter(data.IteratorFrom(types.String(opts.Prefix)))
 	}
 
-	if startFields > 1 {
-		return nil, ErrConflictingStartConstraints
+	if opts.Start != nil {
+		if opts.Start.Key != nil && opts.Start.Key.Value != "" {
+			sk := types.String(opts.Start.Key.Value)
+			it := data.IteratorFrom(sk)
+			if opts.Start.Key.Exclusive && it.Valid() && it.Key().Equals(sk) {
+				it.Next()
+			}
+			updateIter(it)
+		}
+		if opts.Start.Index != nil {
+			updateIter(data.IteratorAt(uint64((*opts.Start.Index))))
+		}
+	}
+
+	if it == nil {
+		it = data.Iterator()
 	}
 
 	lim := opts.Limit
@@ -61,31 +63,16 @@ func scan(data types.Map, opts exec.ScanOptions) ([]exec.ScanItem, error) {
 		lim = 50
 	}
 
-	var it types.MapIterator
-	if startID != "" {
-		it = data.IteratorFrom(types.String(startID))
-	} else {
-		it = data.IteratorAt(startIndex)
-	}
-
 	res := []exec.ScanItem{}
-	for {
-		k, v := it.Next()
-		chk.True((k == nil) == (v == nil), "Nilness of key and value should match")
-		if k == nil {
-			break
-		}
+	for ; it.Valid(); it.Next() {
+		k, v := it.Entry()
 		chk.True(k.Kind() == types.StringKind, "Only keys with string kinds are supported, Noms schema check should have caught this")
-		if skipNext {
-			skipNext = false
-			continue
-		}
 		ks := string(k.(types.String))
 		if opts.Prefix != "" && !strings.HasPrefix(ks, opts.Prefix) {
 			break
 		}
 		res = append(res, exec.ScanItem{
-			ID:    string(k.(types.String)),
+			ID:    ks,
 			Value: jsnoms.Make(nil, v),
 		})
 		if len(res) == lim {

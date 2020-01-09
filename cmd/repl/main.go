@@ -290,10 +290,16 @@ func get(parent *kingpin.Application, gdb gdb, out io.Writer) {
 
 func scan(parent *kingpin.Application, gdb gdb, out, errs io.Writer) {
 	kc := parent.Command("scan", "Scans values in-order from the database.")
-	var opts execpkg.ScanOptions
+	opts := execpkg.ScanOptions{
+		Start: &execpkg.ScanBound{
+			Key:   &execpkg.ScanKey{},
+			Index: new(uint64),
+		},
+	}
 	kc.Flag("prefix", "prefix of values to return").StringVar(&opts.Prefix)
-	kc.Flag("start-at", "id of the value to start scanning at").StringVar(&opts.StartAtID)
-	kc.Flag("start-after", "id of the value to start scanning after").StringVar(&opts.StartAfterID)
+	kc.Flag("start-key", "id of the value to start scanning at").StringVar(&opts.Start.Key.Value)
+	kc.Flag("start-key-exclusive", "id of the value to start scanning at").BoolVar(&opts.Start.Key.Exclusive)
+	kc.Flag("start-index", "id of the value to start scanning at").Uint64Var(opts.Start.Index)
 	kc.Flag("limit", "maximum number of items to return").IntVar(&opts.Limit)
 	kc.Action(func(_ *kingpin.ParseContext) error {
 		db, err := gdb()

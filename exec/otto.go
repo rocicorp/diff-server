@@ -30,13 +30,20 @@ func (ufe UnknownFunctionError) Error() string {
 	return fmt.Sprintf("Unknown function: %s", string(ufe))
 }
 
+type ScanKey struct {
+	Value     string `json:"value,omitempty"`
+	Exclusive bool   `json:"exclusive,omitempty"`
+}
+
+type ScanBound struct {
+	Key   *ScanKey `json:"key,omitempty"`
+	Index *uint64  `json:"index,omitempty"`
+}
+
 type ScanOptions struct {
-	Prefix          string `json:"prefix,omitempty"`
-	StartAtIndex    uint64 `json:"startAtIndex,omitempty"`
-	StartAfterIndex uint64 `json:"startAfterIndex,omitempty"`
-	StartAtID       string `json:"startAtID,omitempty"`
-	StartAfterID    string `json:"startAfterID,omitempty"`
-	Limit           int    `json:"limit,omitempty"`
+	Prefix string     `json:"prefix,omitempty"`
+	Start  *ScanBound `json:"start,omitempty"`
+	Limit  int        `json:"limit,omitempty"`
 	// Future: EndAtID, EndBeforeID
 }
 
