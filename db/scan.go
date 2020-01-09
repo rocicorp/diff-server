@@ -41,10 +41,10 @@ func scan(data types.Map, opts exec.ScanOptions) ([]exec.ScanItem, error) {
 	}
 
 	if opts.Start != nil {
-		if opts.Start.Key != nil && opts.Start.Key.Value != "" {
-			sk := types.String(opts.Start.Key.Value)
+		if opts.Start.ID != nil && opts.Start.ID.Value != "" {
+			sk := types.String(opts.Start.ID.Value)
 			it := data.IteratorFrom(sk)
-			if opts.Start.Key.Exclusive && it.Valid() && it.Key().Equals(sk) {
+			if opts.Start.ID.Exclusive && it.Valid() && it.Key().Equals(sk) {
 				it.Next()
 			}
 			updateIter(it)

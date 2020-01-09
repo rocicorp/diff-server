@@ -30,14 +30,14 @@ func (ufe UnknownFunctionError) Error() string {
 	return fmt.Sprintf("Unknown function: %s", string(ufe))
 }
 
-type ScanKey struct {
+type ScanID struct {
 	Value     string `json:"value,omitempty"`
 	Exclusive bool   `json:"exclusive,omitempty"`
 }
 
 type ScanBound struct {
-	Key   *ScanKey `json:"key,omitempty"`
-	Index *uint64  `json:"index,omitempty"`
+	ID    *ScanID `json:"id,omitempty"`
+	Index *uint64 `json:"index,omitempty"`
 }
 
 type ScanOptions struct {

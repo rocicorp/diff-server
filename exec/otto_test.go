@@ -44,10 +44,10 @@ func (d db) Scan(opts ScanOptions) (r []ScanItem, err error) {
 		lim = math.MaxInt32
 	}
 	for k, v := range d.data {
-		if opts.Start != nil && opts.Start.Key != nil && k < opts.Start.Key.Value {
+		if opts.Start != nil && opts.Start.ID != nil && k < opts.Start.ID.Value {
 			continue
 		}
-		if opts.Start != nil && opts.Start.Key != nil && opts.Start.Key.Exclusive && k <= opts.Start.Key.Value {
+		if opts.Start != nil && opts.Start.ID != nil && opts.Start.ID.Exclusive && k <= opts.Start.ID.Value {
 			continue
 		}
 		if !strings.HasPrefix(k, opts.Prefix) {
