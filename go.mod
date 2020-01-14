@@ -1,4 +1,4 @@
-module roci.dev/replicant
+module roci.dev/replicant/v2
 
 go 1.12
 
