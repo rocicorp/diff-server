@@ -45,6 +45,9 @@ var db = (function() {
 		},
 
 		scan: function(opts) {
+			if (!opts) {
+				throw new Error('Invalid param');
+			}
 			var res = handleError(send(commands.scan, JSON.stringify(opts)));
 			return res.ok ? JSON.parse(res.data) : undefined;
 		},

@@ -256,7 +256,7 @@ func TestExecBatchError(t *testing.T) {
 	out, be, err := db.ExecBatch(batch)
 	assert.NoError(err)
 	assert.Equal(1, be.Index)
-	assert.EqualError(be, "Error: error\n    at append (bundle.js:3:13)\n    at apply (<native code>)\n    at recv (bootstrap.js:64:12)\n")
+	assert.EqualError(be, "Error: error\n    at append (bundle.js:3:13)\n    at apply (<native code>)\n    at recv (bootstrap.js:67:12)\n")
 	assert.Nil(out)
 
 	dbs := []*DB{db, reloadDB(assert, dir)}

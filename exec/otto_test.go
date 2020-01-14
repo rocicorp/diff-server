@@ -2,7 +2,6 @@ package exec
 
 import (
 	"fmt"
-	"math"
 	"sort"
 	"strings"
 	"testing"
@@ -39,21 +38,33 @@ func (d db) Get(id string) (v types.Value, err error) {
 }
 
 func (d db) Scan(opts ScanOptions) (r []ScanItem, err error) {
+	r = []ScanItem{}
 	lim := opts.Limit
 	if lim == 0 {
-		lim = math.MaxInt32
+		lim = len(d.data)
 	}
-	for k, v := range d.data {
+	keys := []string{}
+	for k := range d.data {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return keys[i] < keys[j]
+	})
+	for i, k := range keys {
+		if len(r) == lim {
+			break
+		}
+		v := d.data[k]
 		if opts.Start != nil && opts.Start.ID != nil && k < opts.Start.ID.Value {
 			continue
 		}
 		if opts.Start != nil && opts.Start.ID != nil && opts.Start.ID.Exclusive && k <= opts.Start.ID.Value {
 			continue
 		}
-		if !strings.HasPrefix(k, opts.Prefix) {
+		if opts.Start != nil && opts.Start.Index != nil && uint64(i) < *opts.Start.Index {
 			continue
 		}
-		if len(r) == lim {
+		if !strings.HasPrefix(k, opts.Prefix) {
 			continue
 		}
 		r = append(r, ScanItem{
@@ -61,9 +72,6 @@ func (d db) Scan(opts ScanOptions) (r []ScanItem, err error) {
 			Value: jsnoms.Make(d.noms, v),
 		})
 	}
-	sort.Slice(r, func(i, j int) bool {
-		return r[i].ID < r[j].ID
-	})
 	return r, nil
 }
 
@@ -116,9 +124,19 @@ func TestPutHasGetRoundtrip(t *testing.T) {
 	noms := sp.GetDatabase()
 	d := db{noms, map[string]types.Value{}}
 	code := `
-function assert(cond) {
+function assert(cond, msg) {
+	msg = msg || '';
+	if (msg != '') {
+		msg = ': ' + msg;
+	}
 	if (!cond) {
-		throw new Error("unexpected condition");
+		throw new Error('unexpected condition' + msg);
+	}
+}
+
+function assertEqual(exp, act) {
+	if (exp != act) {
+		assert(false, 'Expected: ' + exp + ', got: ' + act);
 	}
 }
 
@@ -128,15 +146,33 @@ function test() {
 	db.put("hot", "dog");
 	assert(db.has("foo"));
 	assert("bar" === db.get("foo"));
-	var results = db.scan({
-		fromID: "f",
-	});
-	assert(results.length == 2);
-	assert(results[0].id == "foo");
-	assert(results[0].value == "bar");
-	assert(results[1].id == "hot");
-	assert(results[01].value == "dog");
-	return "hi";
+	var cases = [
+		{err:'Error: Invalid param'},
+		{opts: null, err:'Error: Invalid param'},
+		{opts: {}, expected: [{id:"foo",value:"bar"},{id:"hot",value:"dog"}]},
+		{opts: {limit:0}, expected: [{id:"foo",value:"bar"},{id:"hot",value:"dog"}]},
+		{opts: {limit:1}, expected: [{id:"foo",value:"bar"}]},
+		{opts: {start:{}}, expected: [{id:"foo",value:"bar"},{id:"hot",value:"dog"}]},
+		{opts: {start:{id:{value:"foo"}}}, expected: [{id:"foo",value:"bar"},{id:"hot",value:"dog"}]},
+		{opts: {start:{id:{value:"foo",exclusive:true}}}, expected: [{id:"hot",value:"dog"}]},
+		{opts: {start:{id:{value:"foo"},index:1}}, expected: [{id:"hot",value:"dog"}]},
+		{opts: {start:{index:1}}, expected: [{id:"hot",value:"dog"}]},
+		{opts: {start:{index:2}}, expected: []},
+	];
+	for (var i = 0, c; c = cases[i]; i++) {
+		var results, error;
+		try {
+			results = db.scan(c.opts);
+		} catch (e) {
+			error = e.toString();
+		}
+		if (c.err) {
+			assertEqual(error, c.err);
+		} else {
+			assertEqual(JSON.stringify(c.expected), JSON.stringify(results));
+		}
+	}
+	return 'hi';
 }
 `
 	out, err := Run(d, strings.NewReader(code), "test", types.NewList(noms))
@@ -184,7 +220,7 @@ func TestErrors(t *testing.T) {
 	}{
 		{"!!not valid javascript!!!", "", "bundle.js: Line 1:7 Unexpected identifier (and 2 more errors)"},
 		{"throw new Error('bonk')", "", "Error: bonk\n    at bundle.js:1:11\n"},
-		{"function bonk() { throw new Error('bonk'); }", "bonk", "Error: bonk\n    at bonk (bundle.js:1:29)\n    at apply (<native code>)\n    at recv (bootstrap.js:64:12)\n"},
+		{"function bonk() { throw new Error('bonk'); }", "bonk", "Error: bonk\n    at bonk (bundle.js:1:29)\n    at apply (<native code>)\n    at recv (bootstrap.js:67:12)\n"},
 		{"", "bonk", "Unknown function: bonk"},
 	}
 
