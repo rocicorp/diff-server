@@ -14,6 +14,7 @@ import (
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/dgrijalva/jwt-go"
 	rlog "roci.dev/replicant/util/log"
+	"roci.dev/replicant/util/version"
 )
 
 var (
@@ -59,6 +60,15 @@ func NewService(storageRoot string, accounts []Account) *Service {
 
 func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	rlog.Init(os.Stderr, rlog.Options{Prefix: true})
+
+	if r.URL.Path == "/" {
+		w.Header().Add("Content-type", "text/plain")
+		w.Write([]byte("Hello from Replicache\n"))
+		w.Write([]byte(fmt.Sprintf("Version: %s\n\n", version.Version())))
+		w.Write([]byte("This is the root of the service.\n"))
+		w.Write([]byte("To access an individual DB, try: /<accountid>/<dbname>/<cmd>\n"))
+		return
+	}
 
 	server, cErr, authErr, sErr := s.getServer(r)
 	if cErr != "" {
