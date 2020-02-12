@@ -81,21 +81,6 @@ func TestRebase(t *testing.T) {
 		return r
 	}
 
-	rj := func(basis, subject, expected Commit, ds string) Commit {
-		d := data(ds)
-		r := makeReject(
-			noms,
-			basis.Ref(),
-			epoch,
-			subject.Ref(),
-			expected.Ref(),
-			"",
-			basis.Value.Code,
-			write(d)) // result data
-		write(r.Original)
-		return r
-	}
-
 	test := func(onto, head, expected Commit, expectedError string) {
 		noms.Flush()
 		actual, err := rebase(db, onto.Ref(), epoch, head, types.Ref{})
@@ -182,92 +167,5 @@ func TestRebase(t *testing.T) {
 		roc := ro(a, c, "a,c")
 		expected := ro(b, roc, "a,b,c")
 		test(b, roc, expected, "")
-	})()
-
-	// reject unsupported
-	// onto: g - a
-	// head: g --- rj(b)
-	//         \ b /
-	// rslt: error: can't rebase reject commits
-	(func() {
-		a := tx(g, "a", "a")
-		b := tx(g, "b", "b")
-		rjb := rj(g, b, a, "")
-		test(a, rjb, Commit{}, "Invalid commit type: CommitTypeReject")
-	})()
-
-	// nondeterm/ff
-	// a client syncs a ff that is incorrect
-	// onto: g
-	// head: g - x
-	// rslt: g ---- rj(x)
-	//         \ x /
-	(func() {
-		x := tx(g, "x", "a")
-		expected := tx(g, "x", "x")
-		rjx := rj(g, x, expected, "") // commit is not applied, therefore data goes back to basis value, which is empty
-		test(g, x, rjx, "")
-	})()
-
-	// nondeterm/ff2
-	// a client syncs a ff that has an incorrect commit followed by a correct one
-	// onto: g
-	// head: g - x - b
-	// rslt: g ---- rj(x) - ro(b)
-	//         \ x / - b - /
-	(func() {
-		x := tx(g, "x", "a")
-		b := tx(x, "b", "a,b")
-		expectedX := tx(g, "x", "x")
-		rjx := rj(g, x, expectedX, "")
-		rob := ro(rjx, b, "b")
-		test(g, b, rob, "")
-	})()
-
-	// nondeterm/ff3
-	// a client syncs a ff that contains two incorrect commits in a row
-	// onto: g
-	// head: g - x - y
-	// rslt: g ---- rj(x) - rj(y)
-	//         \ x / - y - /
-	(func() {
-		x := tx(g, "x", "a")
-		y := tx(x, "y", "a,b")
-		expectedX := tx(g, "x", "x")
-		rjx := rj(g, x, expectedX, "")
-		expectedY := tx(x, "y", "a,y")
-		rjy := rj(rjx, y, expectedY, "")
-		test(g, y, rjy, "")
-	})()
-
-	// nondeterm/reorder
-	// a client submits an incorrect commit that also needs to be reordered
-	// we never get to the reordering because the commit fails validation
-	// onto: g - a
-	// head: g - x
-	// rslt: g - a - rj(x)
-	//         \ x /
-	(func() {
-		a := tx(g, "a", "a")
-		x := tx(g, "x", "b")
-		expected := tx(g, "x", "x")
-		rjx := rj(a, x, expected, "a")
-		test(a, x, rjx, "")
-	})()
-
-	// nondeterm/reorder2
-	// a client syncs a ff that contains a reorder that has the wrong result
-	// onto: g
-	// head: g - a - xro(b)
-	//         \ b /
-	// rslt: g - a \ ------ rj(xro(b))
-	//         \ b - xro(b) /
-	(func() {
-		a := tx(g, "a", "a")
-		b := tx(g, "b", "b")
-		xrob := ro(a, b, "a,x") // data is wrong, should be a,b
-		expected := ro(a, b, "a,b")
-		rjxrob := rj(a, xrob, expected, "a")
-		test(g, xrob, rjxrob, "")
 	})()
 }

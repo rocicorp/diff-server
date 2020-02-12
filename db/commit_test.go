@@ -104,42 +104,6 @@ func TestMarshal(t *testing.T) {
 				}),
 			}),
 		},
-		{
-			makeReject(noms, types.NewRef(g.Original), d, types.NewRef(tx.Original), types.Ref{}, "didn't feel like it", br, dr),
-			types.NewStruct("Commit", types.StructData{
-				"parents": types.NewSet(noms, types.NewRef(g.Original), types.NewRef(tx.Original)),
-				"meta": types.NewStruct("Reject", types.StructData{
-					"date":    marshal.MustMarshal(noms, d),
-					"subject": types.NewRef(tx.Original),
-					"reason":  types.String("unused"),
-					"reason2": types.NewStruct("Fiat", types.StructData{
-						"detail": types.String("didn't feel like it"),
-					}),
-				}),
-				"value": types.NewStruct("", types.StructData{
-					"code": br,
-					"data": dr,
-				}),
-			}),
-		},
-		{
-			makeReject(noms, types.NewRef(g.Original), d, types.NewRef(tx.Original), noms.WriteValue(types.String("foo")), "", br, dr),
-			types.NewStruct("Commit", types.StructData{
-				"parents": types.NewSet(noms, types.NewRef(g.Original), types.NewRef(tx.Original)),
-				"meta": types.NewStruct("Reject", types.StructData{
-					"date":    marshal.MustMarshal(noms, d),
-					"subject": types.NewRef(tx.Original),
-					"reason":  types.String("unused"),
-					"reason2": types.NewStruct("Nondeterm", types.StructData{
-						"expected": noms.WriteValue(types.String("foo")),
-					}),
-				}),
-				"value": types.NewStruct("", types.StructData{
-					"code": br,
-					"data": dr,
-				}),
-			}),
-		},
 	}
 
 	for i, t := range tc {

@@ -446,9 +446,6 @@ func logCmd(parent *kingpin.Application, gdb gdb, out io.Writer) {
 				}
 
 				switch c.Type() {
-				case db.CommitTypeReject:
-					r += " (REJECT)"
-					mergedTime = c.Meta.Reject.Date.Time
 				case db.CommitTypeReorder:
 					r += " (REBASE)"
 					mergedTime = c.Meta.Reorder.Date.Time
@@ -478,13 +475,6 @@ func logCmd(parent *kingpin.Application, gdb gdb, out io.Writer) {
 				return fmt.Sprintf("%s(%s)", initialCommit.Meta.Tx.Name, strings.Join(args, ", "))
 			}
 
-			rejectReason := func() string {
-				if c.Meta.Reject.Reason.Fiat.Detail != "" {
-					return fmt.Sprintf("Fiat (%s)", c.Meta.Reject.Reason.Fiat.Detail)
-				}
-				return fmt.Sprintf("Nondeterminism (Expected %s, Got %s)", c.Meta.Reject.Reason.Nondeterm.Expected.TargetHash().String(), initialCommit.Original.Hash().String())
-			}
-
 			fmt.Fprintln(out, color("commit "+c.Original.Hash().String(), "red+h"))
 			table := (&tbl.Table{}).
 				Add("Created: ", initialCommit.Meta.Tx.Date.String())
@@ -493,9 +483,6 @@ func logCmd(parent *kingpin.Application, gdb gdb, out io.Writer) {
 			table.Add("Status: ", status)
 			if t != (time.Time{}) {
 				table.Add("Merged: ", t.String())
-			}
-			if c.Type() == db.CommitTypeReject {
-				table.Add("Reject Reason: ", rejectReason())
 			}
 
 			if !initialCommit.Original.Equals(c.Original) {

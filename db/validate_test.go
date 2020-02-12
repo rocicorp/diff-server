@@ -124,18 +124,6 @@ func TestValidate(t *testing.T) {
 			types.NewMap(noms, types.String("foo"), list("bar", "baz", "quux"))))
 	noms.WriteValue(ro1c.Original)
 
-	rj1 := makeReject(
-		noms,
-		noms.WriteValue(tx1.Original),
-		epoch,
-		noms.WriteValue(tx3.Original),
-		types.Ref{},
-		"reason1",
-		noms.WriteValue(eb),
-		noms.WriteValue(
-			types.NewMap(noms, types.String("foo"), list("bar"))))
-	noms.WriteValue(rj1.Original)
-
 	tc := []struct {
 		in   Commit
 		diff string
@@ -149,7 +137,6 @@ func TestValidate(t *testing.T) {
 		{ro1, "", ""},
 		{ro1b, ".value {\n-   data: #1f3f1stoa9pit2jctse1svtl9vm01sbk\n+   data: #cdvf5afbdn7vpmj2ag7mhesrce5joob9\n  }\n", ""},
 		{ro1c, "", ""}, // again, we don't see the incorrect basis
-		{rj1, "", "Invalid commit type: CommitTypeReject"},
 		{g, "", "Invalid commit type: CommitTypeGenesis"},
 	}
 

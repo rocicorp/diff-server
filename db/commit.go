@@ -35,19 +35,6 @@ Struct Commit {
 			secSinceEpoch: Number,
 		},
 		subject: Ref<Cycle<Commit>>,
-	} |
-	Struct Reject {
-		date:   Struct DateTime {
-			secSinceEpoch: Number,
-		},
-		subject: Ref<Cycle<Commit>>,
-		reason2: Struct Nondeterm {
-			expected: Ref<Cycle<Commit>>,
-		} | Struct Fiat {
-			detail: String,
-		},
-
-		reason: Value, // deprecated
 	},
 	value: Struct {
 		code: Ref<Blob>,
@@ -104,23 +91,6 @@ func (r *Reason) UnmarshalNoms(v types.Value) error {
 	return union.Unmarshal(v, r)
 }
 
-type Reject struct {
-	Date    datetime.DateTime
-	Subject types.Ref
-	Reason  Reason `noms:"reason2"`
-}
-
-func (r Reject) MarshalNoms(vrw types.ValueReadWriter) (val types.Value, err error) {
-	type internal Reject
-	vs := marshal.MustMarshal(vrw, internal(r)).(types.Struct)
-
-	// Must set legacy "reason" even though it isn't used for backward compat with clients that validated that.
-	vs = vs.Set("reason", types.String("unused"))
-	vs = vs.SetName("Reject")
-
-	return vs, nil
-}
-
 type Genesis struct {
 	ServerCommitID string `noms:"serverCommitID,omitempty"`
 }
@@ -129,7 +99,6 @@ type Meta struct {
 	// At most one of these will be set. If none are set, then the commit is the genesis commit.
 	Tx      Tx      `noms:",omitempty"`
 	Reorder Reorder `noms:",omitempty"`
-	Reject  Reject  `noms:",omitempty"`
 	Genesis Genesis `noms:",omitempty"`
 }
 
@@ -164,7 +133,6 @@ const (
 	CommitTypeGenesis = iota
 	CommitTypeTx
 	CommitTypeReorder
-	CommitTypeReject
 )
 
 func (t CommitType) String() string {
@@ -175,8 +143,6 @@ func (t CommitType) String() string {
 		return "CommitTypeTx"
 	case CommitTypeReorder:
 		return "CommitTypeReorder"
-	case CommitTypeReject:
-		return "CommitTypeReject"
 	}
 	chk.Fail("NOTREACHED")
 	return ""
@@ -201,9 +167,6 @@ func (c Commit) Type() CommitType {
 	if !c.Meta.Reorder.Subject.IsZeroValue() {
 		return CommitTypeReorder
 	}
-	if !c.Meta.Reject.Subject.IsZeroValue() {
-		return CommitTypeReject
-	}
 	return CommitTypeGenesis
 }
 
@@ -211,8 +174,6 @@ func (c Commit) Type() CommitType {
 func (c Commit) Target() types.Ref {
 	if !c.Meta.Reorder.Subject.IsZeroValue() {
 		return c.Meta.Reorder.Subject
-	} else if !c.Meta.Reject.Subject.IsZeroValue() {
-		return c.Meta.Reject.Subject
 	}
 	return types.Ref{}
 }
@@ -221,7 +182,7 @@ func (c Commit) InitalCommit(noms types.ValueReader) (Commit, error) {
 	switch c.Type() {
 	case CommitTypeTx, CommitTypeGenesis:
 		return c, nil
-	case CommitTypeReorder, CommitTypeReject:
+	case CommitTypeReorder:
 		var t Commit
 		err := marshal.Unmarshal(c.Target().TargetValue(noms), &t)
 		if err != nil {
@@ -317,19 +278,6 @@ func makeReorder(noms types.ValueReadWriter, basis types.Ref, d datetime.DateTim
 	c.Parents = []types.Ref{basis, subject}
 	c.Meta.Reorder.Date = d
 	c.Meta.Reorder.Subject = subject
-	c.Value.Code = newBundle
-	c.Value.Data = newData
-	c.Original = marshal.MustMarshal(noms, c).(types.Struct)
-	return c
-}
-
-func makeReject(noms types.ValueReadWriter, basis types.Ref, d datetime.DateTime, subject, nondeterm types.Ref, fiatDetail string, newBundle, newData types.Ref) Commit {
-	c := Commit{}
-	c.Parents = []types.Ref{basis, subject}
-	c.Meta.Reject.Date = d
-	c.Meta.Reject.Subject = subject
-	c.Meta.Reject.Reason.Nondeterm.Expected = nondeterm
-	c.Meta.Reject.Reason.Fiat.Detail = fiatDetail
 	c.Value.Code = newBundle
 	c.Value.Data = newData
 	c.Original = marshal.MustMarshal(noms, c).(types.Struct)
