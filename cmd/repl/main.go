@@ -355,7 +355,6 @@ func del(parent *kingpin.Application, gdb gdb, out io.Writer) {
 
 func sync(parent *kingpin.Application, gdb gdb) {
 	kc := parent.Command("sync", "Sync with a replicant server.")
-	shallow := parent.Flag("shallow", "Use the new 'shallow' sync protocol").Bool()
 	remoteSpec := kp.DatabaseSpec(kc.Arg("remote", "Server to sync with. See https://github.com/attic-labs/noms/blob/master/doc/spelling.md#spelling-databases.").Required())
 
 	kc.Action(func(_ *kingpin.ParseContext) error {
@@ -364,11 +363,7 @@ func sync(parent *kingpin.Application, gdb gdb) {
 			return err
 		}
 		// TODO: progress
-		if *shallow {
-			return db.RequestSync(*remoteSpec, nil)
-		} else {
-			return db.Sync(*remoteSpec)
-		}
+		return db.RequestSync(*remoteSpec, nil)
 	})
 }
 

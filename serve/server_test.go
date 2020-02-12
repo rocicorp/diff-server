@@ -11,36 +11,11 @@ import (
 	"testing"
 
 	"github.com/attic-labs/noms/go/spec"
-	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
 
-	"roci.dev/replicant/db"
 	"roci.dev/replicant/util/time"
 )
 
-func TestBasics(t *testing.T) {
-	assert := assert.New(t)
-
-	defer startTestServer(assert).Shutdown(context.Background())
-
-	d, dir := db.LoadTempDB(assert)
-	fmt.Println("client test db", dir)
-	assert.NoError(d.PutBundle(types.NewBlob(d.Noms(), strings.NewReader(`function push(id, val) { list = db.get(id) || []; list.push(val); db.put(id, list); }`))))
-	_, err := d.Exec("push", types.NewList(d.Noms(), types.String("items"), types.String("foo")))
-	assert.NoError(err)
-	_, err = d.Exec("push", types.NewList(d.Noms(), types.String("items"), types.String("bar")))
-	assert.NoError(err)
-
-	sp, err := spec.ForDatabase("http://localhost:8674")
-	assert.NoError(err)
-	err = d.Sync(sp)
-	assert.NoError(err)
-
-	remote, err := db.New(sp.GetDatabase(), "")
-	remote.Reload()
-	assert.NoError(err)
-	assert.Equal(d.Hash(), remote.Hash())
-}
 func TestAPI(t *testing.T) {
 	assert := assert.New(t)
 

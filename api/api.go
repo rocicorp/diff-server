@@ -58,8 +58,8 @@ func (api *API) Dispatch(name string, req []byte) ([]byte, error) {
 		return api.dispatchExec(req)
 	case "execBatch":
 		return api.dispatchExecBatch(req)
-	case "sync":
-		return api.dispatchSync(req)
+	case "requestSync":
+		return api.dispatchRequestSync(req)
 	case "syncProgress":
 		return api.dispatchSyncProgress(req)
 	case "handleSync":
@@ -293,7 +293,7 @@ func (api *API) dispatchExecBatch(reqBytes []byte) ([]byte, error) {
 	return mustMarshal(res), nil
 }
 
-func (api *API) dispatchSync(reqBytes []byte) ([]byte, error) {
+func (api *API) dispatchRequestSync(reqBytes []byte) ([]byte, error) {
 	var req shared.SyncRequest
 	err := json.Unmarshal(reqBytes, &req)
 	if err != nil {
@@ -309,21 +309,17 @@ func (api *API) dispatchSync(reqBytes []byte) ([]byte, error) {
 	req.Remote.Options.Authorization = req.Auth
 
 	res := shared.SyncResponse{}
-	if req.Shallow {
-		err = api.db.RequestSync(req.Remote.Spec, func(received, expected uint64) {
-			api.sp = syncProgress{
-				bytesReceived: received,
-				bytesExpected: expected,
-			}
-		})
-		if _, ok := err.(db.SyncAuthError); ok {
-			res.Error = &shared.SyncResponseError{
-				BadAuth: err.Error(),
-			}
-			err = nil
+	err = api.db.RequestSync(req.Remote.Spec, func(received, expected uint64) {
+		api.sp = syncProgress{
+			bytesReceived: received,
+			bytesExpected: expected,
 		}
-	} else {
-		err = api.db.Sync(req.Remote.Spec)
+	})
+	if _, ok := err.(db.SyncAuthError); ok {
+		res.Error = &shared.SyncResponseError{
+			BadAuth: err.Error(),
+		}
+		err = nil
 	}
 	if err != nil {
 		return nil, err

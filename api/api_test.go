@@ -31,8 +31,6 @@ func TestBasics(t *testing.T) {
 	function log(key, val) { var v = db.get(key) || []; v.push(val); db.put(key, v); }`)
 	assert.NoError(err)
 
-	_, remoteDir := db.LoadTempDB(assert)
-
 	tc := []struct {
 		rpc              string
 		req              string
@@ -83,10 +81,6 @@ func TestBasics(t *testing.T) {
 		{"handleSync", `{"basis":"bonk"}`, ``, "Invalid basis hash"},
 		{"handleSync", `{"basis":"vsm77oo1c3r9m5p3r0dkc64imapu1ldm"}`,
 			`{"patch":[{"op":"add","path":"/u/bar","value":2}],"commitID":"7iavk1o833kqplvrtn2rqc406dfvrf6c","nomsChecksum":"2jbp7674jqsv0553qkq0hr68na0tvku1"}`, ""},
-
-		// sync
-		{"sync", invalidRequest, ``, invalidRequestError},
-		{"sync", fmt.Sprintf(`{"remote":"%s"}`, remoteDir), `{"root":"7iavk1o833kqplvrtn2rqc406dfvrf6c"}`, ""},
 
 		// scan
 		{"put", `{"id": "foopa", "value": "doopa"}`, `{"root":"61hqku8sbqc76cgjjti99fhkjl3nq4r7"}`, ""},
@@ -156,6 +150,6 @@ func TestProgress(t *testing.T) {
 		Shallow: true,
 	}
 
-	_, err = api.Dispatch("sync", mustMarshal(req))
+	_, err = api.Dispatch("requestSync", mustMarshal(req))
 	assert.Regexp(`Response from [^ ]+ is not valid JSON: json: cannot unmarshal string into Go value of type shared.HandleSyncResponse`, err.Error())
 }
