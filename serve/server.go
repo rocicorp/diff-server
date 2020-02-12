@@ -39,7 +39,7 @@ type server struct {
 }
 
 func newServer(cs chunks.ChunkStore, urlPrefix, origin string) (*server, error) {
-	router := datas.Router(cs, urlPrefix)
+	router := httprouter.New()
 	noms := datas.NewDatabase(cs)
 	db, err := db.New(noms, origin)
 	if err != nil {

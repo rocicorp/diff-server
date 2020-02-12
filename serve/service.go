@@ -19,7 +19,16 @@ import (
 var (
 	// /<account>/<db>/<cmd>
 	pathRegex = regexp.MustCompile(`^\/([\w-]+)\/([\w-]+)\/([\w-]+)\/?$`)
+	origin    = "server"
 )
+
+func SetFakeOrigin(override string) func() {
+	original := origin
+	origin = override
+	return func() {
+		origin = original
+	}
+}
 
 // Service is a running instance of the Replicant service. A service handles one or more servers.
 type Service struct {
@@ -109,7 +118,7 @@ func (s *Service) getServer(req *http.Request) (r *server, clientError string, a
 		return nil, "", nil, err
 	}
 
-	server, err := newServer(sp.NewChunkStore(), fmt.Sprintf("/%s/%s", acc, db), "server")
+	server, err := newServer(sp.NewChunkStore(), fmt.Sprintf("/%s/%s", acc, db), origin)
 	s.servers[key] = server
 	if err != nil {
 		return nil, "", nil, err

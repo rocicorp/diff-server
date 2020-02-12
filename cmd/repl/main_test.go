@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"strings"
 	"testing"
@@ -12,6 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"roci.dev/replicant/db"
+	servepkg "roci.dev/replicant/serve"
 	"roci.dev/replicant/util/time"
 )
 
@@ -299,22 +303,51 @@ func TestDrop(t *testing.T) {
 
 func TestServe(t *testing.T) {
 	assert := assert.New(t)
-	_, dir := db.LoadTempDB(assert)
+	dir, err := ioutil.TempDir("", "")
+	assert.NoError(err)
+	fmt.Println(dir)
+
+	defer time.SetFake()()
+	defer servepkg.SetFakeOrigin("test")()
+
 	args := append([]string{"--db=" + dir, "serve", "--port=8674"})
 	go impl(args, strings.NewReader(""), os.Stdout, os.Stderr, func(_ int) {})
 
-	sp, err := spec.ForDatabase("http://localhost:8674/sandbox/foo")
-	assert.NoError(err)
-	d, err := db.New(sp.GetDatabase(), "test")
-	assert.NoError(err)
+	const code = `function add(id, d) { var v = db.get(id) || 0; v += d; db.put(id, v); return v; }`
+	tc := []struct {
+		rpc              string
+		req              string
+		expectedResponse string
+		expectedError    string
+	}{
+		// Lifted mostly from api_test.go
+		// We don't need to test everything here, just a smoke test that api tests via http are working!
+		{"getRoot", `{}`, `{"root":"klra597i7o2u52k222chv2lqeb13v5sd"}`, ""},
+		{"put", `{"id": "foo", "value": "bar"}`, `{"root":"3aktuu35stgss7djb5famn6u7iul32nv"}`, ""},
+		{"has", `{"id": "foo"}`, `{"has":true}`, ""},
+		{"get", `{"id": "foo"}`, `{"has":true,"value":"bar"}`, ""},
+		{"putBundle", fmt.Sprintf(`{"code": "%s"}`, code), `{"root":"bicmkeg8tfbhcv7gu283lab120r4tc7c"}`, ""},
+		{"getBundle", `{}`, fmt.Sprintf(`{"code":"%s"}`, code), ""},
+		{"exec", `{"name": "add", "args": ["bar", 2]}`, `{"result":2,"root":"mcvqlfeba8olg9o1vakmar6o8cbp76m4"}`, ""},
+		{"get", `{"id": "bar"}`, `{"has":true,"value":2}`, ""},
+		{"put", `{"id": "foopa", "value": "doopa"}`, `{"root":"bvb8b8o945cih7fvliq9s6n3pdd9l2qa"}`, ""},
+		{"handleSync", `{"basis": "mcvqlfeba8olg9o1vakmar6o8cbp76m4"}`,
+			`{"patch":[{"op":"add","path":"/u/foopa","value":"doopa"}],"commitID":"bvb8b8o945cih7fvliq9s6n3pdd9l2qa","nomsChecksum":"kgrbb68en2h53f797jl1cpdt89a72rri"}`, ""},
+		{"scan", `{"prefix": "foo"}`, `[{"id":"foo","value":"bar"},{"id":"foopa","value":"doopa"}]`, ""},
+		{"execBatch", `[{"name": "add", "args": ["bar", 2]},{"name": "add", "args": ["bar", 2]}]`, `{"batch":[{"result":4},{"result":6}],"root":"csp63mgsrbg4v3t7psaiqhbl6s4rsv6h"}`, ""},
+		{"get", `{"id": "bar"}`, `{"has":true,"value":6}`, ""},
+	}
 
-	err = d.PutBundle(types.NewBlob(d.Noms(), strings.NewReader("function setFoo(val) { db.put('foo', val); }")))
-	assert.NoError(err)
-	_, err = d.Exec("setFoo", types.NewList(d.Noms(), types.String("bar")))
-	assert.NoError(err)
-	v, err := d.Get("foo")
-	assert.NoError(err)
-	assert.Equal("bar", string(v.(types.String)))
+	for i, t := range tc {
+		msg := fmt.Sprintf("test case %d: %s: %s", i, t.rpc, t.req)
+		resp, err := http.Post(fmt.Sprintf("http://localhost:8674/sandbox/foo/%s", t.rpc), "application/json", strings.NewReader(t.req))
+		assert.NoError(err, msg)
+		assert.Equal("application/json", resp.Header.Get("Content-type"))
+		body := bytes.Buffer{}
+		_, err = io.Copy(&body, resp.Body)
+		assert.NoError(err, msg)
+		assert.Equal(t.expectedResponse+"\n", string(body.Bytes()), msg)
+	}
 }
 
 func TestEmptyInput(t *testing.T) {
