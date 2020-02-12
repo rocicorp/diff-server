@@ -16,7 +16,7 @@ func TestScan(t *testing.T) {
 	assert := assert.New(t)
 	sp, err := spec.ForDatabase("mem")
 	assert.NoError(err)
-	d, err := Load(sp, "test")
+	d, err := Load(sp)
 	assert.NoError(err)
 
 	put := func(k string) {

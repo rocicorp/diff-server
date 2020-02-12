@@ -34,7 +34,7 @@ func benchmarkExec(http bool, b *testing.B) {
 	if http {
 		sp, err := spec.ForDatabase("https://serve.replicate.to/sandbox/benchmark-test")
 		assert.NoError(err)
-		db, err = Load(sp, "test")
+		db, err = Load(sp)
 		assert.NoError(err)
 	} else {
 		var dir string
@@ -96,7 +96,7 @@ func benchmarkExecBatch(n int, http bool, b *testing.B) {
 	if http {
 		sp, err := spec.ForDatabase("https://serve.replicate.to/sandbox/benchmark-test")
 		assert.NoError(err)
-		db, err = Load(sp, "test")
+		db, err = Load(sp)
 		assert.NoError(err)
 	} else {
 		var dir string

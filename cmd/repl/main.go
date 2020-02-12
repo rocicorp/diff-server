@@ -81,7 +81,7 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 		if err != nil {
 			return db.DB{}, err
 		}
-		r, err := db.Load(sp, "cli")
+		r, err := db.Load(sp)
 		if err != nil {
 			return db.DB{}, err
 		}
@@ -487,7 +487,6 @@ func logCmd(parent *kingpin.Application, gdb gdb, out io.Writer) {
 
 			fmt.Fprintln(out, color("commit "+c.Original.Hash().String(), "red+h"))
 			table := (&tbl.Table{}).
-				Add("Origin: ", initialCommit.Meta.Tx.Origin).
 				Add("Created: ", initialCommit.Meta.Tx.Date.String())
 
 			status, t := getStatus()

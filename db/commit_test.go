@@ -26,7 +26,7 @@ func TestMarshal(t *testing.T) {
 	dr := noms.WriteValue(types.NewMap(noms, types.String("foo"), types.String("bar")))
 	args := types.NewList(noms, types.Bool(true), types.String("monkey"))
 	g := makeGenesis(noms, "")
-	tx := makeTx(noms, types.NewRef(g.Original), "o1", d, emptyBlob, "func", args, br, dr)
+	tx := makeTx(noms, types.NewRef(g.Original), d, emptyBlob, "func", args, br, dr)
 	noms.WriteValue(g.Original)
 	noms.WriteValue(tx.Original)
 
@@ -63,11 +63,10 @@ func TestMarshal(t *testing.T) {
 			types.NewStruct("Commit", types.StructData{
 				"parents": types.NewSet(noms, types.NewRef(g.Original)),
 				"meta": types.NewStruct("Tx", types.StructData{
-					"origin": types.String("o1"),
-					"date":   marshal.MustMarshal(noms, d),
-					"code":   emptyBlob,
-					"name":   types.String("func"),
-					"args":   args,
+					"date": marshal.MustMarshal(noms, d),
+					"code": emptyBlob,
+					"name": types.String("func"),
+					"args": args,
 				}),
 				"value": types.NewStruct("", types.StructData{
 					"code": br,
@@ -76,15 +75,14 @@ func TestMarshal(t *testing.T) {
 			}),
 		},
 		{
-			makeTx(noms, types.NewRef(g.Original), "o1", d, br, "func", args, emptyBlob, dr),
+			makeTx(noms, types.NewRef(g.Original), d, br, "func", args, emptyBlob, dr),
 			types.NewStruct("Commit", types.StructData{
 				"parents": types.NewSet(noms, types.NewRef(g.Original)),
 				"meta": types.NewStruct("Tx", types.StructData{
-					"origin": types.String("o1"),
-					"date":   marshal.MustMarshal(noms, d),
-					"code":   br,
-					"name":   types.String("func"),
-					"args":   args,
+					"date": marshal.MustMarshal(noms, d),
+					"code": br,
+					"name": types.String("func"),
+					"args": args,
 				}),
 				"value": types.NewStruct("", types.StructData{
 					"code": emptyBlob,
@@ -93,11 +91,10 @@ func TestMarshal(t *testing.T) {
 			}),
 		},
 		{
-			makeReorder(noms, types.NewRef(g.Original), "o1", d, types.NewRef(tx.Original), br, dr),
+			makeReorder(noms, types.NewRef(g.Original), d, types.NewRef(tx.Original), br, dr),
 			types.NewStruct("Commit", types.StructData{
 				"parents": types.NewSet(noms, types.NewRef(g.Original), types.NewRef(tx.Original)),
 				"meta": types.NewStruct("Reorder", types.StructData{
-					"origin":  types.String("o1"),
 					"date":    marshal.MustMarshal(noms, d),
 					"subject": types.NewRef(tx.Original),
 				}),
@@ -108,11 +105,10 @@ func TestMarshal(t *testing.T) {
 			}),
 		},
 		{
-			makeReject(noms, types.NewRef(g.Original), "o1", d, types.NewRef(tx.Original), types.Ref{}, "didn't feel like it", br, dr),
+			makeReject(noms, types.NewRef(g.Original), d, types.NewRef(tx.Original), types.Ref{}, "didn't feel like it", br, dr),
 			types.NewStruct("Commit", types.StructData{
 				"parents": types.NewSet(noms, types.NewRef(g.Original), types.NewRef(tx.Original)),
 				"meta": types.NewStruct("Reject", types.StructData{
-					"origin":  types.String("o1"),
 					"date":    marshal.MustMarshal(noms, d),
 					"subject": types.NewRef(tx.Original),
 					"reason":  types.String("unused"),
@@ -127,11 +123,10 @@ func TestMarshal(t *testing.T) {
 			}),
 		},
 		{
-			makeReject(noms, types.NewRef(g.Original), "o1", d, types.NewRef(tx.Original), noms.WriteValue(types.String("foo")), "", br, dr),
+			makeReject(noms, types.NewRef(g.Original), d, types.NewRef(tx.Original), noms.WriteValue(types.String("foo")), "", br, dr),
 			types.NewStruct("Commit", types.StructData{
 				"parents": types.NewSet(noms, types.NewRef(g.Original), types.NewRef(tx.Original)),
 				"meta": types.NewStruct("Reject", types.StructData{
-					"origin":  types.String("o1"),
 					"date":    marshal.MustMarshal(noms, d),
 					"subject": types.NewRef(tx.Original),
 					"reason":  types.String("unused"),

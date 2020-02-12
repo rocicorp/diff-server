@@ -16,7 +16,7 @@ func reloadDB(assert *assert.Assertions, dir string) (db *DB) {
 	sp, err := spec.ForDatabase(dir)
 	assert.NoError(err)
 
-	db, err = Load(sp, "test")
+	db, err = Load(sp)
 	assert.NoError(err)
 
 	return db
@@ -70,7 +70,7 @@ func TestDel(t *testing.T) {
 	assert := assert.New(t)
 	sp, err := spec.ForDatabase("mem")
 	assert.NoError(err)
-	db, err := Load(sp, "test")
+	db, err := Load(sp)
 	assert.NoError(err)
 
 	err = db.Put("foo", types.String("bar"))
@@ -293,14 +293,14 @@ func TestLoadBadSpec(t *testing.T) {
 
 	sp, err := spec.ForDatabase("http://localhost:6666") // not running, presumably
 	assert.NoError(err)
-	db, err := Load(sp, "test")
+	db, err := Load(sp)
 	assert.Nil(db)
 	assert.EqualError(err, "Get http://localhost:6666/root/: dial tcp [::1]:6666: connect: connection refused")
 
 	srv := httptest.NewServer(http.NotFoundHandler())
 	sp, err = spec.ForDatabase(srv.URL)
 	assert.NoError(err)
-	db, err = Load(sp, "test")
+	db, err = Load(sp)
 	assert.Nil(db)
 	assert.EqualError(err, "Unexpected response: Not Found: 404 page not found")
 }

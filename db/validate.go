@@ -11,7 +11,7 @@ func validate(db *DB, commit Commit) (replayed Commit, err error) {
 		if err != nil {
 			return Commit{}, err
 		}
-		return makeTx(db.noms, commit.BasisRef(), commit.Meta.Tx.Origin, commit.Meta.Tx.Date, commit.Meta.Tx.Code, commit.Meta.Tx.Name, commit.Meta.Tx.Args, newBundle, newData), nil
+		return makeTx(db.noms, commit.BasisRef(), commit.Meta.Tx.Date, commit.Meta.Tx.Code, commit.Meta.Tx.Name, commit.Meta.Tx.Args, newBundle, newData), nil
 
 	case CommitTypeReorder:
 		target, err := commit.InitalCommit(db.noms)
@@ -22,7 +22,7 @@ func validate(db *DB, commit Commit) (replayed Commit, err error) {
 		if err != nil {
 			return Commit{}, err
 		}
-		return makeReorder(db.noms, commit.BasisRef(), commit.Meta.Reorder.Origin, commit.Meta.Reorder.Date, commit.Target(), newBundle, newData), nil
+		return makeReorder(db.noms, commit.BasisRef(), commit.Meta.Reorder.Date, commit.Target(), newBundle, newData), nil
 	}
 
 	// We should never get asked to validate other commit types:

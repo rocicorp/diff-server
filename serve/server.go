@@ -38,10 +38,10 @@ type server struct {
 	api    *api.API
 }
 
-func newServer(cs chunks.ChunkStore, urlPrefix, origin string) (*server, error) {
+func newServer(cs chunks.ChunkStore, urlPrefix string) (*server, error) {
 	router := httprouter.New()
 	noms := datas.NewDatabase(cs)
-	db, err := db.New(noms, origin)
+	db, err := db.New(noms)
 	if err != nil {
 		return nil, err
 	}

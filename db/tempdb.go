@@ -14,7 +14,7 @@ func LoadTempDB(assert *assert.Assertions) (r *DB, dir string) {
 	sp, err := spec.ForDatabase(td)
 	assert.NoError(err)
 
-	r, err = Load(sp, "test")
+	r, err = Load(sp)
 	assert.NoError(err)
 
 	return r, td

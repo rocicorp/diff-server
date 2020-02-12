@@ -23,7 +23,6 @@ Struct Commit {
 		serverCommitID?: String,  // only used on client
 	} |
 	Struct Tx {
-		origin: String,
 		date:   Struct DateTime {
 			secSinceEpoch: Number,
 		},
@@ -32,14 +31,12 @@ Struct Commit {
 		args: List<Value>,
 	} |
 	Struct Reorder {
-		origin: String,
 		date:   Struct DateTime {
 			secSinceEpoch: Number,
 		},
 		subject: Ref<Cycle<Commit>>,
 	} |
 	Struct Reject {
-		origin: String,
 		date:   Struct DateTime {
 			secSinceEpoch: Number,
 		},
@@ -61,11 +58,10 @@ Struct Commit {
 
 // TODO: These types should be private
 type Tx struct {
-	Origin string
-	Date   datetime.DateTime
-	Code   types.Ref `noms:",omitempty"` // TODO: rename: "Bundle/BundleRef"
-	Name   string
-	Args   types.List
+	Date datetime.DateTime
+	Code types.Ref `noms:",omitempty"` // TODO: rename: "Bundle/BundleRef"
+	Name string
+	Args types.List
 }
 
 func (tx Tx) Bundle(noms types.ValueReader) types.Blob {
@@ -76,7 +72,6 @@ func (tx Tx) Bundle(noms types.ValueReader) types.Blob {
 }
 
 type Reorder struct {
-	Origin  string
 	Date    datetime.DateTime
 	Subject types.Ref
 }
@@ -110,7 +105,6 @@ func (r *Reason) UnmarshalNoms(v types.Value) error {
 }
 
 type Reject struct {
-	Origin  string
 	Date    datetime.DateTime
 	Subject types.Ref
 	Reason  Reason `noms:"reason2"`
@@ -305,10 +299,9 @@ func makeGenesis(noms types.ValueReadWriter, serverCommitID string) Commit {
 	return c
 }
 
-func makeTx(noms types.ValueReadWriter, basis types.Ref, origin string, d datetime.DateTime, bundle types.Ref, f string, args types.List, newBundle, newData types.Ref) Commit {
+func makeTx(noms types.ValueReadWriter, basis types.Ref, d datetime.DateTime, bundle types.Ref, f string, args types.List, newBundle, newData types.Ref) Commit {
 	c := Commit{}
 	c.Parents = []types.Ref{basis}
-	c.Meta.Tx.Origin = origin
 	c.Meta.Tx.Date = d
 	c.Meta.Tx.Code = bundle
 	c.Meta.Tx.Name = f
@@ -319,10 +312,9 @@ func makeTx(noms types.ValueReadWriter, basis types.Ref, origin string, d dateti
 	return c
 }
 
-func makeReorder(noms types.ValueReadWriter, basis types.Ref, origin string, d datetime.DateTime, subject, newBundle, newData types.Ref) Commit {
+func makeReorder(noms types.ValueReadWriter, basis types.Ref, d datetime.DateTime, subject, newBundle, newData types.Ref) Commit {
 	c := Commit{}
 	c.Parents = []types.Ref{basis, subject}
-	c.Meta.Reorder.Origin = origin
 	c.Meta.Reorder.Date = d
 	c.Meta.Reorder.Subject = subject
 	c.Value.Code = newBundle
@@ -331,10 +323,9 @@ func makeReorder(noms types.ValueReadWriter, basis types.Ref, origin string, d d
 	return c
 }
 
-func makeReject(noms types.ValueReadWriter, basis types.Ref, origin string, d datetime.DateTime, subject, nondeterm types.Ref, fiatDetail string, newBundle, newData types.Ref) Commit {
+func makeReject(noms types.ValueReadWriter, basis types.Ref, d datetime.DateTime, subject, nondeterm types.Ref, fiatDetail string, newBundle, newData types.Ref) Commit {
 	c := Commit{}
 	c.Parents = []types.Ref{basis, subject}
-	c.Meta.Reject.Origin = origin
 	c.Meta.Reject.Date = d
 	c.Meta.Reject.Subject = subject
 	c.Meta.Reject.Reason.Nondeterm.Expected = nondeterm

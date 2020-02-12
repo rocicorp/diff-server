@@ -60,7 +60,6 @@ func rebase(db *DB, onto types.Ref, date datetime.DateTime, commit Commit, forkP
 		rj := makeReject(
 			db.noms,
 			types.NewRef(newBasis.Original), // basis
-			db.origin,
 			date,
 			types.NewRef(commit.Original),         // subject
 			db.noms.WriteValue(replayed.Original), // expected
@@ -111,7 +110,7 @@ func rebase(db *DB, onto types.Ref, date datetime.DateTime, commit Commit, forkP
 	}
 
 	// Create and return the reorder commit, which will become the basis for the prev frame of the recursive call.
-	newCommit := makeReorder(db.noms, types.NewRef(newBasis.Original), db.origin, date, types.NewRef(commit.Original), newBundle, newData)
+	newCommit := makeReorder(db.noms, types.NewRef(newBasis.Original), date, types.NewRef(commit.Original), newBundle, newData)
 	db.noms.WriteValue(newCommit.Original)
 	return newCommit, nil
 }

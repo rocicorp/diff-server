@@ -41,7 +41,6 @@ func TestValidate(t *testing.T) {
 	tx1 := makeTx(
 		noms,
 		noms.WriteValue(g.Original),
-		"o1",
 		epoch,
 		noms.WriteValue(b1),
 		"log",
@@ -53,7 +52,6 @@ func TestValidate(t *testing.T) {
 	tx1b := makeTx(
 		noms,
 		noms.WriteValue(g.Original),
-		"o1",
 		epoch,
 		noms.WriteValue(b1),
 		"log",
@@ -65,7 +63,6 @@ func TestValidate(t *testing.T) {
 	tx2 := makeTx(
 		noms,
 		noms.WriteValue(tx1.Original),
-		"o1",
 		epoch,
 		noms.WriteValue(b1),
 		"log",
@@ -77,7 +74,6 @@ func TestValidate(t *testing.T) {
 	tx2b := makeTx(
 		noms,
 		noms.WriteValue(tx1b.Original), // basis is incorrect
-		"o1",
 		epoch,
 		noms.WriteValue(b1),
 		"log",
@@ -92,7 +88,6 @@ func TestValidate(t *testing.T) {
 	tx3 := makeTx(
 		noms,
 		noms.WriteValue(g.Original),
-		"o1",
 		epoch,
 		noms.WriteValue(b1),
 		"log",
@@ -104,7 +99,6 @@ func TestValidate(t *testing.T) {
 	ro1 := makeReorder(
 		noms,
 		noms.WriteValue(tx1.Original),
-		"o1",
 		epoch,
 		noms.WriteValue(tx3.Original),
 		noms.WriteValue(eb),
@@ -114,7 +108,6 @@ func TestValidate(t *testing.T) {
 	ro1b := makeReorder(
 		noms,
 		noms.WriteValue(tx1.Original),
-		"o1",
 		epoch,
 		noms.WriteValue(tx3.Original),
 		noms.WriteValue(eb),
@@ -124,7 +117,6 @@ func TestValidate(t *testing.T) {
 	ro1c := makeReorder(
 		noms,
 		noms.WriteValue(tx1b.Original), // incorrect basis
-		"o1",
 		epoch,
 		noms.WriteValue(tx3.Original),
 		noms.WriteValue(eb),
@@ -135,7 +127,6 @@ func TestValidate(t *testing.T) {
 	rj1 := makeReject(
 		noms,
 		noms.WriteValue(tx1.Original),
-		"o1",
 		epoch,
 		noms.WriteValue(tx3.Original),
 		types.Ref{},

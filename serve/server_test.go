@@ -32,18 +32,18 @@ func TestAPI(t *testing.T) {
 		// Lifted mostly from api_test.go
 		// We don't need to test everything here, just a smoke test that api tests via http are working!
 		{"getRoot", `{}`, `{"root":"klra597i7o2u52k222chv2lqeb13v5sd"}`, ""},
-		{"put", `{"id": "foo", "value": "bar"}`, `{"root":"3aktuu35stgss7djb5famn6u7iul32nv"}`, ""},
+		{"put", `{"id": "foo", "value": "bar"}`, `{"root":"luskchgmo38ohffb2vh9tmfel0ibbfpa"}`, ""},
 		{"has", `{"id": "foo"}`, `{"has":true}`, ""},
 		{"get", `{"id": "foo"}`, `{"has":true,"value":"bar"}`, ""},
-		{"putBundle", fmt.Sprintf(`{"code": "%s"}`, code), `{"root":"bicmkeg8tfbhcv7gu283lab120r4tc7c"}`, ""},
+		{"putBundle", fmt.Sprintf(`{"code": "%s"}`, code), `{"root":"n40amopvr0atv1bs77fc30np36a5atse"}`, ""},
 		{"getBundle", `{}`, fmt.Sprintf(`{"code":"%s"}`, code), ""},
-		{"exec", `{"name": "add", "args": ["bar", 2]}`, `{"result":2,"root":"mcvqlfeba8olg9o1vakmar6o8cbp76m4"}`, ""},
+		{"exec", `{"name": "add", "args": ["bar", 2]}`, `{"result":2,"root":"fs116gjgsjhkpjn8i8jtpno1tbhkhl2s"}`, ""},
 		{"get", `{"id": "bar"}`, `{"has":true,"value":2}`, ""},
-		{"put", `{"id": "foopa", "value": "doopa"}`, `{"root":"bvb8b8o945cih7fvliq9s6n3pdd9l2qa"}`, ""},
-		{"handleSync", `{"basis": "mcvqlfeba8olg9o1vakmar6o8cbp76m4"}`,
-			`{"patch":[{"op":"add","path":"/u/foopa","value":"doopa"}],"commitID":"bvb8b8o945cih7fvliq9s6n3pdd9l2qa","nomsChecksum":"kgrbb68en2h53f797jl1cpdt89a72rri"}`, ""},
+		{"put", `{"id": "foopa", "value": "doopa"}`, `{"root":"qtjr71od13utmars8d0g4d88or63vh71"}`, ""},
+		{"handleSync", `{"basis": "fs116gjgsjhkpjn8i8jtpno1tbhkhl2s"}`,
+			`{"patch":[{"op":"add","path":"/u/foopa","value":"doopa"}],"commitID":"qtjr71od13utmars8d0g4d88or63vh71","nomsChecksum":"kgrbb68en2h53f797jl1cpdt89a72rri"}`, ""},
 		{"scan", `{"prefix": "foo"}`, `[{"id":"foo","value":"bar"},{"id":"foopa","value":"doopa"}]`, ""},
-		{"execBatch", `[{"name": "add", "args": ["bar", 2]},{"name": "add", "args": ["bar", 2]}]`, `{"batch":[{"result":4},{"result":6}],"root":"csp63mgsrbg4v3t7psaiqhbl6s4rsv6h"}`, ""},
+		{"execBatch", `[{"name": "add", "args": ["bar", 2]},{"name": "add", "args": ["bar", 2]}]`, `{"batch":[{"result":4},{"result":6}],"root":"jkp0ojvvrho7gfpiu5m6164m8alsqkmf"}`, ""},
 		{"get", `{"id": "bar"}`, `{"has":true,"value":6}`, ""},
 	}
 
@@ -67,8 +67,7 @@ func startTestServer(assert *assert.Assertions) *http.Server {
 		assert.NoError(err)
 		sp, err := spec.ForDatabase(serverDir)
 		assert.NoError(err)
-		// use same origin used in api_test.go so that hashes match up and any differences with it stand out
-		s, err := newServer(sp.NewChunkStore(), "", "test")
+		s, err := newServer(sp.NewChunkStore(), "")
 		assert.NoError(err)
 		hs := http.Server{
 			Addr:    ":8674",

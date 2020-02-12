@@ -12,7 +12,7 @@ func TestEditorRoundtrip(t *testing.T) {
 	assert := assert.New(t)
 	sp, err := spec.ForDatabase("mem")
 	assert.NoError(err)
-	db, err := Load(sp, "o1")
+	db, err := Load(sp)
 	assert.NoError(err)
 
 	ed := &editor{noms: db.Noms(), data: db.head.Data(db.Noms()).Edit()}
@@ -52,7 +52,7 @@ func TestEditorMutationAttempt(t *testing.T) {
 	assert := assert.New(t)
 	sp, err := spec.ForDatabase("mem")
 	assert.NoError(err)
-	db, err := Load(sp, "o1")
+	db, err := Load(sp)
 	assert.NoError(err)
 
 	var ed *editor

@@ -58,7 +58,6 @@ func TestRebase(t *testing.T) {
 		r := makeTx(
 			noms,
 			basis.Ref(),
-			"test", // origin
 			epoch,
 			bundleRef,        // bundle
 			"log",            // function
@@ -74,7 +73,6 @@ func TestRebase(t *testing.T) {
 		r := makeReorder(
 			noms,
 			basis.Ref(),
-			"test",
 			epoch,
 			subject.Ref(),
 			basis.Value.Code,
@@ -88,7 +86,6 @@ func TestRebase(t *testing.T) {
 		r := makeReject(
 			noms,
 			basis.Ref(),
-			"test",
 			epoch,
 			subject.Ref(),
 			expected.Ref(),

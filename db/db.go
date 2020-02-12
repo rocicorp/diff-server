@@ -26,13 +26,12 @@ const (
 )
 
 type DB struct {
-	noms   datas.Database
-	origin string
-	head   Commit
-	mu     sync.Mutex
+	noms datas.Database
+	head Commit
+	mu   sync.Mutex
 }
 
-func Load(sp spec.Spec, origin string) (*DB, error) {
+func Load(sp spec.Spec) (*DB, error) {
 	if !sp.Path.IsEmpty() {
 		return nil, errors.New("Invalid spec - must not specify a path")
 	}
@@ -45,13 +44,12 @@ func Load(sp spec.Spec, origin string) (*DB, error) {
 		err = err.(d.WrappedError).Cause()
 		return nil, err
 	}
-	return New(noms, origin)
+	return New(noms)
 }
 
-func New(noms datas.Database, origin string) (*DB, error) {
+func New(noms datas.Database) (*DB, error) {
 	r := DB{
-		noms:   noms,
-		origin: origin,
+		noms: noms,
 	}
 	defer r.lock()()
 	err := r.init()
@@ -206,7 +204,7 @@ func (db *DB) ExecBatch(batch []BatchItem) ([]BatchItemResponse, *BatchError, er
 			bundleRef = types.NewRef(bundle)
 		}
 
-		basis = makeTx(db.noms, basisRef, db.origin, time.DateTime(), bundleRef, item.Function, item.Args, newBundle, newData)
+		basis = makeTx(db.noms, basisRef, time.DateTime(), bundleRef, item.Function, item.Args, newBundle, newData)
 		basisRef = db.noms.WriteValue(basis.Original)
 	}
 
@@ -245,7 +243,7 @@ func (db *DB) execInternal(bundle types.Blob, function string, args types.List) 
 		bundleRef = types.NewRef(bundle)
 	}
 
-	commit := makeTx(db.noms, basis, db.origin, time.DateTime(), bundleRef, function, args, newBundle, newData)
+	commit := makeTx(db.noms, basis, time.DateTime(), bundleRef, function, args, newBundle, newData)
 	commitRef := db.noms.WriteValue(commit.Original)
 
 	// FastForward not strictly needed here because we should have already ensured that we were
