@@ -26,7 +26,6 @@ func validate(db *DB, commit Commit) (replayed Commit, err error) {
 	}
 
 	// We should never get asked to validate other commit types:
-	// - reject: clients aren't allowed to create reject commits, only the server, so forks should never contain rejects
 	// - genesis: the genesis commit should never be in a fork
 
 	return Commit{}, fmt.Errorf("Invalid commit type: %v", commit.Type())

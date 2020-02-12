@@ -1,7 +1,6 @@
 package db
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/attic-labs/noms/go/marshal"
@@ -61,34 +60,6 @@ func (tx Tx) Bundle(noms types.ValueReader) types.Blob {
 type Reorder struct {
 	Date    datetime.DateTime
 	Subject types.Ref
-}
-
-type Nondeterm struct {
-	Expected types.Ref
-}
-
-type Fiat struct {
-	Detail string
-}
-
-type Reason struct {
-	Nondeterm Nondeterm
-	Fiat      Fiat
-}
-
-func (r Reason) MarshalNoms(vrw types.ValueReadWriter) (val types.Value, err error) {
-	v, err := union.Marshal(r, vrw)
-	if err != nil {
-		return nil, err
-	}
-	if v == nil {
-		return nil, errors.New("At least one field of Reason is required")
-	}
-	return v, nil
-}
-
-func (r *Reason) UnmarshalNoms(v types.Value) error {
-	return union.Unmarshal(v, r)
 }
 
 type Genesis struct {
