@@ -1,9 +1,7 @@
 package db
 
 import (
-	"encoding/json"
 	"errors"
-	"io/ioutil"
 	"log"
 
 	"github.com/attic-labs/noms/go/hash"
@@ -47,22 +45,6 @@ func (db *DB) HandleSync(from hash.Hash) ([]jsonpatch.Operation, error) {
 		for ; i < len(r); i++ {
 			r[i].Path = "/u" + r[i].Path
 		}
-	}
-
-	if !fc.Value.Code.Equals(db.head.Value.Code) {
-		buf, err := ioutil.ReadAll(db.head.Bundle(db.Noms()).Reader())
-		if err != nil {
-			return nil, err
-		}
-		j, err := json.Marshal(string(buf))
-		if err != nil {
-			return nil, err
-		}
-		r = append(r, jsonpatch.Operation{
-			Op:    jsonpatch.OpReplace,
-			Path:  "/s/code",
-			Value: json.RawMessage(j),
-		})
 	}
 
 	return r, nil

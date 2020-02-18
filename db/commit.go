@@ -25,7 +25,6 @@ Struct Commit {
 		date:   Struct DateTime {
 			secSinceEpoch: Number,
 		},
-		code?: Ref<Blob>,	// omitted for system functions
 		name: String,
 		args: List<Value>,
 	} |
@@ -36,7 +35,6 @@ Struct Commit {
 		subject: Ref<Cycle<Commit>>,
 	},
 	value: Struct {
-		code: Ref<Blob>,
 		data: Ref<Map<String, Value>>,
 	},
 }`)
@@ -45,16 +43,8 @@ Struct Commit {
 // TODO: These types should be private
 type Tx struct {
 	Date datetime.DateTime
-	Code types.Ref `noms:",omitempty"` // TODO: rename: "Bundle/BundleRef"
 	Name string
 	Args types.List
-}
-
-func (tx Tx) Bundle(noms types.ValueReader) types.Blob {
-	if tx.Code.IsZeroValue() {
-		return types.Blob{}
-	}
-	return tx.Code.TargetValue(noms).(types.Blob)
 }
 
 type Reorder struct {
@@ -92,8 +82,7 @@ type Commit struct {
 	Parents []types.Ref `noms:",set"`
 	Meta    Meta
 	Value   struct {
-		Code types.Ref `noms:",omitempty"`
-		Data types.Ref `noms:",omitempty"` // TODO: Rename "Bundle"
+		Data types.Ref `noms:",omitempty"`
 	}
 	Original types.Struct `noms:",original"`
 }
@@ -125,10 +114,6 @@ func (c Commit) Ref() types.Ref {
 
 func (c Commit) Data(noms types.ValueReadWriter) types.Map {
 	return c.Value.Data.TargetValue(noms).(types.Map)
-}
-
-func (c Commit) Bundle(noms types.ValueReadWriter) types.Blob {
-	return c.Value.Code.TargetValue(noms).(types.Blob)
 }
 
 func (c Commit) Type() CommitType {
@@ -225,31 +210,27 @@ func makeGenesis(noms types.ValueReadWriter, serverCommitID string) Commit {
 	c := Commit{}
 	c.Meta.Genesis.ServerCommitID = serverCommitID
 	c.Value.Data = noms.WriteValue(types.NewMap(noms))
-	c.Value.Code = noms.WriteValue(types.NewBlob(noms))
 	c.Original = marshal.MustMarshal(noms, c).(types.Struct)
 	noms.WriteValue(c.Original)
 	return c
 }
 
-func makeTx(noms types.ValueReadWriter, basis types.Ref, d datetime.DateTime, bundle types.Ref, f string, args types.List, newBundle, newData types.Ref) Commit {
+func makeTx(noms types.ValueReadWriter, basis types.Ref, d datetime.DateTime, f string, args types.List, newData types.Ref) Commit {
 	c := Commit{}
 	c.Parents = []types.Ref{basis}
 	c.Meta.Tx.Date = d
-	c.Meta.Tx.Code = bundle
 	c.Meta.Tx.Name = f
 	c.Meta.Tx.Args = args
-	c.Value.Code = newBundle
 	c.Value.Data = newData
 	c.Original = marshal.MustMarshal(noms, c).(types.Struct)
 	return c
 }
 
-func makeReorder(noms types.ValueReadWriter, basis types.Ref, d datetime.DateTime, subject, newBundle, newData types.Ref) Commit {
+func makeReorder(noms types.ValueReadWriter, basis types.Ref, d datetime.DateTime, subject, newData types.Ref) Commit {
 	c := Commit{}
 	c.Parents = []types.Ref{basis, subject}
 	c.Meta.Reorder.Date = d
 	c.Meta.Reorder.Subject = subject
-	c.Value.Code = newBundle
 	c.Value.Data = newData
 	c.Original = marshal.MustMarshal(noms, c).(types.Struct)
 	return c

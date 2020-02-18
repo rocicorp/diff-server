@@ -9,6 +9,7 @@ import (
 	"github.com/attic-labs/noms/go/util/datetime"
 	"github.com/stretchr/testify/assert"
 
+	"roci.dev/replicant/util/chk"
 	"roci.dev/replicant/util/noms/diff"
 )
 
@@ -50,8 +51,7 @@ func TestRebase(t *testing.T) {
 	epoch := datetime.DateTime{}
 	bundle := types.NewBlob(noms, strings.NewReader("function log(k, v) { var val = db.get(k) || []; val.push(v); db.put(k, val); }"))
 	err := db.PutBundle(bundle)
-	assert.NoError(err)
-	bundleRef := types.NewRef(bundle)
+	chk.NoError(err)
 
 	tx := func(basis Commit, arg string, ds string) Commit {
 		d := data(ds)
@@ -59,10 +59,8 @@ func TestRebase(t *testing.T) {
 			noms,
 			basis.Ref(),
 			epoch,
-			bundleRef,        // bundle
 			"log",            // function
 			list("foo", arg), // args
-			basis.Value.Code, // result bundle
 			write(d))         // result data
 		write(r.Original)
 		return r
@@ -75,7 +73,6 @@ func TestRebase(t *testing.T) {
 			basis.Ref(),
 			epoch,
 			subject.Ref(),
-			basis.Value.Code,
 			write(d)) // result data
 		write(r.Original)
 		return r

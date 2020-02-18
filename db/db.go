@@ -3,8 +3,10 @@
 package db
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"strings"
 	"sync"
@@ -17,6 +19,7 @@ import (
 	"github.com/attic-labs/noms/go/types"
 
 	"roci.dev/replicant/exec"
+	"roci.dev/replicant/util/chk"
 	"roci.dev/replicant/util/time"
 )
 
@@ -26,9 +29,10 @@ const (
 )
 
 type DB struct {
-	noms datas.Database
-	head Commit
-	mu   sync.Mutex
+	noms   datas.Database
+	head   Commit
+	bundle []byte
+	mu     sync.Mutex
 }
 
 func Load(sp spec.Spec) (*DB, error) {
@@ -131,13 +135,21 @@ func (db *DB) Del(path string) (ok bool, err error) {
 }
 
 func (db *DB) Bundle() (types.Blob, error) {
-	return db.head.Bundle(db.noms), nil
+	// TODO: Change return type to []byte
+	return types.NewBlob(db.noms, bytes.NewReader(db.bundle)), nil
 }
 
 func (db *DB) PutBundle(b types.Blob) error {
 	defer db.lock()()
-	_, err := db.execInternal(types.Blob{}, ".putBundle", types.NewList(db.noms, b))
-	return err
+	err := validateBundle(b, db.noms)
+	if err != nil {
+		return err
+	}
+	var buf []byte
+	buf, err = ioutil.ReadAll(b.Reader())
+	chk.NoError(err)
+	db.bundle = buf
+	return nil
 }
 
 func (db *DB) Exec(function string, args types.List) (types.Value, error) {
@@ -180,12 +192,11 @@ func (db *DB) ExecBatch(batch []BatchItem) ([]BatchItemResponse, *BatchError, er
 	r := make([]BatchItemResponse, 0, len(batch))
 	basis := db.head
 	basisRef := basis.Ref()
-	bundle := basis.Bundle(db.noms)
 	for i, item := range batch {
 		if strings.HasPrefix(item.Function, ".") {
 			return nil, &BatchError{fmt.Errorf("Cannot call system function: %s", item.Function), i}, nil
 		}
-		newBundle, newData, output, isWrite, err := db.execImpl(basisRef, bundle, item.Function, item.Args)
+		newData, output, isWrite, err := db.execImpl(basisRef, item.Function, item.Args)
 		if err != nil {
 			return nil, &BatchError{err, i}, nil
 		}
@@ -199,12 +210,7 @@ func (db *DB) ExecBatch(batch []BatchItem) ([]BatchItemResponse, *BatchError, er
 			continue
 		}
 
-		var bundleRef types.Ref
-		if bundle != (types.Blob{}) {
-			bundleRef = types.NewRef(bundle)
-		}
-
-		basis = makeTx(db.noms, basisRef, time.DateTime(), bundleRef, item.Function, item.Args, newBundle, newData)
+		basis = makeTx(db.noms, basisRef, time.DateTime(), item.Function, item.Args, newData)
 		basisRef = db.noms.WriteValue(basis.Original)
 	}
 
@@ -228,7 +234,7 @@ func (db *DB) Reload() error {
 
 func (db *DB) execInternal(bundle types.Blob, function string, args types.List) (types.Value, error) {
 	basis := types.NewRef(db.head.Original)
-	newBundle, newData, output, isWrite, err := db.execImpl(basis, bundle, function, args)
+	newData, output, isWrite, err := db.execImpl(basis, function, args)
 	if err != nil {
 		return nil, err
 	}
@@ -238,12 +244,7 @@ func (db *DB) execInternal(bundle types.Blob, function string, args types.List) 
 		return output, nil
 	}
 
-	var bundleRef types.Ref
-	if bundle != (types.Blob{}) {
-		bundleRef = types.NewRef(bundle)
-	}
-
-	commit := makeTx(db.noms, basis, time.DateTime(), bundleRef, function, args, newBundle, newData)
+	commit := makeTx(db.noms, basis, time.DateTime(), function, args, newData)
 	commitRef := db.noms.WriteValue(commit.Original)
 
 	// FastForward not strictly needed here because we should have already ensured that we were
@@ -257,14 +258,13 @@ func (db *DB) execInternal(bundle types.Blob, function string, args types.List) 
 }
 
 // TODO: add date and random source to this so that sync can set it up correctly when replaying.
-func (db *DB) execImpl(basis types.Ref, bundle types.Blob, function string, args types.List) (newBundleRef types.Ref, newDataRef types.Ref, output types.Value, isWrite bool, err error) {
+func (db *DB) execImpl(basis types.Ref, function string, args types.List) (newDataRef types.Ref, output types.Value, isWrite bool, err error) {
 	var basisCommit Commit
 	err = marshal.Unmarshal(basis.TargetValue(db.noms), &basisCommit)
 	if err != nil {
-		return types.Ref{}, types.Ref{}, nil, false, err
+		return types.Ref{}, nil, false, err
 	}
 
-	newBundle := basisCommit.Value.Code
 	newData := basisCommit.Value.Data
 
 	if strings.HasPrefix(function, ".") {
@@ -292,53 +292,19 @@ func (db *DB) execImpl(basis types.Ref, bundle types.Blob, function string, args
 			newData = db.noms.WriteValue(ed.Finalize())
 			output = types.Bool(ok)
 			break
-		case ".putBundle":
-			cb := basisCommit.Bundle(db.noms)
-			nb := args.Get(uint64(0)).(types.Blob)
-			if cb.Equals(nb) {
-				log.Printf("Bundle %s already installed, skipping", cb.Hash())
-				break
-			}
-
-			var currentVersion, newVersion float64
-			currentVersion, err = getBundleVersion(cb, db.noms)
-			if err != nil {
-				return
-			}
-			newVersion, err = getBundleVersion(nb, db.noms)
-			if err != nil {
-				return
-			}
-			shouldUpdate := func() bool {
-				if currentVersion == 0 && newVersion == 0 {
-					log.Printf("Replacing unversioned bundle %s with %s", cb.Hash(), nb.Hash())
-					return true
-				}
-				if newVersion > currentVersion {
-					log.Printf("Upgrading bundle from %f to %f", currentVersion, newVersion)
-					return true
-				}
-				log.Printf("Proposed bundle version %f not better than current version %f, skipping update", newVersion, currentVersion)
-				return false
-			}
-			if shouldUpdate() {
-				newBundle = db.noms.WriteValue(nb)
-				isWrite = true
-			}
-			break
 		}
 	} else {
 		ed := &editor{noms: db.noms, data: basisCommit.Data(db.noms).Edit()}
-		o, err := exec.Run(ed, bundle.Reader(), function, args)
+		o, err := exec.Run(ed, bytes.NewReader(db.bundle), function, args)
 		if err != nil {
-			return types.Ref{}, types.Ref{}, nil, false, err
+			return types.Ref{}, nil, false, err
 		}
 		isWrite = ed.receivedMutAttempt
 		newData = db.noms.WriteValue(ed.Finalize())
 		output = o
 	}
 
-	return newBundle, newData, output, isWrite, nil
+	return newData, output, isWrite, nil
 }
 
 func (db *DB) lock() func() {
@@ -348,21 +314,12 @@ func (db *DB) lock() func() {
 	}
 }
 
-func getBundleVersion(bundle types.Blob, noms types.ValueReadWriter) (float64, error) {
+func validateBundle(bundle types.Blob, noms types.ValueReadWriter) error {
 	// TODO: Passing editor is not really necessary because the script cannot call
 	// it because it only has access to the `db` object which is passed as a param
 	// to transaction functions. We only need to pass something here because the
 	// impl of exec.Run() requires ed.noms.
 	ed := &editor{noms: noms, data: nil}
-	r, err := exec.Run(ed, bundle.Reader(), "codeVersion", types.NewList(noms))
-	if _, ok := err.(exec.UnknownFunctionError); ok {
-		return 0, nil
-	}
-	if err != nil {
-		return 0, err
-	}
-	if r == nil || r.Kind() != types.NumberKind {
-		return 0, errors.New("codeVersion() must return a number")
-	}
-	return float64(r.(types.Number)), nil
+	_, err := exec.Run(ed, bundle.Reader(), "", types.NewList(noms))
+	return err
 }

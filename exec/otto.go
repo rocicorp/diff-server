@@ -79,6 +79,10 @@ func Run(db Database, source io.Reader, fn string, args types.List) (types.Value
 		return nil, errDetail(err)
 	}
 
+	if fn == "" {
+		return nil, nil
+	}
+
 	vm.Set("send", func(call o.FunctionCall) o.Value {
 		args := call.ArgumentList
 		cmdID, err := args[0].ToInteger()

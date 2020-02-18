@@ -44,15 +44,15 @@ func TestBasics(t *testing.T) {
 		// attempt to read non-json with get()
 
 		// getRoot on empty db
-		{"getRoot", `{}`, `{"root":"klra597i7o2u52k222chv2lqeb13v5sd"}`, ""},
+		{"getRoot", `{}`, `{"root":"uosmsi0mbbd1qgf2m0rgfkcrhf32c7om"}`, ""},
 
 		// put
 		{"put", invalidRequest, ``, invalidRequestError},
-		{"getRoot", `{}`, `{"root":"klra597i7o2u52k222chv2lqeb13v5sd"}`, ""}, // getRoot when db didn't change
+		{"getRoot", `{}`, `{"root":"uosmsi0mbbd1qgf2m0rgfkcrhf32c7om"}`, ""}, // getRoot when db didn't change
 		{"put", `{"id": "foo"}`, ``, "value field is required"},
 		{"put", `{"id": "foo", "value": null}`, ``, "value field is required"},
-		{"put", `{"id": "foo", "value": "bar"}`, `{"root":"luskchgmo38ohffb2vh9tmfel0ibbfpa"}`, ""},
-		{"getRoot", `{}`, `{"root":"luskchgmo38ohffb2vh9tmfel0ibbfpa"}`, ""}, // getRoot when db did change
+		{"put", `{"id": "foo", "value": "bar"}`, `{"root":"nti2kt1b288sfhdmqkgnjrog52a7m8ob"}`, ""},
+		{"getRoot", `{}`, `{"root":"nti2kt1b288sfhdmqkgnjrog52a7m8ob"}`, ""}, // getRoot when db did change
 
 		// has
 		{"has", invalidRequest, ``, invalidRequestError},
@@ -64,7 +64,7 @@ func TestBasics(t *testing.T) {
 
 		// putBundle
 		{"putBundle", invalidRequest, ``, invalidRequestError},
-		{"putBundle", fmt.Sprintf(`{"code": %s}`, string(code)), `{"root":"l6ia3192b4iiu552175s89tntlb91q2j"}`, ""},
+		{"putBundle", fmt.Sprintf(`{"code": %s}`, string(code)), `{"root":"nti2kt1b288sfhdmqkgnjrog52a7m8ob"}`, ""},
 
 		// getBundle
 		{"getBundle", invalidRequest, ``, invalidRequestError},
@@ -72,26 +72,26 @@ func TestBasics(t *testing.T) {
 
 		// exec
 		{"exec", invalidRequest, ``, invalidRequestError},
-		{"exec", `{"name": "add", "args": ["bar", 2]}`, `{"result":2,"root":"3pvopt7mij7g29t52u7trl0erln9jbhr"}`, ""},
+		{"exec", `{"name": "add", "args": ["bar", 2]}`, `{"result":2,"root":"01aj0nvumggim5hkm0atuf0s73p9l51e"}`, ""},
 		{"get", `{"id": "bar"}`, `{"has":true,"value":2}`, ""},
 
 		// handleSync
 		{"handleSync", `{"basis":""}`,
-			`{"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/u/bar","value":2},{"op":"add","path":"/u/foo","value":"bar"},{"op":"replace","path":"/s/code","value":"function add(key, d) { var v = db.get(key) || 0; v += d; db.put(key, v); return v; }\n\tfunction log(key, val) { var v = db.get(key) || []; v.push(val); db.put(key, v); }"}],"commitID":"3pvopt7mij7g29t52u7trl0erln9jbhr","nomsChecksum":"2jbp7674jqsv0553qkq0hr68na0tvku1"}`, ""},
+			`{"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/u/bar","value":2},{"op":"add","path":"/u/foo","value":"bar"}],"commitID":"01aj0nvumggim5hkm0atuf0s73p9l51e","nomsChecksum":"2jbp7674jqsv0553qkq0hr68na0tvku1"}`, ""},
 		{"handleSync", `{"basis":"bonk"}`, ``, "Invalid basis hash"},
-		{"handleSync", `{"basis":"l6ia3192b4iiu552175s89tntlb91q2j"}`,
-			`{"patch":[{"op":"add","path":"/u/bar","value":2}],"commitID":"3pvopt7mij7g29t52u7trl0erln9jbhr","nomsChecksum":"2jbp7674jqsv0553qkq0hr68na0tvku1"}`, ""},
+		{"handleSync", `{"basis":"nti2kt1b288sfhdmqkgnjrog52a7m8ob"}`,
+			`{"patch":[{"op":"add","path":"/u/bar","value":2}],"commitID":"01aj0nvumggim5hkm0atuf0s73p9l51e","nomsChecksum":"2jbp7674jqsv0553qkq0hr68na0tvku1"}`, ""},
 
 		// scan
-		{"put", `{"id": "foopa", "value": "doopa"}`, `{"root":"ms3cj5bb0vre25bi6dh11jqlsot8b0mg"}`, ""},
+		{"put", `{"id": "foopa", "value": "doopa"}`, `{"root":"dsvkq4dji7v7kbj70b5tml1go53k516q"}`, ""},
 		{"scan", `{"prefix": "foo"}`, `[{"id":"foo","value":"bar"},{"id":"foopa","value":"doopa"}]`, ""},
 		{"scan", `{"start": {"id": {"value": "foo"}}}`, `[{"id":"foo","value":"bar"},{"id":"foopa","value":"doopa"}]`, ""},
 		{"scan", `{"start": {"id": {"value": "foo", "exclusive": true}}}`, `[{"id":"foopa","value":"doopa"}]`, ""},
 
 		// execBatch
 		{"execBatch", invalidRequest, ``, invalidRequestError},
-		{"execBatch", `[{"name": "add", "args": ["bar", 2]},{"name": ".putBundle", "args": []}]`, `{"error":{"index":1,"detail":"Cannot call system function: .putBundle"},"root":"ms3cj5bb0vre25bi6dh11jqlsot8b0mg"}`, ""},
-		{"execBatch", `[{"name": "add", "args": ["bar", 2]},{"name": "add", "args": ["bar", 2]},{"name": "log", "args": ["log", "bar"]}]`, `{"batch":[{"result":4},{"result":6},{}],"root":"gl7turagjh7cr2o3op4c1q7jo4hbrq4m"}`, ""},
+		{"execBatch", `[{"name": "add", "args": ["bar", 2]},{"name": ".putBundle", "args": []}]`, `{"error":{"index":1,"detail":"Cannot call system function: .putBundle"},"root":"dsvkq4dji7v7kbj70b5tml1go53k516q"}`, ""},
+		{"execBatch", `[{"name": "add", "args": ["bar", 2]},{"name": "add", "args": ["bar", 2]},{"name": "log", "args": ["log", "bar"]}]`, `{"batch":[{"result":4},{"result":6},{}],"root":"qt3a4k7pktg8jhabj2bmfh262ls4gebm"}`, ""},
 		{"get", `{"id": "bar"}`, `{"has":true,"value":6}`, ""},
 		// TODO: other scan operators
 	}

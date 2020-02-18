@@ -117,13 +117,6 @@ func (db *DB) RequestSync(remote spec.Spec, progress Progress) error {
 	var ed *types.MapEditor
 	for _, op := range patch {
 		switch {
-		case op.Path == "/s/code":
-			var code string
-			err = json.Unmarshal([]byte(op.Value), &code)
-			if err != nil {
-				return fmt.Errorf("Cannot unmarshal /s/code: %s", err.Error())
-			}
-			head.Value.Code = db.noms.WriteValue(types.NewBlob(db.noms, strings.NewReader(code)))
 		case strings.HasPrefix(op.Path, "/u"):
 			if ed == nil {
 				ed = db.head.Data(db.noms).Edit()

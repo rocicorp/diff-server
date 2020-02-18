@@ -52,12 +52,12 @@ func rebase(db *DB, onto types.Ref, date datetime.DateTime, commit Commit, forkP
 	}
 
 	// Otherwise we need to re-execute the transaction against the new basis.
-	var newBundle, newData types.Ref
+	var newData types.Ref
 
 	switch commit.Type() {
 	case CommitTypeTx:
 		// For Tx transactions, just re-run the tx with the new basis.
-		newBundle, newData, _, _, err = db.execImpl(types.NewRef(newBasis.Original), commit.Meta.Tx.Bundle(db.noms), commit.Meta.Tx.Name, commit.Meta.Tx.Args)
+		newData, _, _, err = db.execImpl(types.NewRef(newBasis.Original), commit.Meta.Tx.Name, commit.Meta.Tx.Args)
 		if err != nil {
 			return Commit{}, err
 		}
@@ -70,7 +70,7 @@ func rebase(db *DB, onto types.Ref, date datetime.DateTime, commit Commit, forkP
 		if err != nil {
 			return Commit{}, err
 		}
-		newBundle, newData, _, _, err = db.execImpl(types.NewRef(newBasis.Original), target.Meta.Tx.Bundle(db.noms), target.Meta.Tx.Name, target.Meta.Tx.Args)
+		newData, _, _, err = db.execImpl(types.NewRef(newBasis.Original), target.Meta.Tx.Name, target.Meta.Tx.Args)
 		if err != nil {
 			return Commit{}, err
 		}
@@ -80,7 +80,7 @@ func rebase(db *DB, onto types.Ref, date datetime.DateTime, commit Commit, forkP
 	}
 
 	// Create and return the reorder commit, which will become the basis for the prev frame of the recursive call.
-	newCommit := makeReorder(db.noms, types.NewRef(newBasis.Original), date, types.NewRef(commit.Original), newBundle, newData)
+	newCommit := makeReorder(db.noms, types.NewRef(newBasis.Original), date, types.NewRef(commit.Original), newData)
 	db.noms.WriteValue(newCommit.Original)
 	return newCommit, nil
 }

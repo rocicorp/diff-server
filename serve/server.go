@@ -27,7 +27,7 @@ import (
 )
 
 var (
-	commands = []string{"getRoot", "has", "get", "scan", "put", "del", "getBundle", "putBundle", "exec", "execBatch", "handleSync"}
+	commands = []string{"handleSync"}
 )
 
 // server is a single Replicant instance. The Replicant service runs many such instances.

@@ -203,9 +203,10 @@ func putBundle(parent *kingpin.CmdClause, gdb gdb, in io.Reader) {
 }
 
 func exec(parent *kingpin.Application, gdb gdb, out io.Writer) {
-	kc := parent.Command("exec", "Execute a function.")
+	kc := parent.Command("exec", "Execute a function from the bundle in stdin.")
 
-	name := kc.Arg("name", "Name of function from current transaction bundle to execute.").Required().String()
+	bundle := kc.Flag("bundle", "Filename of bundle to execute").Required().File()
+	name := kc.Arg("name", "Name of function from bundle to execute.").Required().String()
 	raw := kc.Arg("args", "JSON-formatted arguments to the function. For convenience, bare strings are also supported.").Strings()
 
 	parse := func(s string, noms types.ValueReadWriter) (types.Value, error) {
@@ -231,6 +232,8 @@ func exec(parent *kingpin.Application, gdb gdb, out io.Writer) {
 		if err != nil {
 			return err
 		}
+		err = db.PutBundle(types.NewBlob(db.Noms(), *bundle))
+		chk.NoError(err)
 
 		args := make([]types.Value, 0, len(*raw))
 		for _, r := range *raw {
@@ -355,6 +358,7 @@ func del(parent *kingpin.Application, gdb gdb, out io.Writer) {
 
 func sync(parent *kingpin.Application, gdb gdb) {
 	kc := parent.Command("sync", "Sync with a replicant server.")
+	bundle := kc.Flag("bundle", "Source of bundle functions").Required().File()
 	remoteSpec := kp.DatabaseSpec(kc.Arg("remote", "Server to sync with. See https://github.com/attic-labs/noms/blob/master/doc/spelling.md#spelling-databases.").Required())
 
 	kc.Action(func(_ *kingpin.ParseContext) error {
@@ -362,6 +366,7 @@ func sync(parent *kingpin.Application, gdb gdb) {
 		if err != nil {
 			return err
 		}
+		db.PutBundle(types.NewBlob(db.Noms(), *bundle))
 		// TODO: progress
 		return db.RequestSync(*remoteSpec, nil)
 	})

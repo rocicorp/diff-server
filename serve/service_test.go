@@ -95,7 +95,7 @@ func TestCheckAccess(t *testing.T) {
 		svc := NewService(td, accounts)
 		res := httptest.NewRecorder()
 
-		req := httptest.NewRequest("POST", fmt.Sprintf("/%s/%s/put", t.accountID, t.dbName), strings.NewReader(`{"id":"foo","value":"bar"}`))
+		req := httptest.NewRequest("POST", fmt.Sprintf("/%s/%s/handleSync", t.accountID, t.dbName), strings.NewReader(`{"basis": "00000000000000000000000000000000"}`))
 		req.Header.Add("Authorization", t.token)
 		svc.ServeHTTP(res, req)
 
@@ -116,6 +116,7 @@ func TestCheckAccess(t *testing.T) {
 }
 
 func TestConcurrentAccessUsingMultipleServices(t *testing.T) {
+	// TO
 	assert := assert.New(t)
 	td, _ := ioutil.TempDir("", "")
 
@@ -136,9 +137,9 @@ func TestConcurrentAccessUsingMultipleServices(t *testing.T) {
 		httptest.NewRecorder(),
 	}
 
-	svc1.ServeHTTP(res[0], httptest.NewRequest("POST", "/sandbox/foo/put", strings.NewReader(`{"id":"foo","value":"bar"}`)))
-	svc2.ServeHTTP(res[1], httptest.NewRequest("POST", "/sandbox/foo/put", strings.NewReader(`{"id":"foo","value":"bar"}`)))
-	svc1.ServeHTTP(res[2], httptest.NewRequest("POST", "/sandbox/foo/put", strings.NewReader(`{"id":"foo","value":"bar"}`)))
+	svc1.ServeHTTP(res[0], httptest.NewRequest("POST", "/sandbox/foo/handleSync", strings.NewReader(`{"basis": "00000000000000000000000000000000"}`)))
+	svc2.ServeHTTP(res[1], httptest.NewRequest("POST", "/sandbox/foo/handleSync", strings.NewReader(`{"basis": "00000000000000000000000000000000"}`)))
+	svc1.ServeHTTP(res[2], httptest.NewRequest("POST", "/sandbox/foo/handleSync", strings.NewReader(`{"basis": "00000000000000000000000000000000"}`)))
 
 	for i, r := range res {
 		assert.Equal(http.StatusOK, r.Code, fmt.Sprintf("response %d: %s", i, string(r.Body.Bytes())))

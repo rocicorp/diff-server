@@ -18,9 +18,6 @@ func TestHandleSync(t *testing.T) {
 	fmt.Println(dir)
 
 	bundle := `function set(k, v) { db.put(k, v); }`
-	escapedBundle, err := json.Marshal(bundle)
-	assert.NoError(err)
-
 	var fromID hash.Hash
 	tc := []struct {
 		label         string
@@ -39,13 +36,7 @@ func TestHandleSync(t *testing.T) {
 			func() {
 				db.PutBundle(types.NewBlob(db.Noms(), strings.NewReader(bundle)))
 			},
-			[]jsonpatch.Operation{
-				{
-					Op:    jsonpatch.OpReplace,
-					Path:  "/s/code",
-					Value: escapedBundle,
-				},
-			},
+			[]jsonpatch.Operation{},
 			"",
 		},
 		{

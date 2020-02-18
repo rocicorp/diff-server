@@ -17,6 +17,7 @@ func TestValidate(t *testing.T) {
 
 	db, dir := LoadTempDB(assert)
 	fmt.Println(dir)
+	db.PutBundle(types.NewBlob(db.Noms(), strings.NewReader("function log(k, v) { var val = db.get(k) || []; val.push(v); db.put(k, val); }")))
 	noms := db.noms
 
 	list := func(items ...string) types.List {
@@ -29,8 +30,6 @@ func TestValidate(t *testing.T) {
 
 	epoch := datetime.DateTime{}
 	g := makeGenesis(noms, "")
-	eb := types.NewEmptyBlob(noms)
-	b1 := types.NewBlob(noms, strings.NewReader("function log(k, v) { var val = db.get(k) || []; val.push(v); db.put(k, val); }"))
 	d1 := types.NewMap(noms,
 		types.String("foo"),
 		list("bar"))
@@ -42,10 +41,8 @@ func TestValidate(t *testing.T) {
 		noms,
 		noms.WriteValue(g.Original),
 		epoch,
-		noms.WriteValue(b1),
 		"log",
 		list("foo", "bar"),
-		noms.WriteValue(eb),
 		noms.WriteValue(d1))
 	noms.WriteValue(tx1.Original)
 
@@ -53,10 +50,8 @@ func TestValidate(t *testing.T) {
 		noms,
 		noms.WriteValue(g.Original),
 		epoch,
-		noms.WriteValue(b1),
 		"log",
 		list("foo", "bar"),
-		noms.WriteValue(eb),
 		noms.WriteValue(d2)) // incorrect, should be d1
 	noms.WriteValue(tx1b.Original)
 
@@ -64,10 +59,8 @@ func TestValidate(t *testing.T) {
 		noms,
 		noms.WriteValue(tx1.Original),
 		epoch,
-		noms.WriteValue(b1),
 		"log",
 		list("foo", "baz"),
-		noms.WriteValue(eb),
 		noms.WriteValue(d2))
 	noms.WriteValue(tx2.Original)
 
@@ -75,10 +68,8 @@ func TestValidate(t *testing.T) {
 		noms,
 		noms.WriteValue(tx1b.Original), // basis is incorrect
 		epoch,
-		noms.WriteValue(b1),
 		"log",
 		list("foo", "baz"),
-		noms.WriteValue(eb),
 		noms.WriteValue(
 			d2.Edit().Set(
 				types.String("foo"),
@@ -89,10 +80,8 @@ func TestValidate(t *testing.T) {
 		noms,
 		noms.WriteValue(g.Original),
 		epoch,
-		noms.WriteValue(b1),
 		"log",
 		list("foo", "quux"),
-		noms.WriteValue(eb),
 		noms.WriteValue(
 			types.NewMap(noms, types.String("foo"), list("quux"))))
 	noms.WriteValue(tx3.Original)
@@ -101,7 +90,6 @@ func TestValidate(t *testing.T) {
 		noms.WriteValue(tx1.Original),
 		epoch,
 		noms.WriteValue(tx3.Original),
-		noms.WriteValue(eb),
 		noms.WriteValue(
 			types.NewMap(noms, types.String("foo"), list("bar", "quux"))))
 	noms.WriteValue(ro1.Original)
@@ -110,7 +98,6 @@ func TestValidate(t *testing.T) {
 		noms.WriteValue(tx1.Original),
 		epoch,
 		noms.WriteValue(tx3.Original),
-		noms.WriteValue(eb),
 		noms.WriteValue(
 			types.NewMap(noms, types.String("foo"), list("bar", "monkey")))) // incorrect
 	noms.WriteValue(ro1b.Original)
@@ -119,7 +106,6 @@ func TestValidate(t *testing.T) {
 		noms.WriteValue(tx1b.Original), // incorrect basis
 		epoch,
 		noms.WriteValue(tx3.Original),
-		noms.WriteValue(eb),
 		noms.WriteValue(
 			types.NewMap(noms, types.String("foo"), list("bar", "baz", "quux"))))
 	noms.WriteValue(ro1c.Original)

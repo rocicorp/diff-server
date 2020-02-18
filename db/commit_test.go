@@ -2,7 +2,6 @@ package db
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/attic-labs/noms/go/chunks"
@@ -18,15 +17,13 @@ func TestMarshal(t *testing.T) {
 	assert := assert.New(t)
 
 	noms := types.NewValueStore((&chunks.TestStorage{}).NewView())
-	emptyBlob := noms.WriteValue(types.NewEmptyBlob(noms))
 	emptyMap := noms.WriteValue(types.NewMap(noms))
 
 	d := datetime.Now()
-	br := noms.WriteValue(types.NewBlob(noms, strings.NewReader("blobdata")))
 	dr := noms.WriteValue(types.NewMap(noms, types.String("foo"), types.String("bar")))
 	args := types.NewList(noms, types.Bool(true), types.String("monkey"))
 	g := makeGenesis(noms, "")
-	tx := makeTx(noms, types.NewRef(g.Original), d, emptyBlob, "func", args, br, dr)
+	tx := makeTx(noms, types.NewRef(g.Original), d, "func", args, dr)
 	noms.WriteValue(g.Original)
 	noms.WriteValue(tx.Original)
 
@@ -40,7 +37,6 @@ func TestMarshal(t *testing.T) {
 				"meta":    types.NewStruct("Genesis", types.StructData{}),
 				"parents": types.NewSet(noms),
 				"value": types.NewStruct("", types.StructData{
-					"code": emptyBlob,
 					"data": emptyMap,
 				}),
 			}),
@@ -53,7 +49,6 @@ func TestMarshal(t *testing.T) {
 				}),
 				"parents": types.NewSet(noms),
 				"value": types.NewStruct("", types.StructData{
-					"code": emptyBlob,
 					"data": emptyMap,
 				}),
 			}),
@@ -64,34 +59,30 @@ func TestMarshal(t *testing.T) {
 				"parents": types.NewSet(noms, types.NewRef(g.Original)),
 				"meta": types.NewStruct("Tx", types.StructData{
 					"date": marshal.MustMarshal(noms, d),
-					"code": emptyBlob,
 					"name": types.String("func"),
 					"args": args,
 				}),
 				"value": types.NewStruct("", types.StructData{
-					"code": br,
 					"data": dr,
 				}),
 			}),
 		},
 		{
-			makeTx(noms, types.NewRef(g.Original), d, br, "func", args, emptyBlob, dr),
+			makeTx(noms, types.NewRef(g.Original), d, "func", args, dr),
 			types.NewStruct("Commit", types.StructData{
 				"parents": types.NewSet(noms, types.NewRef(g.Original)),
 				"meta": types.NewStruct("Tx", types.StructData{
 					"date": marshal.MustMarshal(noms, d),
-					"code": br,
 					"name": types.String("func"),
 					"args": args,
 				}),
 				"value": types.NewStruct("", types.StructData{
-					"code": emptyBlob,
 					"data": dr,
 				}),
 			}),
 		},
 		{
-			makeReorder(noms, types.NewRef(g.Original), d, types.NewRef(tx.Original), br, dr),
+			makeReorder(noms, types.NewRef(g.Original), d, types.NewRef(tx.Original), dr),
 			types.NewStruct("Commit", types.StructData{
 				"parents": types.NewSet(noms, types.NewRef(g.Original), types.NewRef(tx.Original)),
 				"meta": types.NewStruct("Reorder", types.StructData{
@@ -99,7 +90,6 @@ func TestMarshal(t *testing.T) {
 					"subject": types.NewRef(tx.Original),
 				}),
 				"value": types.NewStruct("", types.StructData{
-					"code": br,
 					"data": dr,
 				}),
 			}),

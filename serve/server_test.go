@@ -11,40 +11,30 @@ import (
 	"testing"
 
 	"github.com/attic-labs/noms/go/spec"
+	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
 
+	"roci.dev/replicant/db"
 	"roci.dev/replicant/util/time"
 )
 
 func TestAPI(t *testing.T) {
 	assert := assert.New(t)
 
-	defer startTestServer(assert).Shutdown(context.Background())
 	defer time.SetFake()()
 
-	const code = `function add(id, d) { var v = db.get(id) || 0; v += d; db.put(id, v); return v; }`
+	db, s := startTestServer(assert)
+	db.Put("foo", types.String("bar"))
+	defer s.Shutdown(context.Background())
+
 	tc := []struct {
 		rpc              string
 		req              string
 		expectedResponse string
 		expectedError    string
 	}{
-		// Lifted mostly from api_test.go
-		// We don't need to test everything here, just a smoke test that api tests via http are working!
-		{"getRoot", `{}`, `{"root":"klra597i7o2u52k222chv2lqeb13v5sd"}`, ""},
-		{"put", `{"id": "foo", "value": "bar"}`, `{"root":"luskchgmo38ohffb2vh9tmfel0ibbfpa"}`, ""},
-		{"has", `{"id": "foo"}`, `{"has":true}`, ""},
-		{"get", `{"id": "foo"}`, `{"has":true,"value":"bar"}`, ""},
-		{"putBundle", fmt.Sprintf(`{"code": "%s"}`, code), `{"root":"n40amopvr0atv1bs77fc30np36a5atse"}`, ""},
-		{"getBundle", `{}`, fmt.Sprintf(`{"code":"%s"}`, code), ""},
-		{"exec", `{"name": "add", "args": ["bar", 2]}`, `{"result":2,"root":"fs116gjgsjhkpjn8i8jtpno1tbhkhl2s"}`, ""},
-		{"get", `{"id": "bar"}`, `{"has":true,"value":2}`, ""},
-		{"put", `{"id": "foopa", "value": "doopa"}`, `{"root":"qtjr71od13utmars8d0g4d88or63vh71"}`, ""},
-		{"handleSync", `{"basis": "fs116gjgsjhkpjn8i8jtpno1tbhkhl2s"}`,
-			`{"patch":[{"op":"add","path":"/u/foopa","value":"doopa"}],"commitID":"qtjr71od13utmars8d0g4d88or63vh71","nomsChecksum":"kgrbb68en2h53f797jl1cpdt89a72rri"}`, ""},
-		{"scan", `{"prefix": "foo"}`, `[{"id":"foo","value":"bar"},{"id":"foopa","value":"doopa"}]`, ""},
-		{"execBatch", `[{"name": "add", "args": ["bar", 2]},{"name": "add", "args": ["bar", 2]}]`, `{"batch":[{"result":4},{"result":6}],"root":"jkp0ojvvrho7gfpiu5m6164m8alsqkmf"}`, ""},
-		{"get", `{"id": "bar"}`, `{"has":true,"value":6}`, ""},
+		{"handleSync", `{"basis": "00000000000000000000000000000000"}`,
+			`{"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/u/foo","value":"bar"}],"commitID":"nti2kt1b288sfhdmqkgnjrog52a7m8ob","nomsChecksum":"am8lvhrbscqkngg75jaiubirapurghv9"}`, ""},
 	}
 
 	for i, t := range tc {
@@ -59,8 +49,9 @@ func TestAPI(t *testing.T) {
 	}
 }
 
-func startTestServer(assert *assert.Assertions) *http.Server {
+func startTestServer(assert *assert.Assertions) (*db.DB, *http.Server) {
 	svr := make(chan *http.Server)
+	var d *db.DB
 	go func() {
 		serverDir, err := ioutil.TempDir("", "")
 		fmt.Printf("server dir: %s\n", serverDir)
@@ -69,6 +60,7 @@ func startTestServer(assert *assert.Assertions) *http.Server {
 		assert.NoError(err)
 		s, err := newServer(sp.NewChunkStore(), "")
 		assert.NoError(err)
+		d = s.db
 		hs := http.Server{
 			Addr:    ":8674",
 			Handler: s,
@@ -77,5 +69,5 @@ func startTestServer(assert *assert.Assertions) *http.Server {
 		err = hs.ListenAndServe()
 		assert.Equal(http.ErrServerClosed, err)
 	}()
-	return <-svr
+	return d, <-svr
 }

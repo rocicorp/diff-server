@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path"
 	"strings"
 	"testing"
 
@@ -21,6 +22,16 @@ import (
 func TestCommands(t *testing.T) {
 	assert := assert.New(t)
 	defer time.SetFake()()
+
+	td, err := ioutil.TempDir("", "")
+	fmt.Println("test database:", td)
+	assert.NoError(err)
+
+	bf, err := os.Create(path.Join(td, "bundle.js"))
+	assert.NoError(err)
+	_, err = bf.Write([]byte("function futz(k, v){ db.put(k, v) }; function echo(v) { return v; };\n"))
+	assert.NoError(err)
+	assert.NoError(bf.Close())
 
 	tc := []struct {
 		label string
@@ -39,33 +50,9 @@ func TestCommands(t *testing.T) {
 			"",
 		},
 		{
-			"bundle put good",
-			"function futz(k, v){ db.put(k, v) }; function echo(v) { return v; };",
-			"bundle put",
-			0,
-			"",
-			"Replacing unversioned bundle 2eulo8v8rihcjm0e93brv14dopakkder with a2gj33rbobbebq5r89c2vmr8k2so3mo0\n",
-		},
-		{
-			"bundle get good",
-			"",
-			"bundle get",
-			0,
-			"function futz(k, v){ db.put(k, v) }; function echo(v) { return v; };",
-			"",
-		},
-		{
-			"log bundle put",
-			"",
-			"log --no-pager",
-			0,
-			fmt.Sprintf("commit 1thp4ttnqipht2ploh75tia42sbi34t5\nCreated:     %s\nStatus:      PENDING\nMerged:      %s\nTransaction: .putBundle(blob(a2gj33rbobbebq5r89c2vmr8k2so3mo0))\n\n", time.Now(), time.Now()),
-			"",
-		},
-		{
 			"exec unknown-function",
 			"",
-			"exec monkey",
+			fmt.Sprintf("exec --bundle=%s monkey", bf.Name()),
 			1,
 			"",
 			"Unknown function: monkey\n",
@@ -73,7 +60,7 @@ func TestCommands(t *testing.T) {
 		{
 			"exec missing-key",
 			"",
-			"exec futz",
+			fmt.Sprintf("exec --bundle=%s futz", bf.Name()),
 			1,
 			"",
 			"Error: Invalid id\n    at bootstrap.js:20:14\n    at bootstrap.js:26:4\n    at futz (bundle.js:1:22)\n    at apply (<native code>)\n    at recv (bootstrap.js:67:12)\n\n",
@@ -81,7 +68,7 @@ func TestCommands(t *testing.T) {
 		{
 			"exec missing-val",
 			"",
-			"exec futz foo",
+			fmt.Sprintf("exec --bundle=%s futz foo", bf.Name()),
 			1,
 			"",
 			"Error: Invalid value\n    at bootstrap.js:29:15\n    at futz (bundle.js:1:22)\n    at apply (<native code>)\n    at recv (bootstrap.js:67:12)\n\n",
@@ -89,7 +76,7 @@ func TestCommands(t *testing.T) {
 		{
 			"exec good",
 			"",
-			"exec futz foo bar",
+			fmt.Sprintf("exec --bundle=%s futz foo bar", bf.Name()),
 			0,
 			"",
 			"",
@@ -99,13 +86,13 @@ func TestCommands(t *testing.T) {
 			"",
 			"log --no-pager",
 			0,
-			fmt.Sprintf("commit igvcul8ig9jl4h54gvsvha5r4l7o0gh3\nCreated:     %s\nStatus:      PENDING\nMerged:      %s\nTransaction: futz(\"foo\", \"bar\")\n(root) {\n+   \"foo\": \"bar\"\n  }\n\ncommit 1thp4ttnqipht2ploh75tia42sbi34t5\nCreated:     %s\nStatus:      PENDING\nMerged:      %s\nTransaction: .putBundle(blob(a2gj33rbobbebq5r89c2vmr8k2so3mo0))\n\n", time.Now(), time.Now(), time.Now(), time.Now()),
+			fmt.Sprintf("commit dq05ge0eu8rh74buuh2tq31pnlsp9bvs\nCreated:     %s\nStatus:      PENDING\nMerged:      %s\nTransaction: futz(\"foo\", \"bar\")\n(root) {\n+   \"foo\": \"bar\"\n  }\n\n", time.Now(), time.Now()),
 			"",
 		},
 		{
 			"exec echo",
 			"",
-			"exec echo monkey",
+			fmt.Sprintf("exec --bundle=%s echo monkey", bf.Name()),
 			0,
 			`"monkey"`,
 			"",
@@ -240,10 +227,6 @@ func TestCommands(t *testing.T) {
 		},
 	}
 
-	td, err := ioutil.TempDir("", "")
-	fmt.Println("test database:", td)
-	assert.NoError(err)
-
 	for _, c := range tc {
 		ob := &strings.Builder{}
 		eb := &strings.Builder{}
@@ -318,22 +301,8 @@ func TestServe(t *testing.T) {
 		expectedResponse string
 		expectedError    string
 	}{
-		// Lifted mostly from api_test.go
-		// We don't need to test everything here, just a smoke test that api tests via http are working!
-		{"getRoot", `{}`, `{"root":"klra597i7o2u52k222chv2lqeb13v5sd"}`, ""},
-		{"put", `{"id": "foo", "value": "bar"}`, `{"root":"luskchgmo38ohffb2vh9tmfel0ibbfpa"}`, ""},
-		{"has", `{"id": "foo"}`, `{"has":true}`, ""},
-		{"get", `{"id": "foo"}`, `{"has":true,"value":"bar"}`, ""},
-		{"putBundle", fmt.Sprintf(`{"code": "%s"}`, code), `{"root":"n40amopvr0atv1bs77fc30np36a5atse"}`, ""},
-		{"getBundle", `{}`, fmt.Sprintf(`{"code":"%s"}`, code), ""},
-		{"exec", `{"name": "add", "args": ["bar", 2]}`, `{"result":2,"root":"fs116gjgsjhkpjn8i8jtpno1tbhkhl2s"}`, ""},
-		{"get", `{"id": "bar"}`, `{"has":true,"value":2}`, ""},
-		{"put", `{"id": "foopa", "value": "doopa"}`, `{"root":"qtjr71od13utmars8d0g4d88or63vh71"}`, ""},
-		{"handleSync", `{"basis": "fs116gjgsjhkpjn8i8jtpno1tbhkhl2s"}`,
-			`{"patch":[{"op":"add","path":"/u/foopa","value":"doopa"}],"commitID":"qtjr71od13utmars8d0g4d88or63vh71","nomsChecksum":"kgrbb68en2h53f797jl1cpdt89a72rri"}`, ""},
-		{"scan", `{"prefix": "foo"}`, `[{"id":"foo","value":"bar"},{"id":"foopa","value":"doopa"}]`, ""},
-		{"execBatch", `[{"name": "add", "args": ["bar", 2]},{"name": "add", "args": ["bar", 2]}]`, `{"batch":[{"result":4},{"result":6}],"root":"jkp0ojvvrho7gfpiu5m6164m8alsqkmf"}`, ""},
-		{"get", `{"id": "bar"}`, `{"has":true,"value":6}`, ""},
+		{"handleSync", `{"basis": "00000000000000000000000000000000"}`,
+			`{"patch":[{"op":"remove","path":"/"}],"commitID":"uosmsi0mbbd1qgf2m0rgfkcrhf32c7om","nomsChecksum":"t13tdcmq2d3pkpt9avk4p4nbt1oagaa3"}`, ""},
 	}
 
 	for i, t := range tc {
