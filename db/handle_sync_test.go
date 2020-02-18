@@ -3,7 +3,6 @@ package db
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/attic-labs/noms/go/hash"
@@ -34,7 +33,7 @@ func TestHandleSync(t *testing.T) {
 		{
 			"put-bundle",
 			func() {
-				db.PutBundle(types.NewBlob(db.Noms(), strings.NewReader(bundle)))
+				db.PutBundle([]byte(bundle))
 			},
 			[]jsonpatch.Operation{},
 			"",

@@ -3,7 +3,6 @@ package db
 import (
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"github.com/attic-labs/noms/go/spec"
@@ -27,10 +26,8 @@ func TestGenesis(t *testing.T) {
 	db, _ := LoadTempDB(assert)
 
 	assert.False(db.Has("foo"))
-	b, err := db.Bundle()
-	assert.NoError(err)
-	assert.False(b == types.Blob{})
-	assert.Equal(uint64(0), b.Len())
+	b := db.Bundle()
+	assert.Nil(b)
 
 	assert.True(db.head.Original.Equals(makeGenesis(db.noms, "").Original))
 }
@@ -96,33 +93,30 @@ func TestBundleInvalid(t *testing.T) {
 	assert := assert.New(t)
 	db, dir := LoadTempDB(assert)
 
-	err := db.PutBundle(types.NewBlob(db.noms, strings.NewReader("bundlebundle")))
+	err := db.PutBundle([]byte("bundlebundle"))
 	assert.EqualError(err, "ReferenceError: 'bundlebundle' is not defined\n    at bundle.js:1:1\n")
 
 	dbs := []*DB{db, reloadDB(assert, dir)}
 	for _, d := range dbs {
-		act, err := d.Bundle()
-		assert.NoError(err)
-		assert.True(types.NewEmptyBlob(db.noms).Equals(act))
+		act := d.Bundle()
+		assert.Equal([]byte(nil), act)
 	}
 }
 
-func TestBundleUnversioned(t *testing.T) {
+func TestBundle(t *testing.T) {
 	assert := assert.New(t)
 	db, dir := LoadTempDB(assert)
 
-	exp := types.NewBlob(db.noms, strings.NewReader("function foo(){}"))
+	exp := []byte("function foo(){}")
 	err := db.PutBundle(exp)
 	assert.NoError(err)
 
-	act, err := db.Bundle()
-	assert.NoError(err)
-	assert.True(exp.Equals(act))
+	act := db.Bundle()
+	assert.Equal(exp, act)
 
 	db = reloadDB(assert, dir)
-	act, err = db.Bundle()
-	assert.NoError(err)
-	assert.True(act.Empty())
+	act = db.Bundle()
+	assert.Nil(act)
 }
 
 func TestExec(t *testing.T) {
@@ -136,7 +130,7 @@ func TestExec(t *testing.T) {
 }
 `
 
-	db.PutBundle(types.NewBlob(db.noms, strings.NewReader(code)))
+	db.PutBundle([]byte(code))
 
 	out, err := db.Exec("append", types.NewList(db.noms, types.String("log"), types.String("foo")))
 	assert.NoError(err)
@@ -165,7 +159,7 @@ func TestExecBatch(t *testing.T) {
 }
 `
 
-	db.PutBundle(types.NewBlob(db.noms, strings.NewReader(code)))
+	db.PutBundle([]byte(code))
 
 	batch := []BatchItem{
 		BatchItem{"append", types.NewList(db.noms, types.String("log"), types.String("foo"))},
@@ -202,7 +196,7 @@ func TestExecBatchError(t *testing.T) {
 }
 `
 
-	db.PutBundle(types.NewBlob(db.noms, strings.NewReader(code)))
+	db.PutBundle([]byte(code))
 
 	batch := []BatchItem{
 		BatchItem{"append", types.NewList(db.noms, types.String("log"), types.String("foo"))},
@@ -229,7 +223,7 @@ func TestReadTransaction(t *testing.T) {
 
 	code := `function write(v) { db.put("foo", v) } function read() { return db.get("foo") }`
 
-	db.PutBundle(types.NewBlob(db.noms, strings.NewReader(code)))
+	db.PutBundle([]byte(code))
 
 	out, err := db.Exec("write", types.NewList(db.noms, types.String("bar")))
 	assert.NoError(err)

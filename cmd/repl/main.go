@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"log"
@@ -156,10 +157,6 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 	drop(app, getSpec, in, out)
 	logCmd(app, getDB, out)
 
-	bundle := app.Command("bundle", "Manage the currently registered bundle.")
-	getBundle(bundle, getDB, out)
-	putBundle(bundle, getDB, in)
-
 	if len(args) == 0 {
 		app.Usage(args)
 		return
@@ -174,33 +171,6 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 
 type gdb func() (db.DB, error)
 type gsp func() (spec.Spec, error)
-
-func getBundle(parent *kingpin.CmdClause, gdb gdb, out io.Writer) {
-	kc := parent.Command("get", "Get the current JavaScript code bundle.")
-	kc.Action(func(_ *kingpin.ParseContext) error {
-		db, err := gdb()
-		if err != nil {
-			return err
-		}
-		b, err := db.Bundle()
-		if err != nil {
-			return err
-		}
-		_, err = io.Copy(out, b.Reader())
-		return err
-	})
-}
-
-func putBundle(parent *kingpin.CmdClause, gdb gdb, in io.Reader) {
-	kc := parent.Command("put", "Set a new JavaScript code bundle.")
-	kc.Action(func(_ *kingpin.ParseContext) error {
-		db, err := gdb()
-		if err != nil {
-			return err
-		}
-		return db.PutBundle(types.NewBlob(db.Noms(), in))
-	})
-}
 
 func exec(parent *kingpin.Application, gdb gdb, out io.Writer) {
 	kc := parent.Command("exec", "Execute a function from the bundle in stdin.")
@@ -232,8 +202,11 @@ func exec(parent *kingpin.Application, gdb gdb, out io.Writer) {
 		if err != nil {
 			return err
 		}
-		err = db.PutBundle(types.NewBlob(db.Noms(), *bundle))
+
+		buf := &bytes.Buffer{}
+		_, err = io.Copy(buf, *bundle)
 		chk.NoError(err)
+		err = db.PutBundle(buf.Bytes())
 
 		args := make([]types.Value, 0, len(*raw))
 		for _, r := range *raw {
@@ -366,7 +339,12 @@ func sync(parent *kingpin.Application, gdb gdb) {
 		if err != nil {
 			return err
 		}
-		db.PutBundle(types.NewBlob(db.Noms(), *bundle))
+
+		buf := &bytes.Buffer{}
+		_, err = io.Copy(buf, *bundle)
+		chk.NoError(err)
+		err = db.PutBundle(buf.Bytes())
+
 		// TODO: progress
 		return db.RequestSync(*remoteSpec, nil)
 	})

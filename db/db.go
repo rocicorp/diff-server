@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"strings"
 	"sync"
@@ -19,7 +18,6 @@ import (
 	"github.com/attic-labs/noms/go/types"
 
 	"roci.dev/replicant/exec"
-	"roci.dev/replicant/util/chk"
 	"roci.dev/replicant/util/time"
 )
 
@@ -134,21 +132,17 @@ func (db *DB) Del(path string) (ok bool, err error) {
 	return bool(v.(types.Bool)), err
 }
 
-func (db *DB) Bundle() (types.Blob, error) {
-	// TODO: Change return type to []byte
-	return types.NewBlob(db.noms, bytes.NewReader(db.bundle)), nil
+func (db *DB) Bundle() []byte {
+	return db.bundle
 }
 
-func (db *DB) PutBundle(b types.Blob) error {
-	defer db.lock()()
+func (db *DB) PutBundle(b []byte) error {
 	err := validateBundle(b, db.noms)
 	if err != nil {
 		return err
 	}
-	var buf []byte
-	buf, err = ioutil.ReadAll(b.Reader())
-	chk.NoError(err)
-	db.bundle = buf
+	defer db.lock()()
+	db.bundle = b
 	return nil
 }
 
@@ -314,12 +308,12 @@ func (db *DB) lock() func() {
 	}
 }
 
-func validateBundle(bundle types.Blob, noms types.ValueReadWriter) error {
+func validateBundle(bundle []byte, noms types.ValueReadWriter) error {
 	// TODO: Passing editor is not really necessary because the script cannot call
 	// it because it only has access to the `db` object which is passed as a param
 	// to transaction functions. We only need to pass something here because the
 	// impl of exec.Run() requires ed.noms.
 	ed := &editor{noms: noms, data: nil}
-	_, err := exec.Run(ed, bundle.Reader(), "", types.NewList(noms))
+	_, err := exec.Run(ed, bytes.NewReader(bundle), "", types.NewList(noms))
 	return err
 }

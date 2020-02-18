@@ -7,12 +7,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"strings"
 	"sync/atomic"
 
 	"github.com/attic-labs/noms/go/hash"
-	"github.com/attic-labs/noms/go/types"
 
 	"roci.dev/replicant/api/shared"
 	"roci.dev/replicant/db"
@@ -181,19 +178,9 @@ func (api *API) dispatchGetBundle(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	b, err := api.db.Bundle()
-	if err != nil {
-		return nil, err
-	}
-	var sb strings.Builder
-	_, err = io.Copy(&sb, b.Reader())
-	if err != nil {
-		return nil, err
-	}
-	res := shared.GetBundleResponse{
-		Code: sb.String(),
-	}
-	return mustMarshal(res), nil
+	return mustMarshal(shared.GetBundleResponse{
+		Code: string(api.db.Bundle()),
+	}), nil
 }
 
 func (api *API) dispatchPutBundle(reqBytes []byte) ([]byte, error) {
@@ -202,8 +189,7 @@ func (api *API) dispatchPutBundle(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	b := types.NewBlob(api.db.Noms(), strings.NewReader(req.Code))
-	err = api.db.PutBundle(b)
+	err = api.db.PutBundle([]byte(req.Code))
 	if err != nil {
 		return nil, errors.New(err.Error())
 	}

@@ -2,7 +2,6 @@ package db
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/attic-labs/noms/go/types"
@@ -17,7 +16,7 @@ func TestValidate(t *testing.T) {
 
 	db, dir := LoadTempDB(assert)
 	fmt.Println(dir)
-	db.PutBundle(types.NewBlob(db.Noms(), strings.NewReader("function log(k, v) { var val = db.get(k) || []; val.push(v); db.put(k, val); }")))
+	db.PutBundle([]byte("function log(k, v) { var val = db.get(k) || []; val.push(v); db.put(k, val); }"))
 	noms := db.noms
 
 	list := func(items ...string) types.List {

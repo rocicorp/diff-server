@@ -49,7 +49,7 @@ func TestRebase(t *testing.T) {
 
 	g := db.head
 	epoch := datetime.DateTime{}
-	bundle := types.NewBlob(noms, strings.NewReader("function log(k, v) { var val = db.get(k) || []; val.push(v); db.put(k, val); }"))
+	bundle := []byte("function log(k, v) { var val = db.get(k) || []; val.push(v); db.put(k, val); }")
 	err := db.PutBundle(bundle)
 	chk.NoError(err)
 
