@@ -37,12 +37,12 @@ func main() {
 }
 
 func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
-	app := kingpin.New("diff-server", "")
+	app := kingpin.New("diffs", "")
 	app.ErrorWriter(errs)
 	app.UsageWriter(errs)
 	app.Terminate(exit)
 
-	v := app.Flag("version", "Prints the version of diff-server - same as the 'version' command.").Short('v').Bool()
+	v := app.Flag("version", "Prints the version of diffs - same as the 'version' command.").Short('v').Bool()
 	sps := app.Flag("db", "The prefix to use for databases managed. Both local and remote databases are supported. For local databases, specify a directory path to store the database in. For remote databases, specify the http(s) URL to the database (usually https://serve.replicate.to/<mydb>).").PlaceHolder("/path/to/db").Required().String()
 	tf := app.Flag("trace", "Name of a file to write a trace to").OpenFile(os.O_RDWR|os.O_CREATE, 0644)
 	cpu := app.Flag("cpu", "Name of file to write CPU profile to").OpenFile(os.O_RDWR|os.O_CREATE, 0644)
