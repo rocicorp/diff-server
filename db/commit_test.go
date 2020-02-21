@@ -45,7 +45,7 @@ func TestMarshal(t *testing.T) {
 			c2,
 			types.NewStruct("Commit", types.StructData{
 				"parents": types.NewSet(noms, c1.Ref()),
-				"meta": types.NewStruct("Tx", types.StructData{
+				"meta": types.NewStruct("", types.StructData{
 					"date": marshal.MustMarshal(noms, d),
 				}),
 				"value": types.NewStruct("", types.StructData{

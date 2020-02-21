@@ -43,7 +43,7 @@ func (c Commit) Data(noms types.ValueReadWriter) types.Map {
 
 func makeCommit(noms types.ValueReadWriter, basis types.Ref, d datetime.DateTime, newData types.Ref) Commit {
 	c := Commit{}
-	if !basis.TargetHash().IsEmpty() {
+	if !basis.IsZeroValue() {
 		c.Parents = []types.Ref{basis}
 	}
 	c.Meta.Date = d
