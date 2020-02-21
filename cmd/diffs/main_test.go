@@ -36,10 +36,8 @@ func TestDrop(t *testing.T) {
 
 	for i, t := range tc {
 		d, dir := db.LoadTempDB(assert)
-		d.Put("foo", types.String("bar"))
-		val, err := d.Get("foo")
+		err := d.PutData(types.NewMap(d.Noms(), types.String("foo"), types.String("bar")))
 		assert.NoError(err)
-		assert.Equal("bar", string(val.(types.String)))
 
 		desc := fmt.Sprintf("test case %d, input: %s", i, t.in)
 		args := append([]string{"--db=" + dir, "drop"})
@@ -77,8 +75,8 @@ func TestServe(t *testing.T) {
 		expectedResponse string
 		expectedError    string
 	}{
-		{"handleSync", `{"basis": "00000000000000000000000000000000"}`,
-			`{"patch":[{"op":"remove","path":"/"}],"commitID":"uosmsi0mbbd1qgf2m0rgfkcrhf32c7om","nomsChecksum":"t13tdcmq2d3pkpt9avk4p4nbt1oagaa3"}`, ""},
+		{"sync", `{"basis": "00000000000000000000000000000000"}`,
+			`{"patch":[{"op":"remove","path":"/"}],"nomsChecksum":"t13tdcmq2d3pkpt9avk4p4nbt1oagaa3"}`, ""},
 	}
 
 	for i, t := range tc {
