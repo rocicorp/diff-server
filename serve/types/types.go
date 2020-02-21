@@ -1,7 +1,7 @@
 package types
 
 import (
-	"roci.dev/replicant/util/noms/jsonpatch"
+	"roci.dev/diff-server/util/noms/jsonpatch"
 )
 
 type HandleSyncRequest struct {

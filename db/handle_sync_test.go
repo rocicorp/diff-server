@@ -8,7 +8,7 @@ import (
 	"github.com/attic-labs/noms/go/hash"
 	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
-	"roci.dev/replicant/util/noms/jsonpatch"
+	"roci.dev/diff-server/util/noms/jsonpatch"
 )
 
 func TestHandleSync(t *testing.T) {

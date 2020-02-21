@@ -10,8 +10,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 
-	"roci.dev/replicant/serve"
-	"roci.dev/replicant/serve/accounts"
+	"roci.dev/diff-server/serve"
+	"roci.dev/diff-server/serve/accounts"
 )
 
 const (

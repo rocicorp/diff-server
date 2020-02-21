@@ -8,7 +8,7 @@ import (
 	"github.com/attic-labs/noms/go/nomdl"
 	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
-	"roci.dev/replicant/util/noms/memstore"
+	"roci.dev/diff-server/util/noms/memstore"
 )
 
 func TestDiff(t *testing.T) {

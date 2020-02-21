@@ -6,7 +6,7 @@ import (
 	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
 
-	"roci.dev/replicant/util/noms/memstore"
+	"roci.dev/diff-server/util/noms/memstore"
 )
 
 func TestMarshalUnion(t *testing.T) {

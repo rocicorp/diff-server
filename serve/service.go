@@ -13,8 +13,8 @@ import (
 
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/dgrijalva/jwt-go"
-	rlog "roci.dev/replicant/util/log"
-	"roci.dev/replicant/util/version"
+	rlog "roci.dev/diff-server/util/log"
+	"roci.dev/diff-server/util/version"
 )
 
 var (

@@ -14,8 +14,8 @@ import (
 	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
 
-	"roci.dev/replicant/db"
-	"roci.dev/replicant/util/time"
+	"roci.dev/diff-server/db"
+	"roci.dev/diff-server/util/time"
 )
 
 func TestAPI(t *testing.T) {
@@ -24,7 +24,8 @@ func TestAPI(t *testing.T) {
 	defer time.SetFake()()
 
 	db, s := startTestServer(assert)
-	db.Put("foo", types.String("bar"))
+	err := db.PutData(types.NewMap(db.Noms(), types.String("foo"), types.String("bar")))
+	assert.NoError(err)
 	defer s.Shutdown(context.Background())
 
 	tc := []struct {
@@ -33,8 +34,8 @@ func TestAPI(t *testing.T) {
 		expectedResponse string
 		expectedError    string
 	}{
-		{"handleSync", `{"basis": "00000000000000000000000000000000"}`,
-			`{"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/u/foo","value":"bar"}],"commitID":"nti2kt1b288sfhdmqkgnjrog52a7m8ob","nomsChecksum":"am8lvhrbscqkngg75jaiubirapurghv9"}`, ""},
+		{"sync", `{"basis": "00000000000000000000000000000000"}`,
+			`{"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/u/foo","value":"bar"}],"nomsChecksum":"am8lvhrbscqkngg75jaiubirapurghv9"}`, ""},
 	}
 
 	for i, t := range tc {

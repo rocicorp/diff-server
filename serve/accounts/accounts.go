@@ -1,7 +1,7 @@
 package accounts
 
 import (
-	"roci.dev/replicant/serve"
+	"roci.dev/diff-server/serve"
 )
 
 var (

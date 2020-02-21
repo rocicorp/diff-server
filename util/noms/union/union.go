@@ -8,7 +8,7 @@ import (
 	"github.com/attic-labs/noms/go/marshal"
 	"github.com/attic-labs/noms/go/types"
 
-	"roci.dev/replicant/util/chk"
+	"roci.dev/diff-server/util/chk"
 )
 
 func Marshal(st interface{}, noms types.ValueReadWriter) (types.Value, error) {

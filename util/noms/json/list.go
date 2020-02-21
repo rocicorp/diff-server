@@ -5,7 +5,7 @@ import (
 
 	"github.com/attic-labs/noms/go/types"
 
-	"roci.dev/replicant/util/chk"
+	"roci.dev/diff-server/util/chk"
 )
 
 // TODO: test

@@ -14,8 +14,8 @@ import (
 	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
 
-	"roci.dev/replicant/db"
-	"roci.dev/replicant/util/time"
+	"roci.dev/diff-server/db"
+	"roci.dev/diff-server/util/time"
 )
 
 func TestDrop(t *testing.T) {

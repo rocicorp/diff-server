@@ -16,11 +16,11 @@ import (
 	"github.com/attic-labs/noms/go/spec"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
-	"roci.dev/replicant/db"
-	servepkg "roci.dev/replicant/serve"
-	"roci.dev/replicant/serve/accounts"
-	rlog "roci.dev/replicant/util/log"
-	"roci.dev/replicant/util/version"
+	"roci.dev/diff-server/db"
+	servepkg "roci.dev/diff-server/serve"
+	"roci.dev/diff-server/serve/accounts"
+	rlog "roci.dev/diff-server/util/log"
+	"roci.dev/diff-server/util/version"
 )
 
 const (
@@ -134,7 +134,7 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 type gsp func() (spec.Spec, error)
 
 func serve(parent *kingpin.Application, sps *string, errs io.Writer) {
-	kc := parent.Command("serve", "Starts a local Replicant server.")
+	kc := parent.Command("serve", "Starts a local diff-server.")
 	port := kc.Flag("port", "The port to run on").Default("7001").Int()
 	kc.Action(func(_ *kingpin.ParseContext) error {
 		ps := fmt.Sprintf(":%d", *port)
@@ -146,7 +146,7 @@ func serve(parent *kingpin.Application, sps *string, errs io.Writer) {
 }
 
 func drop(parent *kingpin.Application, gsp gsp, in io.Reader, out io.Writer) {
-	kc := parent.Command("drop", "Deletes a replicant database and its history.")
+	kc := parent.Command("drop", "Deletes a diff-server database and its history.")
 
 	r := bufio.NewReader(in)
 	w := bufio.NewWriter(out)
