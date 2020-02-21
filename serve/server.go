@@ -5,6 +5,7 @@ package serve
 import (
 	"bytes"
 	"compress/gzip"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -17,17 +18,12 @@ import (
 	"github.com/attic-labs/noms/go/chunks"
 	"github.com/attic-labs/noms/go/datas"
 	"github.com/attic-labs/noms/go/hash"
-	"github.com/attic-labs/noms/go/marshal"
 	"github.com/attic-labs/noms/go/types"
 	"github.com/attic-labs/noms/go/util/verbose"
 	"github.com/julienschmidt/httprouter"
 
-	"roci.dev/replicant/api"
-	"roci.dev/replicant/db"
-)
-
-var (
-	commands = []string{"handleSync"}
+	"roci.dev/diff-server/db"
+	servetypes "roci.dev/diff-server/serve/types"
 )
 
 // server is a single Replicant instance. The Replicant service runs many such instances.
@@ -35,7 +31,6 @@ type server struct {
 	router *httprouter.Router
 	db     *db.DB
 	mu     sync.Mutex
-	api    *api.API
 }
 
 func newServer(cs chunks.ChunkStore, urlPrefix string) (*server, error) {
@@ -45,46 +40,57 @@ func newServer(cs chunks.ChunkStore, urlPrefix string) (*server, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := &server{router: router, db: db, api: api.New(db)}
-	for _, method := range commands {
-		m := method
-		s.router.POST(fmt.Sprintf("%s/%s", urlPrefix, method), func(rw http.ResponseWriter, req *http.Request, ps httprouter.Params) {
-			body := bytes.Buffer{}
-			_, err := io.Copy(&body, req.Body)
-			logPayload(req, body.Bytes(), db)
-			if err != nil {
-				serverError(rw, err)
-				return
-			}
-			resp, err := s.api.Dispatch(m, body.Bytes())
-			if err != nil {
-				// TODO: this might not be a client (4xx) error
-				// Need to change API to be able to indicate user vs server error
-				clientError(rw, http.StatusBadRequest, err.Error()+"\n")
-				return
-			}
+	s := &server{router: router, db: db}
+	s.router.POST(fmt.Sprintf("%s/sync", urlPrefix), func(rw http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+		body := bytes.Buffer{}
+		_, err := io.Copy(&body, req.Body)
+		logPayload(req, body.Bytes(), db)
+		if err != nil {
+			serverError(rw, err)
+			return
+		}
+		var hsreq servetypes.HandleSyncRequest
+		err = json.Unmarshal(body.Bytes(), &hsreq)
+		if err != nil {
+			serverError(rw, err)
+			return
+		}
+		from, ok := hash.MaybeParse(hsreq.Basis)
+		if !ok {
+			clientError(rw, 400, "Invalid basis hash")
+			return
+		}
+		patch, err := s.db.HandleSync(from)
+		if err != nil {
+			serverError(rw, err)
+			return
+		}
+		hsresp := servetypes.HandleSyncResponse{
+			Patch:        patch,
+			NomsChecksum: s.db.Head().Value.Data.TargetHash().String(),
+		}
+		resp, err := json.Marshal(hsresp)
+		if err != nil {
+			serverError(rw, err)
+			return
+		}
+		rw.Header().Set("Content-type", "application/json")
+		rw.Header().Set("Entity-length", strconv.Itoa(len(resp)))
 
-			rw.Header().Set("Content-type", "application/json")
-			rw.Header().Set("Entity-length", strconv.Itoa(len(resp)))
+		w := io.Writer(rw)
+		if strings.Contains(req.Header.Get("Accept-Encoding"), "gzip") {
+			rw.Header().Set("Content-encoding", "gzip")
+			w = gzip.NewWriter(w)
+		}
 
-			w := io.Writer(rw)
-			if strings.Contains(req.Header.Get("Accept-Encoding"), "gzip") {
-				rw.Header().Set("Content-encoding", "gzip")
-				w = gzip.NewWriter(w)
-			}
-
-			_, err = io.Copy(w, bytes.NewReader(resp))
-			if err != nil {
-				serverError(rw, err)
-			}
-			w.Write([]byte{'\n'})
-			if c, ok := w.(io.Closer); ok {
-				c.Close()
-			}
-		})
-	}
-	s.router.POST(urlPrefix+"/sync", func(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-		s.sync(w, req)
+		_, err = io.Copy(w, bytes.NewReader(resp))
+		if err != nil {
+			serverError(rw, err)
+		}
+		w.Write([]byte{'\n'})
+		if c, ok := w.(io.Closer); ok {
+			c.Close()
+		}
 	})
 	return s, nil
 }
@@ -103,36 +109,6 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	s.router.ServeHTTP(w, r)
-}
-
-func (s *server) sync(w http.ResponseWriter, req *http.Request) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	params := req.URL.Query()
-	clientHash, ok := hash.MaybeParse(params.Get("head"))
-	if !ok {
-		clientError(w, http.StatusBadRequest, "invalid value for head param")
-		return
-	}
-	var clientCommit db.Commit
-	clientVal := s.db.Noms().ReadValue(clientHash)
-	if clientVal == nil {
-		clientError(w, http.StatusBadRequest, "Specified hash not found")
-		return
-	}
-	err := marshal.Unmarshal(clientVal, &clientCommit)
-	if err != nil {
-		clientError(w, http.StatusBadRequest, "Invalid client commit")
-		return
-	}
-	mergedCommit, err := db.HandleSync(s.db, clientCommit)
-	if err != nil {
-		serverError(w, err)
-		return
-	}
-	w.WriteHeader(http.StatusOK)
-	io.Copy(w, strings.NewReader(mergedCommit.TargetHash().String()))
 }
 
 func logPayload(req *http.Request, body []byte, d *db.DB) {

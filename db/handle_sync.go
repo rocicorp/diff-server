@@ -7,8 +7,8 @@ import (
 	"github.com/attic-labs/noms/go/hash"
 	"github.com/attic-labs/noms/go/marshal"
 	"github.com/attic-labs/noms/go/types"
+	"github.com/attic-labs/noms/go/util/datetime"
 	"roci.dev/replicant/util/noms/jsonpatch"
-	"roci.dev/replicant/util/time"
 )
 
 func (db *DB) HandleSync(from hash.Hash) ([]jsonpatch.Operation, error) {
@@ -26,7 +26,7 @@ func (db *DB) HandleSync(from hash.Hash) ([]jsonpatch.Operation, error) {
 			Op:   jsonpatch.OpRemove,
 			Path: "/",
 		})
-		fc = makeGenesis(db.Noms(), "")
+		fc = makeCommit(db.Noms(), types.Ref{}, datetime.Epoch, db.noms.WriteValue(types.NewMap(db.noms)))
 	} else {
 		err = marshal.Unmarshal(v, &fc)
 		if err != nil {
@@ -48,22 +48,4 @@ func (db *DB) HandleSync(from hash.Hash) ([]jsonpatch.Operation, error) {
 	}
 
 	return r, nil
-}
-
-// HandleSync implements the server-side of the sync protocol. It's not typical to call it
-// directly, and is exposed primarily so that the server implementation can call it.
-func HandleSync(dest *DB, commit Commit) (newHead types.Ref, err error) {
-	rebased, err := rebase(dest, types.NewRef(dest.head.Original), time.DateTime(), commit, types.Ref{})
-	if err != nil {
-		return newHead, err
-	}
-	_, err = dest.noms.FastForward(dest.noms.GetDataset(LOCAL_DATASET), dest.noms.WriteValue(rebased.Original))
-	if err != nil {
-		return newHead, err
-	}
-	err = dest.init()
-	if err != nil {
-		return newHead, err
-	}
-	return types.NewRef(rebased.Original), nil
 }

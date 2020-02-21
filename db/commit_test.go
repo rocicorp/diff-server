@@ -21,31 +21,19 @@ func TestMarshal(t *testing.T) {
 
 	d := datetime.Now()
 	dr := noms.WriteValue(types.NewMap(noms, types.String("foo"), types.String("bar")))
-	args := types.NewList(noms, types.Bool(true), types.String("monkey"))
-	g := makeGenesis(noms, "")
-	tx := makeTx(noms, types.NewRef(g.Original), d, "func", args, dr)
-	noms.WriteValue(g.Original)
-	noms.WriteValue(tx.Original)
+	c1 := makeCommit(noms, types.Ref{}, d, noms.WriteValue(types.NewMap(noms)))
+	c2 := makeCommit(noms, noms.WriteValue(c1.Original), d, dr)
+	noms.WriteValue(c2.Original)
 
 	tc := []struct {
 		in  Commit
 		exp types.Value
 	}{
 		{
-			makeGenesis(noms, ""),
+			c1,
 			types.NewStruct("Commit", types.StructData{
-				"meta":    types.NewStruct("Genesis", types.StructData{}),
-				"parents": types.NewSet(noms),
-				"value": types.NewStruct("", types.StructData{
-					"data": emptyMap,
-				}),
-			}),
-		},
-		{
-			makeGenesis(noms, "foo"),
-			types.NewStruct("Commit", types.StructData{
-				"meta": types.NewStruct("Genesis", types.StructData{
-					"serverCommitID": types.String("foo"),
+				"meta": types.NewStruct("", types.StructData{
+					"date": marshal.MustMarshal(noms, d),
 				}),
 				"parents": types.NewSet(noms),
 				"value": types.NewStruct("", types.StructData{
@@ -54,40 +42,11 @@ func TestMarshal(t *testing.T) {
 			}),
 		},
 		{
-			tx,
+			c2,
 			types.NewStruct("Commit", types.StructData{
-				"parents": types.NewSet(noms, types.NewRef(g.Original)),
+				"parents": types.NewSet(noms, c1.Ref()),
 				"meta": types.NewStruct("Tx", types.StructData{
 					"date": marshal.MustMarshal(noms, d),
-					"name": types.String("func"),
-					"args": args,
-				}),
-				"value": types.NewStruct("", types.StructData{
-					"data": dr,
-				}),
-			}),
-		},
-		{
-			makeTx(noms, types.NewRef(g.Original), d, "func", args, dr),
-			types.NewStruct("Commit", types.StructData{
-				"parents": types.NewSet(noms, types.NewRef(g.Original)),
-				"meta": types.NewStruct("Tx", types.StructData{
-					"date": marshal.MustMarshal(noms, d),
-					"name": types.String("func"),
-					"args": args,
-				}),
-				"value": types.NewStruct("", types.StructData{
-					"data": dr,
-				}),
-			}),
-		},
-		{
-			makeReorder(noms, types.NewRef(g.Original), d, types.NewRef(tx.Original), dr),
-			types.NewStruct("Commit", types.StructData{
-				"parents": types.NewSet(noms, types.NewRef(g.Original), types.NewRef(tx.Original)),
-				"meta": types.NewStruct("Reorder", types.StructData{
-					"date":    marshal.MustMarshal(noms, d),
-					"subject": types.NewRef(tx.Original),
 				}),
 				"value": types.NewStruct("", types.StructData{
 					"data": dr,

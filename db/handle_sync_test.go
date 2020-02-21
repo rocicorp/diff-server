@@ -16,7 +16,6 @@ func TestHandleSync(t *testing.T) {
 	db, dir := LoadTempDB(assert)
 	fmt.Println(dir)
 
-	bundle := `function set(k, v) { db.put(k, v); }`
 	var fromID hash.Hash
 	tc := []struct {
 		label         string
@@ -31,19 +30,11 @@ func TestHandleSync(t *testing.T) {
 			"",
 		},
 		{
-			"put-bundle",
-			func() {
-				db.PutBundle([]byte(bundle))
-			},
-			[]jsonpatch.Operation{},
-			"",
-		},
-		{
 			"change-1",
 			func() {
-				_, err := db.Exec("set", types.NewList(db.Noms(), types.String("foo"), types.String("bar")))
-				assert.NoError(err)
-				_, err = db.Exec("set", types.NewList(db.Noms(), types.String("hot"), types.String("dog")))
+				err := db.PutData(types.NewMap(db.noms,
+					types.String("foo"), types.String("bar"),
+					types.String("hot"), types.String("dog")))
 				assert.NoError(err)
 			},
 			[]jsonpatch.Operation{
@@ -63,12 +54,9 @@ func TestHandleSync(t *testing.T) {
 		{
 			"change-2",
 			func() {
-				ok, err := db.Del("hot")
-				assert.True(ok)
-				assert.NoError(err)
-				_, err = db.Exec("set", types.NewList(db.Noms(), types.String("foo"), types.String("baz")))
-				assert.NoError(err)
-				_, err = db.Exec("set", types.NewList(db.Noms(), types.String("mon"), types.String("key")))
+				err := db.PutData(types.NewMap(db.noms,
+					types.String("foo"), types.String("baz"),
+					types.String("mon"), types.String("key")))
 				assert.NoError(err)
 			},
 			[]jsonpatch.Operation{
@@ -91,13 +79,7 @@ func TestHandleSync(t *testing.T) {
 		},
 		{
 			"no-diff",
-			func() {
-				err := db.Put("a", types.String("a"))
-				assert.NoError(err)
-				ok, err := db.Del("a")
-				assert.True(ok)
-				assert.NoError(err)
-			},
+			func() {},
 			[]jsonpatch.Operation{},
 			"",
 		},
@@ -106,10 +88,12 @@ func TestHandleSync(t *testing.T) {
 			func() {
 				db, dir = LoadTempDB(assert)
 				fmt.Println("newdir", dir)
+				m := types.NewMap(db.noms).Edit()
 				for _, s := range []string{"a", "b", "c"} {
-					err := db.Put(s, types.String(s))
-					assert.NoError(err)
+					m.Set(types.String(s), types.String(s))
 				}
+				err := db.PutData(m.Map())
+				assert.NoError(err)
 			},
 			[]jsonpatch.Operation{
 				jsonpatch.Operation{
