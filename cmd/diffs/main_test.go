@@ -75,7 +75,7 @@ func TestServe(t *testing.T) {
 		expectedResponse string
 		expectedError    string
 	}{
-		{"sync", `{"basis": "00000000000000000000000000000000"}`,
+		{"handleSync", `{"basis": "00000000000000000000000000000000"}`,
 			`{"patch":[{"op":"remove","path":"/"}],"nomsChecksum":"t13tdcmq2d3pkpt9avk4p4nbt1oagaa3"}`, ""},
 	}
 

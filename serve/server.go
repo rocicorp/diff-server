@@ -41,7 +41,7 @@ func newServer(cs chunks.ChunkStore, urlPrefix string) (*server, error) {
 		return nil, err
 	}
 	s := &server{router: router, db: db}
-	s.router.POST(fmt.Sprintf("%s/sync", urlPrefix), func(rw http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+	s.router.POST(fmt.Sprintf("%s/handleSync", urlPrefix), func(rw http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 		body := bytes.Buffer{}
 		_, err := io.Copy(&body, req.Body)
 		logPayload(req, body.Bytes(), db)

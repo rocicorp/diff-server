@@ -34,7 +34,7 @@ func TestAPI(t *testing.T) {
 		expectedResponse string
 		expectedError    string
 	}{
-		{"sync", `{"basis": "00000000000000000000000000000000"}`,
+		{"handleSync", `{"basis": "00000000000000000000000000000000"}`,
 			`{"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/u/foo","value":"bar"}],"nomsChecksum":"am8lvhrbscqkngg75jaiubirapurghv9"}`, ""},
 	}
 
