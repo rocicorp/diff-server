@@ -2,7 +2,7 @@
 
 This repository implements the Replicache Diff Server. See [Replicache](https://github.com/rocicorp/replicache) for more information.
 
-# Build
+## Build
 
 ```
 cd ~/work
@@ -12,13 +12,13 @@ go build ./cmd/diffs
 go test ./...
 ```
 
-# Run (Development Mode)
+## Run (Development Mode)
 
 ```
 ./diffs serve --db=/tmp/diffs-data
 ```
 
-# Deploy
+## Deploy
 
 ```
 now deploy
