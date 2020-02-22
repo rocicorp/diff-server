@@ -76,7 +76,7 @@ func TestServe(t *testing.T) {
 		expectedError    string
 	}{
 		{"handleSync", `{"basis": "00000000000000000000000000000000"}`,
-			`{"patch":[{"op":"remove","path":"/"}],"nomsChecksum":"t13tdcmq2d3pkpt9avk4p4nbt1oagaa3"}`, ""},
+			`{"commitID":"rub50suqvv4fuv48andafkg65i3c184b","patch":[{"op":"remove","path":"/"}],"nomsChecksum":"t13tdcmq2d3pkpt9avk4p4nbt1oagaa3"}`, ""},
 	}
 
 	for i, t := range tc {

@@ -13,7 +13,6 @@ import (
 	"github.com/attic-labs/noms/go/marshal"
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/attic-labs/noms/go/types"
-	"github.com/attic-labs/noms/go/util/datetime"
 	"roci.dev/diff-server/util/time"
 )
 
@@ -59,7 +58,7 @@ func New(noms datas.Database) (*DB, error) {
 func (db *DB) init() error {
 	ds := db.noms.GetDataset(LOCAL_DATASET)
 	if !ds.HasHead() {
-		genesis := makeCommit(db.noms, types.Ref{}, datetime.Now(), db.Noms().WriteValue(types.NewMap(db.Noms())))
+		genesis := makeCommit(db.noms, types.Ref{}, time.DateTime(), db.Noms().WriteValue(types.NewMap(db.Noms())))
 		genRef := db.noms.WriteValue(genesis.Original)
 		_, err := db.noms.FastForward(ds, genRef)
 		if err != nil {

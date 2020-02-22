@@ -66,6 +66,7 @@ func newServer(cs chunks.ChunkStore, urlPrefix string) (*server, error) {
 			return
 		}
 		hsresp := servetypes.HandleSyncResponse{
+			CommitID:     s.db.Head().Original.Hash().String(),
 			Patch:        patch,
 			NomsChecksum: s.db.Head().Value.Data.TargetHash().String(),
 		}

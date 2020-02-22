@@ -9,6 +9,7 @@ type HandleSyncRequest struct {
 }
 
 type HandleSyncResponse struct {
+	CommitID     string                `json:"commitID"`
 	Patch        []jsonpatch.Operation `json:"patch"`
 	NomsChecksum string                `json:"nomsChecksum"`
 }

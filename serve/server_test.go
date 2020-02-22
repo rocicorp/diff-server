@@ -35,7 +35,7 @@ func TestAPI(t *testing.T) {
 		expectedError    string
 	}{
 		{"handleSync", `{"basis": "00000000000000000000000000000000"}`,
-			`{"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/u/foo","value":"bar"}],"nomsChecksum":"am8lvhrbscqkngg75jaiubirapurghv9"}`, ""},
+			`{"commitID":"139nd8tfucpp5m82o5sumjktgicbtt99","patch":[{"op":"remove","path":"/"},{"op":"add","path":"/u/foo","value":"bar"}],"nomsChecksum":"am8lvhrbscqkngg75jaiubirapurghv9"}`, ""},
 	}
 
 	for i, t := range tc {
