@@ -17,12 +17,12 @@ func TestChecksumComputeAndValue(t *testing.T) {
 	// Might look like a dumb test but it caught two errors in the
 	// original implementation.
 	k := []byte{0x01, 0x02}
-	v := "value"
+	v := "value⌘" // ⌘ is 3 bytes, ensuring code is counting bytes not runes
 	expectedInput := []byte{
-		0x4B, 0x4C, 0x3D, 0x32, // KL=2
-		0x4B, 0x3D, 0x01, 0x02, // K={0x01, 0x02}
-		0x56, 0x4C, 0x3D, 0x35, // VL=5
-		0x56, 0x3D, 0x76, 0x61, 0x6C, 0x75, 0x65, // V={v,a,l,u,e}
+		0x32,       // '2'
+		0x01, 0x02, // {0x01, 0x02}
+		0x38,                                           // '8'
+		0x76, 0x61, 0x6c, 0x75, 0x65, 0xe2, 0x8c, 0x98, // 'v''a''l'u''e''⌘'
 	}
 	c.Add(k, v)
 	assert.Equal(fmt.Sprintf("%08x", crc32.ChecksumIEEE(expectedInput)), c.Value())
