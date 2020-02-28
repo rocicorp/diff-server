@@ -79,6 +79,7 @@ func Diff(from, to types.Map, r []Operation) ([]Operation, error) {
 						Lists: true,
 						Maps:  true,
 					})
+					// Danger: swallowed error.
 					if err != nil {
 						return
 					}
@@ -149,3 +150,30 @@ func Apply(noms types.ValueReadWriter, onto types.Map, patch []Operation) (types
 	}
 	return ed.Map(), nil
 }
+
+// type kvGetter interface {
+// 	Get(key string) (value []byte, err error)
+// }
+
+// func ApplyDiff(c Checksum, kv kvGetter, patch []jsonpatch.Operation) (Checksum, error) {
+// 	for _, o := range patch {
+// 		switch o.Op {
+// 		case jsonpatch.OpRemove:
+// 			if o.Path == "/" {
+// 				c.Reset()
+// 			} else {
+// 				c.Remove(o.Path, o.Value)
+// 			}
+// 		case jsonpatch.OpAdd:
+// 			c.Add(o.Path, o.Value)
+// 		case jsonpatch.OpReplace:
+// 			oldValue, err := kv.Get(o.Path)
+// 			if err != nil {
+// 				return c, errors.Wrapf(err, "Couldn't read key [%s] from kv store", o.Path)
+// 			}
+// 			c.Replace(o.Path, oldValue, o.Value)
+// 		}
+// 	}
+
+// 	return c, nil
+// }

@@ -21,7 +21,7 @@ func (db *DB) HandleSync(from hash.Hash) ([]jsonpatch.Operation, error) {
 	var fc Commit
 	var err error
 	if v == nil {
-		log.Printf("Error: Requested sync basis %s could not be found - sending a fresh sync", from)
+		log.Printf("Requested sync basis %s could not be found - sending a fresh sync", from)
 		r = append(r, jsonpatch.Operation{
 			Op:   jsonpatch.OpRemove,
 			Path: "/",
@@ -46,6 +46,8 @@ func (db *DB) HandleSync(from hash.Hash) ([]jsonpatch.Operation, error) {
 			r[i].Path = "/u" + r[i].Path
 		}
 	}
+
+	// TODO
 
 	return r, nil
 }
