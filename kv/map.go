@@ -24,7 +24,8 @@ func NewMap(noms types.ValueReadWriter) *Map {
 }
 
 // NewMapFromNoms returns a new Map from an existing noms map. This
-// is mainly useful in testing, so far.
+// is mainly useful in testing, so far. Creates a full copy by iterating
+// the noms map, so be careful.
 func NewMapFromNoms(noms types.ValueReadWriter, nm types.Map) *Map {
 	// We dont want to just return a Map with the embedded noms map because
 	// that misses applying any logic in Map.Set eg canonicalization.
