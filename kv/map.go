@@ -64,9 +64,10 @@ func bytesFromNomsValue(value types.Valuable) ([]byte, error) {
 		return []byte{}, err
 	}
 
-	// Canonicalize the output by round tripping through canonical json.
-	// This is inefficient; noms should have the option to canonicalize.
-	// This is also a ripe territory for bugs and we should have better
+	// Canonicalize the output here with canonical json. Likely story is
+	// copying nomsjson and switching it from using the default go impl
+	// to use canonical json package below.
+	// This is ripe territory for bugs and we should have good
 	// canonicalization testing.
 	// TODO canonicalize using 	cjson "github.com/gibson042/canonicaljson-go"
 	// TODO be sure to disallow nil values
