@@ -50,8 +50,7 @@ func TestMapGetSetRemove(t *testing.T) {
 	noms := memstore.New()
 
 	k1 := "k1"
-	//v1, v2 := []byte("\"1\""), []byte("\"2\"")
-	v1, v2 := []byte("1"), []byte("2")
+	v1, v2 := []byte("\"1\""), []byte("\"2\"")
 
 	em := kv.NewMap(noms)
 	assertGetError(assert, em, k1)
