@@ -16,6 +16,10 @@ func (c Checksum) Value() string {
 	return fmt.Sprintf("%08x", c.value)
 }
 
+func (c Checksum) String() string {
+	return c.Value()
+}
+
 func hashEntry(key string, value []byte) uint32 {
 	keyLen := []byte(fmt.Sprintf("%d", len(key)))
 	valLen := []byte(fmt.Sprintf("%d", len(value)))
