@@ -8,7 +8,7 @@ import (
 	"github.com/attic-labs/noms/go/hash"
 	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
-	"roci.dev/diff-server/util/noms/jsonpatch"
+	"roci.dev/diff-server/kv"
 )
 
 func TestHandleSync(t *testing.T) {
@@ -20,13 +20,13 @@ func TestHandleSync(t *testing.T) {
 	tc := []struct {
 		label         string
 		f             func()
-		expectedDiff  []jsonpatch.Operation
+		expectedDiff  []kv.Operation
 		expectedError string
 	}{
 		{
 			"same-commit",
 			func() {},
-			[]jsonpatch.Operation{},
+			[]kv.Operation{},
 			"",
 		},
 		{
@@ -37,15 +37,15 @@ func TestHandleSync(t *testing.T) {
 					types.String("hot"), types.String("dog")))
 				assert.NoError(err)
 			},
-			[]jsonpatch.Operation{
+			[]kv.Operation{
 				{
-					Op:    jsonpatch.OpAdd,
-					Path:  "/u/foo",
+					Op:    kv.OpAdd,
+					Path:  "/foo",
 					Value: []byte("\"bar\""),
 				},
 				{
-					Op:    jsonpatch.OpAdd,
-					Path:  "/u/hot",
+					Op:    kv.OpAdd,
+					Path:  "/hot",
 					Value: []byte("\"dog\""),
 				},
 			},
@@ -59,19 +59,19 @@ func TestHandleSync(t *testing.T) {
 					types.String("mon"), types.String("key")))
 				assert.NoError(err)
 			},
-			[]jsonpatch.Operation{
+			[]kv.Operation{
 				{
-					Op:    jsonpatch.OpReplace,
-					Path:  "/u/foo",
+					Op:    kv.OpReplace,
+					Path:  "/foo",
 					Value: []byte("\"baz\""),
 				},
 				{
-					Op:   jsonpatch.OpRemove,
-					Path: "/u/hot",
+					Op:   kv.OpRemove,
+					Path: "/hot",
 				},
 				{
-					Op:    jsonpatch.OpAdd,
-					Path:  "/u/mon",
+					Op:    kv.OpAdd,
+					Path:  "/mon",
 					Value: []byte("\"key\""),
 				},
 			},
@@ -80,7 +80,7 @@ func TestHandleSync(t *testing.T) {
 		{
 			"no-diff",
 			func() {},
-			[]jsonpatch.Operation{},
+			[]kv.Operation{},
 			"",
 		},
 		{
@@ -95,24 +95,24 @@ func TestHandleSync(t *testing.T) {
 				err := db.PutData(m.Map())
 				assert.NoError(err)
 			},
-			[]jsonpatch.Operation{
-				jsonpatch.Operation{
-					Op:   jsonpatch.OpRemove,
+			[]kv.Operation{
+				kv.Operation{
+					Op:   kv.OpRemove,
 					Path: "/",
 				},
-				jsonpatch.Operation{
-					Op:    jsonpatch.OpAdd,
-					Path:  "/u/a",
+				kv.Operation{
+					Op:    kv.OpAdd,
+					Path:  "/a",
 					Value: json.RawMessage([]byte(`"a"`)),
 				},
-				jsonpatch.Operation{
-					Op:    jsonpatch.OpAdd,
-					Path:  "/u/b",
+				kv.Operation{
+					Op:    kv.OpAdd,
+					Path:  "/b",
 					Value: json.RawMessage([]byte(`"b"`)),
 				},
-				jsonpatch.Operation{
-					Op:    jsonpatch.OpAdd,
-					Path:  "/u/c",
+				kv.Operation{
+					Op:    kv.OpAdd,
+					Path:  "/c",
 					Value: json.RawMessage([]byte(`"c"`)),
 				},
 			},
@@ -123,24 +123,24 @@ func TestHandleSync(t *testing.T) {
 			func() {
 				fromID = hash.Hash{}
 			},
-			[]jsonpatch.Operation{
-				jsonpatch.Operation{
-					Op:   jsonpatch.OpRemove,
+			[]kv.Operation{
+				kv.Operation{
+					Op:   kv.OpRemove,
 					Path: "/",
 				},
-				jsonpatch.Operation{
-					Op:    jsonpatch.OpAdd,
-					Path:  "/u/a",
+				kv.Operation{
+					Op:    kv.OpAdd,
+					Path:  "/a",
 					Value: json.RawMessage([]byte(`"a"`)),
 				},
-				jsonpatch.Operation{
-					Op:    jsonpatch.OpAdd,
-					Path:  "/u/b",
+				kv.Operation{
+					Op:    kv.OpAdd,
+					Path:  "/b",
 					Value: json.RawMessage([]byte(`"b"`)),
 				},
-				jsonpatch.Operation{
-					Op:    jsonpatch.OpAdd,
-					Path:  "/u/c",
+				kv.Operation{
+					Op:    kv.OpAdd,
+					Path:  "/c",
 					Value: json.RawMessage([]byte(`"c"`)),
 				},
 			},
