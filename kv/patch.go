@@ -1,10 +1,11 @@
-// Package jsonpatch implements the JSON Patch format for Noms.
+package kv
+
+// This file implements JSON Patch format for Noms-based Maps.
 // See http://jsonpatch.com/
 //
 // Notes:
-// - jsonpatch only currently supports the "add", "remove", and "replace" operations.
-// - jsonpatch can only compute diffs on Noms values that are Boolean|Number|String, or Lists and Maps containing those types.
-package jsonpatch
+// - only currently supports the "add", "remove", and "replace" operations.
+// - can only compute diffs on Noms values that are Boolean|Number|String, or Lists and Maps containing those types.
 
 import (
 	"bytes"
@@ -44,15 +45,17 @@ func jsonPointerUnescape(s string) string {
 	return strings.ReplaceAll(strings.ReplaceAll(s, "~1", "/"), "~0", "~")
 }
 
-// Diff calculates the difference between two Noms maps as a JSON patch and streams the result to the provided writer.
-func Diff(from, to types.Map, r []Operation) ([]Operation, error) {
+// Diff calculates the difference between two maps as a JSON patch. Presently only
+// creates ops at the top level, at the level of keys, so not super efficient.
+func Diff(from, to *Map, r []Operation) ([]Operation, error) {
 	dChan := make(chan types.ValueChanged)
 	sChan := make(chan struct{})
 	out := make(chan Operation)
 
 	go func() {
 		defer close(dChan)
-		to.Diff(from, dChan, sChan)
+		// Diffing is delegated to the underlying noms maps.
+		to.nm.Diff(from.nm, dChan, sChan)
 	}()
 
 	wg := &sync.WaitGroup{}
@@ -90,7 +93,7 @@ func Diff(from, to types.Map, r []Operation) ([]Operation, error) {
 					}
 					op.Value = json.RawMessage(b.Bytes())
 				default:
-					chk.Fail("Unexpected Noms ChangeType: %#v", d)
+					chk.Fail("Unexpected ChangeType: %#v", d)
 				}
 				out <- op
 			}
@@ -117,35 +120,31 @@ func Diff(from, to types.Map, r []Operation) ([]Operation, error) {
 	return r, nil
 }
 
-func ApplyOne(noms types.ValueReadWriter, onto *types.MapEditor, op Operation) error {
-	if !strings.HasPrefix(op.Path, "/") {
-		return fmt.Errorf("Invalid path %s - must start with /", op.Path)
-	}
-	p := types.String(jsonPointerUnescape(op.Path[1:]))
-	switch op.Op {
-	case OpAdd, OpReplace:
-		v, err := nomsjson.FromJSON(bytes.NewReader([]byte(op.Value)), noms, nomsjson.FromOptions{})
-		if err != nil {
-			return err
-		}
-		onto.Set(p, v)
-	case OpRemove:
-		onto.Remove(p)
-	default:
-		return fmt.Errorf("Unknown JSON Patch operation: %s", op.Op)
-	}
-	return nil
-}
-
-func Apply(noms types.ValueReadWriter, onto types.Map, patch []Operation) (types.Map, error) {
+// ApplyPath applies the given series of ops to the input Map.
+func ApplyPatch(to *Map, patch []Operation) (*Map, error) {
 	if len(patch) == 0 {
-		return onto, nil
+		return to, nil
 	}
-	ed := onto.Edit()
+	ed := to.Edit()
 	for _, op := range patch {
-		err := ApplyOne(noms, ed, op)
-		if err != nil {
-			return types.Map{}, err
+		if !strings.HasPrefix(op.Path, "/") {
+			return &Map{}, fmt.Errorf("Invalid path %s - must start with /", op.Path)
+		}
+		p := jsonPointerUnescape(op.Path[1:])
+		switch op.Op {
+		case OpAdd, OpReplace:
+			if err := ed.Set(p, op.Value); err != nil {
+				return &Map{}, err
+			}
+		case OpRemove:
+			if len(p) == 0 { // Remove("/")
+				emptyMap := NewMap(ed.noms)
+				ed = emptyMap.Edit()
+			} else if err := ed.Remove(p); err != nil {
+				return &Map{}, err
+			}
+		default:
+			return &Map{}, fmt.Errorf("Unknown JSON Patch operation: %s", op.Op)
 		}
 	}
 	return ed.Map(), nil
