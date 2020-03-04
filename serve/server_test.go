@@ -19,7 +19,7 @@ import (
 )
 
 func TestAPI(t *testing.T) {
-	assert := assert.
+	assert := assert.New(t)
 	defer time.SetFake()()
 
 	db, s := startTestServer(assert)
