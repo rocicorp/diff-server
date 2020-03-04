@@ -12,7 +12,7 @@ func TestChecksumComputeAndValue(t *testing.T) {
 	assert := assert.New(t)
 
 	var c Checksum
-	assert.Equal("00000000", c.Value())
+	assert.Equal("00000000", c.String())
 
 	// Might look like a dumb test but it caught two errors in the
 	// original implementation.
@@ -25,7 +25,7 @@ func TestChecksumComputeAndValue(t *testing.T) {
 		0x01, 0x02, // {0x01, 0x02}
 	}
 	c.Add(k, v)
-	assert.Equal(fmt.Sprintf("%08x", crc32.ChecksumIEEE(expectedInput)), c.Value())
+	assert.Equal(fmt.Sprintf("%08x", crc32.ChecksumIEEE(expectedInput)), c.String())
 }
 
 func TestChecksumOperations(t *testing.T) {

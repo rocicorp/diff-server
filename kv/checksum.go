@@ -11,13 +11,8 @@ type Checksum struct {
 	value uint32
 }
 
-// Value returns the current checksum value.
-func (c Checksum) Value() string {
-	return fmt.Sprintf("%08x", c.value)
-}
-
 func (c Checksum) String() string {
-	return c.Value()
+	return fmt.Sprintf("%08x", c.value)
 }
 
 func hashEntry(key string, value []byte) uint32 {
@@ -53,7 +48,7 @@ func (c *Checksum) Replace(key string, oldValue, newValue []byte) {
 
 // Equal returns true if two checksums are equal.
 func (c Checksum) Equal(c2 Checksum) bool {
-	return c.Value() == c2.Value()
+	return c.value == c2.value
 }
 
 // Reset resets the checksum to zero.
