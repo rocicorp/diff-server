@@ -40,15 +40,14 @@ func NewMapFromNoms(noms types.ValueReadWriter, nm types.Map) *Map {
 
 		me.Set(k, v)
 	}
-	return me.Map()
+	return me.Build()
 }
 
 // Get returns the json bytes for the given key, which must exist.
-// It is an error to Get a key that does not exist.
 func (m Map) Get(key string) ([]byte, error) {
 	value, ok := m.nm.MaybeGet(types.String(key))
 	if !ok {
-		return []byte{}, fmt.Errorf("no such key %s", key)
+		return nil, nil
 	}
 
 	return bytesFromNomsValue(value)
@@ -86,9 +85,9 @@ func (m Map) Edit() *MapEditor {
 	return &MapEditor{m.noms, m.nm.Edit(), m.c}
 }
 
-// String returns the string value of the Map.
-func (m Map) String() string {
-	return fmt.Sprintf("Checksum: %s, noms Map: %s\n", m.Checksum(), types.EncodedValue(m.nm))
+// DebugString returns a nice string value of the Map, including the full underlying noms map.
+func (m Map) DebugString() string {
+	return fmt.Sprintf("Checksum: %s, noms Map: %v\n", m.Checksum(), types.EncodedValue(m.nm))
 }
 
 // MapEditor allows mutation of a Map.
@@ -103,7 +102,7 @@ type MapEditor struct {
 func (me MapEditor) Get(key string) ([]byte, error) {
 	nk := types.String(key)
 	if !me.nme.Has(nk) {
-		return nil, fmt.Errorf("no such key %s", key)
+		return nil, nil
 	}
 
 	value := me.nme.Get(nk)
@@ -128,12 +127,11 @@ func (me *MapEditor) Set(key string, value []byte) error {
 	return nil
 }
 
-// Remove removes a key from the Map. It is an error to remove a key that
-// does not exist.
+// Remove removes a key from the Map.
 func (me *MapEditor) Remove(key string) error {
 	nk := types.String(key)
 	if !me.nme.Has(nk) {
-		return fmt.Errorf("no such key %s", key)
+		return nil
 	}
 
 	// Need the old value to update the checksum.
@@ -147,7 +145,7 @@ func (me *MapEditor) Remove(key string) error {
 	return nil
 }
 
-// Map converts back into a Map.
-func (me *MapEditor) Map() *Map {
+// Build converts back into a Map.
+func (me *MapEditor) Build() *Map {
 	return &Map{me.noms, me.nme.Map(), me.c}
 }

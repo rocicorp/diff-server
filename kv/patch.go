@@ -82,9 +82,10 @@ func Diff(from, to *Map, r []Operation) ([]Operation, error) {
 						Lists: true,
 						Maps:  true,
 					})
-					// Danger: swallowed error.
 					if err != nil {
-						return
+						// Would be nice to return an error out of here but there is no plumbing
+						// for it. If you have time feel free.
+						chk.Fail("Couldn't convert noms value to json: %#v", d)
 					}
 					if d.ChangeType == types.DiffChangeAdded {
 						op.Op = OpAdd
@@ -147,5 +148,5 @@ func ApplyPatch(to *Map, patch []Operation) (*Map, error) {
 			return &Map{}, fmt.Errorf("Unknown JSON Patch operation: %s", op.Op)
 		}
 	}
-	return ed.Map(), nil
+	return ed.Build(), nil
 }
