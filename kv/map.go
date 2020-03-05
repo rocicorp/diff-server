@@ -37,7 +37,6 @@ func NewMapFromNoms(noms types.ValueReadWriter, nm types.Map) *Map {
 		if err != nil {
 			chk.Fail("Failed to serialize value to json.")
 		}
-
 		me.Set(k, v)
 	}
 	return me.Build()
@@ -63,15 +62,15 @@ func bytesFromNomsValue(value types.Valuable) ([]byte, error) {
 		return []byte{}, err
 	}
 
-	// Canonicalize the output here with canonical json. Likely story is
-	// copying nomsjson and switching it from using the default go impl
-	// to use canonical json package below.
-	// This is ripe territory for bugs and we should have good
-	// canonicalization testing.
-	// TODO canonicalize using 	cjson "github.com/gibson042/canonicaljson-go"
-	// TODO be sure to disallow nil values
-
-	return b.Bytes(), nil
+	// nomsjson uses Encoder, which assumes it is encoding a stream
+	// of values and therefore appends a newline. Values in our store
+	// can only be a single json value. Here we trim the newline.
+	bb := b.Bytes()
+	if len(bb) == 0 || bb[len(bb)-1] != '\n' {
+		chk.Fail("unexpected json encoding: %s", bb)
+	}
+	bb = bb[:len(bb)-1]
+	return bb, nil
 }
 
 // Checksum is the Cheksum over the Map of k/vs.
@@ -111,7 +110,6 @@ func (me MapEditor) Get(key string) ([]byte, error) {
 
 // Set sets the value for a given key.
 func (me *MapEditor) Set(key string, value []byte) error {
-	// TODO use canonical json here.
 	nv, err := nomsjson.FromJSON(bytes.NewReader(value), me.noms, nomsjson.FromOptions{})
 	if err != nil {
 		return err
@@ -122,8 +120,17 @@ func (me *MapEditor) Set(key string, value []byte) error {
 		// Have to do this in order to properly update checksum.
 		me.Remove(key)
 	}
-	me.c.Add(key, value)
+
+	// The value passed in might not be canonicalized. We have to round trip
+	// to get the canonicalized version which is what we want to checksum and store.
+	canonicalBytes, err := bytesFromNomsValue(nv)
+	if err != nil {
+		return err
+	}
+	// Note: here we are using the noms value unmarshalled from the *un*canonicalized json.
+	// Might be safer to unmarshal here from the canonical json and use that value instead?
 	me.nme.Set(nk, nv)
+	me.c.Add(key, canonicalBytes)
 	return nil
 }
 
