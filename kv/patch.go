@@ -17,8 +17,8 @@ import (
 	"sync"
 
 	"github.com/attic-labs/noms/go/types"
-	nomsjson "github.com/attic-labs/noms/go/util/json"
 	"roci.dev/diff-server/util/chk"
+	nomsjson "roci.dev/diff-server/util/noms/json"
 )
 
 const (

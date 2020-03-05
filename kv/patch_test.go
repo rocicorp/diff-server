@@ -7,7 +7,7 @@ import (
 
 	"github.com/attic-labs/noms/go/nomdl"
 	"github.com/attic-labs/noms/go/types"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert" 
 	"roci.dev/diff-server/util/noms/memstore"
 )
 
@@ -35,8 +35,8 @@ func TestDiff(t *testing.T) {
 			`map {"foo":map{"bar":"baz"}}`, `map {"foo":map{"bar":"quux"}}`,
 			[]string{`{"op":"replace","path":"/foo","value":{"bar":"quux"}}`}, ""},
 		{"all-types",
-			`map{}`, `map {"foo":map{"b":true,"i":42,"f":88.8,"s":"monkey","a":[],"a2":[true,42,88.8],"o":map{}}}`,
-			[]string{`{"op":"add","path":"/foo","value":{"a":[],"a2":[true,42,88.8],"b":true,"f":88.8,"i":42,"o":{},"s":"monkey"}}`}, ""},
+			`map{}`, `map {"foo":map{"b":true,"i":42,"f":88.8,"s":"monkey","a":[],"a2":[true,42,8.88E1],"o":map{}}}`,
+			[]string{`{"op":"add","path":"/foo","value":{"a":[],"a2":[true,42,8.88E1],"b":true,"f":8.88E1,"i":42,"o":{},"s":"monkey"}}`}, ""},
 		{"multiple",
 			`map {"a":"a","b":"b"}`, `map {"b":"bb","c":"c"}`,
 			[]string{
@@ -57,11 +57,12 @@ func TestDiff(t *testing.T) {
 		if t.expectedError == "" {
 			assert.NoError(err, t.label)
 			j, err := json.Marshal(r)
-			assert.NoError(err)
+			assert.NoError(err, t.label)
 			assert.Equal("["+strings.Join(t.expectedResult, ",")+"]", string(j), t.label)
-			m, err := ApplyPatch(fm, r)
-			assert.Equal(types.EncodedValue(tm.nm), types.EncodedValue(m.nm), t.label)
-			assert.True(tm.Checksum().Equal(m.Checksum()))
+			got, err := ApplyPatch(fm, r)
+			es, gots := types.EncodedValue(tm.nm), types.EncodedValue(got.nm)
+			assert.Equal(es, gots, "%s expected %s got %s", t.label, es, gots)
+			assert.True(tm.Checksum().Equal(got.Checksum()), "%s expected %s got %s", t.label, es, gots)
 		} else {
 			assert.EqualError(err, t.expectedError, t.label)
 			// buf might have arbitrary data, not part of the contract

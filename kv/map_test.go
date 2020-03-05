@@ -9,11 +9,7 @@ import (
 	"roci.dev/diff-server/util/noms/memstore"
 )
 
-// TODO unskip when canonicalization works.
-
 func TestNewMap(t *testing.T) {
-	t.Skip()
-
 	assert := assert.New(t)
 
 	noms := memstore.New()
@@ -23,9 +19,34 @@ func TestNewMap(t *testing.T) {
 	m := kv.NewMapFromNoms(noms, nm)
 	expectedm := kv.NewMapFromNoms(noms, types.NewMap(noms))
 	e := expectedm.Edit()
-	assert.NoError(e.Set("key", []byte("\"1\"")))
+	assert.NoError(e.Set("key", []byte(" \"1\" "))) // note spaces intentional to ensure canonicalizes
 	expectedm = e.Build()
-	assert.True(expectedm.Checksum().Equal(m.Checksum()), "got checksum %v, wanted %v", m.Checksum(), expectedm.Checksum())
+	assert.True(expectedm.Checksum().Equal(m.Checksum()), "got checksum %v, wanted %v", m.DebugString(), expectedm.DebugString())
+}
+
+func TestCanonicalizes(t *testing.T) {
+	assert := assert.New(t)
+	noms := memstore.New()
+
+	k, v := "k", []byte("  {  \"z\"   : 1, \n \"a\":    2  } \r")
+	expectedv := []byte("{\"a\":2,\"z\":1}")
+
+	// Does it appear to canonicalize?
+	m := kv.NewMap(noms)
+	me := m.Edit()
+	assert.NoError(me.Set(k, v))
+	assertGetEqual(assert, me, k, expectedv)
+	m = me.Build()
+	assertGetEqual(assert, m, k, expectedv)
+
+	// Does canonicalized map match one where we set an already canonicalized value?
+	// This is an extremely important test!
+	m2 := kv.NewMap(noms)
+	m2e := m2.Edit()
+	assert.NoError(m2e.Set(k, expectedv))
+	assertGetEqual(assert, m2e, k, expectedv)
+	m2 = m2e.Build()
+	assert.True(m2.Checksum().Equal(m.Checksum()))
 }
 
 type getter interface {
@@ -35,7 +56,7 @@ type getter interface {
 func assertGetEqual(assert *assert.Assertions, m getter, key string, expected []byte) {
 	got, err := m.Get(key)
 	assert.NoError(err)
-	assert.Equal(got, expected)
+	assert.Equal(expected, got)
 }
 
 func assertGetError(assert *assert.Assertions, m getter, key string) {
@@ -44,8 +65,6 @@ func assertGetError(assert *assert.Assertions, m getter, key string) {
 }
 
 func TestMapGetSetRemove(t *testing.T) {
-	t.Skip()
-
 	assert := assert.New(t)
 	noms := memstore.New()
 
