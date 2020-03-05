@@ -7,7 +7,7 @@ import (
 	"roci.dev/diff-server/util/chk"
 
 	"github.com/attic-labs/noms/go/types"
-	nomsjson "github.com/attic-labs/noms/go/util/json"
+	nomsjson "roci.dev/diff-server/util/noms/json"
 )
 
 // Map is a map from string key to json bytes. Map is

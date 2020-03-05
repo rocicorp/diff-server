@@ -7,6 +7,7 @@ require (
 	github.com/aws/aws-sdk-go v1.19.28
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/gibson042/canonicaljson-go v1.0.3
 	github.com/golang/protobuf v1.3.1 // indirect
 	github.com/julienschmidt/httprouter v1.2.0
 	github.com/onsi/ginkgo v1.8.0 // indirect

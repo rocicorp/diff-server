@@ -35,8 +35,8 @@ func TestDiff(t *testing.T) {
 			`map {"foo":map{"bar":"baz"}}`, `map {"foo":map{"bar":"quux"}}`,
 			[]string{`{"op":"replace","path":"/foo","value":{"bar":"quux"}}`}, ""},
 		{"all-types",
-			`map{}`, `map {"foo":map{"b":true,"i":42,"f":88.8,"s":"monkey","a":[],"a2":[true,42,88.8],"o":map{}}}`,
-			[]string{`{"op":"add","path":"/foo","value":{"a":[],"a2":[true,42,88.8],"b":true,"f":88.8,"i":42,"o":{},"s":"monkey"}}`}, ""},
+			`map{}`, `map {"foo":map{"b":true,"i":42,"f":88.8,"s":"monkey","a":[],"a2":[true,42,8.88E1],"o":map{}}}`,
+			[]string{`{"op":"add","path":"/foo","value":{"a":[],"a2":[true,42,8.88E1],"b":true,"f":8.88E1,"i":42,"o":{},"s":"monkey"}}`}, ""},
 		{"multiple",
 			`map {"a":"a","b":"b"}`, `map {"b":"bb","c":"c"}`,
 			[]string{
