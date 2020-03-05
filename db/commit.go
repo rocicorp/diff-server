@@ -17,7 +17,9 @@ Struct Commit {
 		},
 	},
 	value: Struct {
+		checksum: String,
 		data: Ref<Map<String, Value>>,
+		stateID: String,
 	},
 }`)
 )
@@ -28,7 +30,9 @@ type Commit struct {
 		Date datetime.DateTime
 	}
 	Value struct {
-		Data types.Ref `noms:",omitempty"`
+		Checksum types.String
+		Data     types.Ref    `noms:",omitempty"`
+		StateID  types.String
 	}
 	Original types.Struct `noms:",original"`
 }
@@ -39,6 +43,10 @@ func (c Commit) Ref() types.Ref {
 
 func (c Commit) Data(noms types.ValueReadWriter) types.Map {
 	return c.Value.Data.TargetValue(noms).(types.Map)
+}
+
+func (c Commit) Checksum(noms types.ValueReadWriter) types.String {
+	return c.Value.Checksum
 }
 
 func makeCommit(noms types.ValueReadWriter, basis types.Ref, d datetime.DateTime, newData types.Ref) Commit {

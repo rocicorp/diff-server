@@ -37,7 +37,9 @@ func TestMarshal(t *testing.T) {
 				}),
 				"parents": types.NewSet(noms),
 				"value": types.NewStruct("", types.StructData{
-					"data": emptyMap,
+					"checksum": types.String(""),
+					"data":     emptyMap,
+					"stateID":  types.String(""),
 				}),
 			}),
 		},
@@ -49,7 +51,9 @@ func TestMarshal(t *testing.T) {
 					"date": marshal.MustMarshal(noms, d),
 				}),
 				"value": types.NewStruct("", types.StructData{
-					"data": dr,
+					"checksum": types.String(""),
+					"data":     dr,
+					"stateID":  types.String(""),
 				}),
 			}),
 		},
