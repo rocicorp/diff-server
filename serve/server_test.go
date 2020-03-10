@@ -35,7 +35,7 @@ func TestAPI(t *testing.T) {
 		expectedResponse string
 		expectedError    string
 	}{
-		{"handleSync", `{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000"}`,
+		{"handlePullRequest", `{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000"}`,
 			`{"stateID":"1pgvpub8mgd4jlsu17qmd3ro0gr3u6hp","patch":[{"op":"remove","path":"/"},{"op":"add","path":"/foo","value":"bar"}],"checksum":"c4e7090d"}`, ""},
 	}
 

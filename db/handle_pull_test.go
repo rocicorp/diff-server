@@ -11,7 +11,7 @@ import (
 	"roci.dev/diff-server/kv"
 )
 
-func TestHandleSync(t *testing.T) {
+func TestHandlePull(t *testing.T) {
 	assert := assert.New(t)
 	db, dir := LoadTempDB(assert)
 	fmt.Println(dir)
@@ -208,7 +208,7 @@ func TestHandleSync(t *testing.T) {
 		t.f()
 		c, err := kv.ChecksumFromString(fromChecksum)
 		assert.NoError(err)
-		r, err := db.HandleSync(fromID, *c)
+		r, err := db.HandlePull(fromID, *c)
 		if t.expectedError == "" {
 			assert.NoError(err, t.label)
 			expected, err := json.Marshal(t.expectedDiff)
