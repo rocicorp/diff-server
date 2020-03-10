@@ -13,6 +13,7 @@ import (
 	"github.com/attic-labs/noms/go/marshal"
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/attic-labs/noms/go/types"
+	"roci.dev/diff-server/kv"
 	"roci.dev/diff-server/util/time"
 )
 
@@ -58,7 +59,8 @@ func New(noms datas.Database) (*DB, error) {
 func (db *DB) init() error {
 	ds := db.noms.GetDataset(LOCAL_DATASET)
 	if !ds.HasHead() {
-		genesis := makeCommit(db.noms, types.Ref{}, time.DateTime(), db.Noms().WriteValue(types.NewMap(db.Noms())))
+		m := kv.NewMap(db.Noms())
+		genesis := makeCommit(db.noms, types.Ref{}, time.DateTime(), db.Noms().WriteValue(m.NomsMap()), types.String(m.Checksum().String()))
 		genRef := db.noms.WriteValue(genesis.Original)
 		_, err := db.noms.FastForward(ds, genRef)
 		if err != nil {
@@ -108,10 +110,10 @@ func (db *DB) lock() func() {
 	}
 }
 
-func (db *DB) PutData(newData types.Map) error {
+func (db *DB) PutData(newData types.Map, checksum types.String) error {
 	defer db.lock()()
 	basis := types.NewRef(db.head.Original)
-	commit := makeCommit(db.noms, basis, time.DateTime(), db.noms.WriteValue(newData))
+	commit := makeCommit(db.noms, basis, time.DateTime(), db.noms.WriteValue(newData), checksum)
 	commitRef := db.noms.WriteValue(commit.Original)
 
 	// FastForward not strictly needed here because we should have already ensured that we were

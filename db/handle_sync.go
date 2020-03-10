@@ -11,28 +11,40 @@ import (
 	"roci.dev/diff-server/kv"
 )
 
-func (db *DB) HandleSync(from hash.Hash) ([]kv.Operation, error) {
-	if from == db.head.Original.Hash() {
-		return []kv.Operation{}, nil
+func fullSync(db *DB, from hash.Hash) ([]kv.Operation, Commit) {
+	log.Printf("Requested sync basis %s could not be found - sending a full sync", from)
+	r := []kv.Operation{
+		kv.Operation{
+			Op:   kv.OpRemove,
+			Path: "/",
+		},
 	}
+	m := kv.NewMap(db.noms)
+	return r, makeCommit(db.Noms(), types.Ref{}, datetime.Epoch, db.noms.WriteValue(m.NomsMap()), types.String(m.Checksum().String()))
+}
 
+func (db *DB) HandleSync(from hash.Hash, fromChecksum kv.Checksum) ([]kv.Operation, error) {
 	r := []kv.Operation{}
 	v := db.Noms().ReadValue(from)
 	var fc Commit
 	var err error
 	if v == nil {
-		log.Printf("Requested sync basis %s could not be found - sending a fresh sync", from)
-		r = append(r, kv.Operation{
-			Op:   kv.OpRemove,
-			Path: "/",
-		})
-		fc = makeCommit(db.Noms(), types.Ref{}, datetime.Epoch, db.noms.WriteValue(types.NewMap(db.noms)))
+		r, fc = fullSync(db, from)
 	} else {
 		err = marshal.Unmarshal(v, &fc)
 		if err != nil {
 			log.Printf("Error: Requested sync basis %s is not a commit: %#v", from, v)
 			return nil, errors.New("Invalid commitID")
 		}
+	}
+
+	fcChecksum, err := kv.ChecksumFromString(string(fc.Value.Checksum))
+	if err != nil {
+		log.Printf("Error: couldn't parse checksum from commit: %s", string(fc.Value.Checksum))
+		return nil, errors.New("unable to parse commit checksum from db")
+	} else if !fcChecksum.Equal(fromChecksum) {
+		log.Printf("Error: checksum mismatch; %s from client, %s in db", fromChecksum.String(), fcChecksum.String())
+		r, fc = fullSync(db, from)
 	}
 
 	if !fc.Value.Data.Equals(db.head.Value.Data) {

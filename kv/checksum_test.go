@@ -53,3 +53,28 @@ func TestChecksumOperations(t *testing.T) {
 	c3.Add(k1, v2)
 	assert.True(c3.Equal(c1))
 }
+
+func TestChecksumFromString(t *testing.T) {
+	tests := []struct {
+		name    string
+		s       string
+		wantVal uint32
+		wantErr bool
+	}{
+		{"parses", "00cf3d55", 13581653, false},
+		{"empty", "", 0, true},
+		{"not a hex number", "00ps", 0, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c, err := ChecksumFromString(tt.s)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ChecksumFromString() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr && c.value != tt.wantVal {
+				t.Errorf("ChecksumFromString() got = %v, want %v", c.value, tt.wantVal)
+			}
+		})
+	}
+}

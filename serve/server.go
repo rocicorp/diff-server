@@ -23,6 +23,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 
 	"roci.dev/diff-server/db"
+	"roci.dev/diff-server/kv"
 	servetypes "roci.dev/diff-server/serve/types"
 )
 
@@ -49,26 +50,31 @@ func newServer(cs chunks.ChunkStore, urlPrefix string) (*server, error) {
 			serverError(rw, err)
 			return
 		}
-		var hsreq servetypes.HandleSyncRequest
+		var hsreq servetypes.PullRequest
 		err = json.Unmarshal(body.Bytes(), &hsreq)
 		if err != nil {
 			serverError(rw, err)
 			return
 		}
+
 		from, ok := hash.MaybeParse(hsreq.Basis)
 		if !ok {
 			clientError(rw, 400, "Invalid basis hash")
 			return
 		}
-		patch, err := s.db.HandleSync(from)
+		fromChecksum, err := kv.ChecksumFromString(hsreq.Checksum)
+		if err != nil {
+			clientError(rw, 400, "Invalid checksum")
+		}
+		patch, err := s.db.HandleSync(from, *fromChecksum)
 		if err != nil {
 			serverError(rw, err)
 			return
 		}
-		hsresp := servetypes.HandleSyncResponse{
-			CommitID:     s.db.Head().Original.Hash().String(),
-			Patch:        patch,
-			NomsChecksum: s.db.Head().Value.Data.TargetHash().String(),
+		hsresp := servetypes.PullResponse{
+			CommitID: s.db.Head().Original.Hash().String(),
+			Patch:    patch,
+			Checksum: string(s.db.Head().Value.Checksum),
 		}
 		resp, err := json.Marshal(hsresp)
 		if err != nil {

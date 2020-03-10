@@ -17,6 +17,7 @@ func TestHandleSync(t *testing.T) {
 	fmt.Println(dir)
 
 	var fromID hash.Hash
+	var fromChecksum string
 	tc := []struct {
 		label         string
 		f             func()
@@ -32,9 +33,10 @@ func TestHandleSync(t *testing.T) {
 		{
 			"change-1",
 			func() {
-				err := db.PutData(types.NewMap(db.noms,
+				m := kv.NewMapFromNoms(db.noms, types.NewMap(db.noms,
 					types.String("foo"), types.String("bar"),
 					types.String("hot"), types.String("dog")))
+				err := db.PutData(m.NomsMap(), types.String(m.Checksum().String()))
 				assert.NoError(err)
 			},
 			[]kv.Operation{
@@ -54,9 +56,10 @@ func TestHandleSync(t *testing.T) {
 		{
 			"change-2",
 			func() {
-				err := db.PutData(types.NewMap(db.noms,
+				m := kv.NewMapFromNoms(db.noms, types.NewMap(db.noms,
 					types.String("foo"), types.String("baz"),
 					types.String("mon"), types.String("key")))
+				err := db.PutData(m.NomsMap(), types.String(m.Checksum().String()))
 				assert.NoError(err)
 			},
 			[]kv.Operation{
@@ -88,11 +91,12 @@ func TestHandleSync(t *testing.T) {
 			func() {
 				db, dir = LoadTempDB(assert)
 				fmt.Println("newdir", dir)
-				m := types.NewMap(db.noms).Edit()
+				me := kv.NewMap(db.noms).Edit()
 				for _, s := range []string{"a", "b", "c"} {
-					m.Set(types.String(s), types.String(s))
+					assert.NoError(me.Set(s, []byte(fmt.Sprintf("\"%s\"", s))))
 				}
-				err := db.PutData(m.Map())
+				m := me.Build()
+				err := db.PutData(m.NomsMap(), types.String(m.Checksum().String()))
 				assert.NoError(err)
 			},
 			[]kv.Operation{
@@ -147,6 +151,46 @@ func TestHandleSync(t *testing.T) {
 			"",
 		},
 		{
+			"invalid-checksum",
+			func() {
+				m := kv.NewMapFromNoms(db.noms, types.NewMap(db.noms,
+					types.String("foo"), types.String("bar")))
+				err := db.PutData(m.NomsMap(), types.String(m.Checksum().String()))
+				assert.NoError(err)
+				fromChecksum = "00000000"
+			},
+			[]kv.Operation{
+				{
+					Op:   kv.OpRemove,
+					Path: "/",
+				},
+				{
+					Op:    kv.OpAdd,
+					Path:  "/foo",
+					Value: []byte("\"bar\""),
+				},
+			},
+			"",
+		},
+		{
+			"same-commit-invalid-checksum",
+			func() {
+				fromChecksum = "00000000"
+			},
+			[]kv.Operation{
+				{
+					Op:   kv.OpRemove,
+					Path: "/",
+				},
+				{
+					Op:    kv.OpAdd,
+					Path:  "/foo",
+					Value: []byte("\"bar\""),
+				},
+			},
+			"",
+		},
+		{
 			"invalid-commit-id",
 			func() {
 				r := db.Noms().WriteValue(types.String("not a commit"))
@@ -159,8 +203,12 @@ func TestHandleSync(t *testing.T) {
 
 	for _, t := range tc {
 		fromID = db.head.Original.Hash()
+		var err error
+		fromChecksum = string(db.head.Value.Checksum)
 		t.f()
-		r, err := db.HandleSync(fromID)
+		c, err := kv.ChecksumFromString(fromChecksum)
+		assert.NoError(err)
+		r, err := db.HandleSync(fromID, *c)
 		if t.expectedError == "" {
 			assert.NoError(err, t.label)
 			expected, err := json.Marshal(t.expectedDiff)

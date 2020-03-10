@@ -3,6 +3,7 @@ package kv
 import (
 	"fmt"
 	"hash/crc32"
+	"strconv"
 )
 
 // Checksum represents a fast, incrementally computable,
@@ -13,6 +14,15 @@ type Checksum struct {
 
 func (c Checksum) String() string {
 	return fmt.Sprintf("%08x", c.value)
+}
+
+// ChecksumFromString parses a checksum value from a string.
+func ChecksumFromString(s string) (*Checksum, error) {
+	v, err := strconv.ParseUint(s, 16, 32)
+	if err != nil {
+		return &Checksum{}, err
+	}
+	return &Checksum{uint32(v)}, nil
 }
 
 func hashEntry(key string, value []byte) uint32 {

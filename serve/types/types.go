@@ -2,12 +2,13 @@ package types
 
 import "roci.dev/diff-server/kv"
 
-type HandleSyncRequest struct {
-	Basis string `'json:"basis"`
+type PullRequest struct {
+	Basis    string `'json:"basis"`
+	Checksum string `'json:"checksum"`
 }
 
-type HandleSyncResponse struct {
-	CommitID     string         `json:"commitID"`
-	Patch        []kv.Operation `json:"patch"`
-	NomsChecksum string         `json:"nomsChecksum"`
+type PullResponse struct {
+	CommitID string         `json:"commitID"`
+	Patch    []kv.Operation `json:"patch"`
+	Checksum string         `json:"checksum"`
 }
