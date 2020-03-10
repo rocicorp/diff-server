@@ -197,7 +197,7 @@ func TestHandleSync(t *testing.T) {
 				fromID = r.TargetHash()
 			},
 			nil,
-			"Invalid commitID",
+			"Invalid baseStateID",
 		},
 	}
 

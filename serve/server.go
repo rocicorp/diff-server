@@ -57,7 +57,7 @@ func newServer(cs chunks.ChunkStore, urlPrefix string) (*server, error) {
 			return
 		}
 
-		from, ok := hash.MaybeParse(hsreq.Basis)
+		from, ok := hash.MaybeParse(hsreq.BaseStateID)
 		if !ok {
 			clientError(rw, 400, "Invalid basis hash")
 			return
@@ -72,7 +72,7 @@ func newServer(cs chunks.ChunkStore, urlPrefix string) (*server, error) {
 			return
 		}
 		hsresp := servetypes.PullResponse{
-			CommitID: s.db.Head().Original.Hash().String(),
+			StateID: s.db.Head().Original.Hash().String(),
 			Patch:    patch,
 			Checksum: string(s.db.Head().Value.Checksum),
 		}

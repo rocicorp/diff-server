@@ -34,7 +34,7 @@ func (db *DB) HandleSync(from hash.Hash, fromChecksum kv.Checksum) ([]kv.Operati
 		err = marshal.Unmarshal(v, &fc)
 		if err != nil {
 			log.Printf("Error: Requested sync basis %s is not a commit: %#v", from, v)
-			return nil, errors.New("Invalid commitID")
+			return nil, errors.New("Invalid baseStateID")
 		}
 	}
 
