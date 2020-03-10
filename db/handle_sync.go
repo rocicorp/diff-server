@@ -43,6 +43,7 @@ func (db *DB) HandleSync(from hash.Hash, fromChecksum kv.Checksum) ([]kv.Operati
 		log.Printf("Error: couldn't parse checksum from commit: %s", string(fc.Value.Checksum))
 		return nil, errors.New("unable to parse commit checksum from db")
 	} else if !fcChecksum.Equal(fromChecksum) {
+		log.Printf("Error: checksum mismatch; %s from client, %s in db", fromChecksum.String(), fcChecksum.String())
 		r, fc = fullSync(db, from)
 	}
 
