@@ -32,9 +32,10 @@ func TestHandleSync(t *testing.T) {
 		{
 			"change-1",
 			func() {
-				err := db.PutData(types.NewMap(db.noms,
+				m := kv.NewMapFromNoms(db.noms, types.NewMap(db.noms,
 					types.String("foo"), types.String("bar"),
 					types.String("hot"), types.String("dog")))
+				err := db.PutData(m.NomsMap(), types.String(m.Checksum().String()))
 				assert.NoError(err)
 			},
 			[]kv.Operation{
@@ -54,9 +55,10 @@ func TestHandleSync(t *testing.T) {
 		{
 			"change-2",
 			func() {
-				err := db.PutData(types.NewMap(db.noms,
+				m := kv.NewMapFromNoms(db.noms, types.NewMap(db.noms,
 					types.String("foo"), types.String("baz"),
 					types.String("mon"), types.String("key")))
+				err := db.PutData(m.NomsMap(), types.String(m.Checksum().String()))
 				assert.NoError(err)
 			},
 			[]kv.Operation{
@@ -88,11 +90,12 @@ func TestHandleSync(t *testing.T) {
 			func() {
 				db, dir = LoadTempDB(assert)
 				fmt.Println("newdir", dir)
-				m := types.NewMap(db.noms).Edit()
+				me := kv.NewMap(db.noms).Edit()
 				for _, s := range []string{"a", "b", "c"} {
-					m.Set(types.String(s), types.String(s))
+					assert.NoError(me.Set(s, []byte(fmt.Sprintf("\"%s\"", s))))
 				}
-				err := db.PutData(m.Map())
+				m := me.Build()
+				err := db.PutData(m.NomsMap(), types.String(m.Checksum().String()))
 				assert.NoError(err)
 			},
 			[]kv.Operation{

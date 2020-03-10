@@ -18,11 +18,13 @@ func TestMarshal(t *testing.T) {
 
 	noms := types.NewValueStore((&chunks.TestStorage{}).NewView())
 	emptyMap := noms.WriteValue(types.NewMap(noms))
+	checksum1 := types.String("1")
 
 	d := datetime.Now()
 	dr := noms.WriteValue(types.NewMap(noms, types.String("foo"), types.String("bar")))
-	c1 := makeCommit(noms, types.Ref{}, d, noms.WriteValue(types.NewMap(noms)))
-	c2 := makeCommit(noms, noms.WriteValue(c1.Original), d, dr)
+	checksum2 := types.String("2")
+	c1 := makeCommit(noms, types.Ref{}, d, noms.WriteValue(types.NewMap(noms)), checksum1)
+	c2 := makeCommit(noms, noms.WriteValue(c1.Original), d, dr, checksum2)
 	noms.WriteValue(c2.Original)
 
 	tc := []struct {
@@ -37,9 +39,8 @@ func TestMarshal(t *testing.T) {
 				}),
 				"parents": types.NewSet(noms),
 				"value": types.NewStruct("", types.StructData{
-					"checksum": types.String(""),
+					"checksum": types.String("1"),
 					"data":     emptyMap,
-					"stateID":  types.String(""),
 				}),
 			}),
 		},
@@ -51,9 +52,8 @@ func TestMarshal(t *testing.T) {
 					"date": marshal.MustMarshal(noms, d),
 				}),
 				"value": types.NewStruct("", types.StructData{
-					"checksum": types.String(""),
+					"checksum": types.String("2"),
 					"data":     dr,
-					"stateID":  types.String(""),
 				}),
 			}),
 		},

@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"roci.dev/diff-server/db"
+	"roci.dev/diff-server/kv"
 	"roci.dev/diff-server/util/time"
 )
 
@@ -36,7 +37,8 @@ func TestDrop(t *testing.T) {
 
 	for i, t := range tc {
 		d, dir := db.LoadTempDB(assert)
-		err := d.PutData(types.NewMap(d.Noms(), types.String("foo"), types.String("bar")))
+		m := kv.NewMapFromNoms(d.Noms(), types.NewMap(d.Noms(), types.String("foo"), types.String("bar")))
+		err := d.PutData(m.NomsMap(), types.String(m.Checksum().String()))
 		assert.NoError(err)
 
 		desc := fmt.Sprintf("test case %d, input: %s", i, t.in)
@@ -76,7 +78,7 @@ func TestServe(t *testing.T) {
 		expectedError    string
 	}{
 		{"handleSync", `{"basis": "00000000000000000000000000000000"}`,
-			`{"commitID":"ilh2pne10o4ber27f1qnuuenu7bmilq8","patch":[{"op":"remove","path":"/"}],"nomsChecksum":"t13tdcmq2d3pkpt9avk4p4nbt1oagaa3"}`, ""},
+			`{"commitID":"unhmo677duk3vbjpu0f01eusdep2k7ei","patch":[{"op":"remove","path":"/"}],"checksum":"00000000"}`, ""},
 	}
 
 	for i, t := range tc {

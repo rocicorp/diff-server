@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"roci.dev/diff-server/db"
+	"roci.dev/diff-server/kv"
 	"roci.dev/diff-server/util/time"
 )
 
@@ -23,7 +24,8 @@ func TestAPI(t *testing.T) {
 	defer time.SetFake()()
 
 	db, s := startTestServer(assert)
-	err := db.PutData(types.NewMap(db.Noms(), types.String("foo"), types.String("bar")))
+	m := kv.NewMapFromNoms(db.Noms(), types.NewMap(db.Noms(), types.String("foo"), types.String("bar")))
+	err := db.PutData(m.NomsMap(), types.String(m.Checksum().String()))
 	assert.NoError(err)
 	defer s.Shutdown(context.Background())
 
@@ -34,7 +36,7 @@ func TestAPI(t *testing.T) {
 		expectedError    string
 	}{
 		{"handleSync", `{"basis": "00000000000000000000000000000000"}`,
-			`{"commitID":"pebeabftl96mdbu0jhiq4n5gsoq9ehqe","patch":[{"op":"remove","path":"/"},{"op":"add","path":"/foo","value":"bar"}],"nomsChecksum":"am8lvhrbscqkngg75jaiubirapurghv9"}`, ""},
+			`{"commitID":"1pgvpub8mgd4jlsu17qmd3ro0gr3u6hp","patch":[{"op":"remove","path":"/"},{"op":"add","path":"/foo","value":"bar"}],"checksum":"c4e7090d"}`, ""},
 	}
 
 	for i, t := range tc {

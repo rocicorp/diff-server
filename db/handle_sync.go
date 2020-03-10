@@ -15,7 +15,9 @@ func (db *DB) HandleSync(from hash.Hash) ([]kv.Operation, error) {
 	if from == db.head.Original.Hash() {
 		return []kv.Operation{}, nil
 	}
-
+	// TODO check checksum
+	// renmae commit and basis
+	// rename handlesync
 	r := []kv.Operation{}
 	v := db.Noms().ReadValue(from)
 	var fc Commit
@@ -26,7 +28,8 @@ func (db *DB) HandleSync(from hash.Hash) ([]kv.Operation, error) {
 			Op:   kv.OpRemove,
 			Path: "/",
 		})
-		fc = makeCommit(db.Noms(), types.Ref{}, datetime.Epoch, db.noms.WriteValue(types.NewMap(db.noms)))
+		m := kv.NewMap(db.noms)
+		fc = makeCommit(db.Noms(), types.Ref{}, datetime.Epoch, db.noms.WriteValue(m.NomsMap()), types.String(m.Checksum().String()))
 	} else {
 		err = marshal.Unmarshal(v, &fc)
 		if err != nil {

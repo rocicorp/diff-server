@@ -42,6 +42,11 @@ func NewMapFromNoms(noms types.ValueReadWriter, nm types.Map) *Map {
 	return me.Build()
 }
 
+// NomsMap returns the underlying noms map.
+func (m Map) NomsMap() types.Map {
+	return m.nm
+}
+
 // Get returns the json bytes for the given key, which must exist.
 func (m Map) Get(key string) ([]byte, error) {
 	value, ok := m.nm.MaybeGet(types.String(key))
@@ -118,7 +123,9 @@ func (me *MapEditor) Set(key string, value []byte) error {
 	nk := types.String(key)
 	if me.nme.Has(nk) {
 		// Have to do this in order to properly update checksum.
-		me.Remove(key)
+		if err := me.Remove(key); err != nil {
+			return err
+		}
 	}
 
 	// The value passed in might not be canonicalized. We have to round trip
@@ -155,4 +162,15 @@ func (me *MapEditor) Remove(key string) error {
 // Build converts back into a Map.
 func (me *MapEditor) Build() *Map {
 	return &Map{me.noms, me.nme.Map(), me.c}
+}
+
+// Checksum is the Cheksum over the Map of k/vs.
+func (me MapEditor) Checksum() Checksum {
+	return me.c
+}
+
+// DebugString returns a nice string value of the MapEditor, including the full underlying noms map.
+func (me MapEditor) DebugString() string {
+	m := me.Build()
+	return fmt.Sprintf("Checksum: %s, noms Map: %v\n", m.Checksum(), types.EncodedValue(m.nm))
 }
