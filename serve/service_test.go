@@ -137,9 +137,9 @@ func TestConcurrentAccessUsingMultipleServices(t *testing.T) {
 		httptest.NewRecorder(),
 	}
 
-	svc1.ServeHTTP(res[0], httptest.NewRequest("POST", "/sandbox/foo/handleSync", strings.NewReader(`{"basis": "00000000000000000000000000000000"}`)))
-	svc2.ServeHTTP(res[1], httptest.NewRequest("POST", "/sandbox/foo/handleSync", strings.NewReader(`{"basis": "00000000000000000000000000000000"}`)))
-	svc1.ServeHTTP(res[2], httptest.NewRequest("POST", "/sandbox/foo/handleSync", strings.NewReader(`{"basis": "00000000000000000000000000000000"}`)))
+	svc1.ServeHTTP(res[0], httptest.NewRequest("POST", "/sandbox/foo/handleSync", strings.NewReader(`{"basis": "00000000000000000000000000000000", "checksum": "00000000"}`)))
+	svc2.ServeHTTP(res[1], httptest.NewRequest("POST", "/sandbox/foo/handleSync", strings.NewReader(`{"basis": "00000000000000000000000000000000", "checksum": "00000000"}`)))
+	svc1.ServeHTTP(res[2], httptest.NewRequest("POST", "/sandbox/foo/handleSync", strings.NewReader(`{"basis": "00000000000000000000000000000000", "checksum": "00000000"}`)))
 
 	for i, r := range res {
 		assert.Equal(http.StatusOK, r.Code, fmt.Sprintf("response %d: %s", i, string(r.Body.Bytes())))
