@@ -3,7 +3,8 @@ package types
 import "roci.dev/diff-server/kv"
 
 type PullRequest struct {
-	Basis string `'json:"basis"`
+	Basis    string `'json:"basis"`
+	Checksum string `'json:"checksum"`
 }
 
 type PullResponse struct {

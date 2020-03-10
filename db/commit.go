@@ -43,10 +43,6 @@ func (c Commit) Data(noms types.ValueReadWriter) types.Map {
 	return c.Value.Data.TargetValue(noms).(types.Map)
 }
 
-func (c Commit) Checksum(noms types.ValueReadWriter) types.String {
-	return c.Value.Checksum
-}
-
 func makeCommit(noms types.ValueReadWriter, basis types.Ref, d datetime.DateTime, newData types.Ref, checksum types.String) Commit {
 	c := Commit{}
 	if !basis.IsZeroValue() {

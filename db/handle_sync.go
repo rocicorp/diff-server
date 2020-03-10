@@ -11,25 +11,25 @@ import (
 	"roci.dev/diff-server/kv"
 )
 
-func (db *DB) HandleSync(from hash.Hash) ([]kv.Operation, error) {
-	if from == db.head.Original.Hash() {
-		return []kv.Operation{}, nil
+func fullSync(db *DB, from hash.Hash) ([]kv.Operation, Commit) {
+	log.Printf("Requested sync basis %s could not be found - sending a full sync", from)
+	r := []kv.Operation{
+		kv.Operation{
+			Op:   kv.OpRemove,
+			Path: "/",
+		},
 	}
-	// TODO check checksum
-	// renmae commit and basis
-	// rename handlesync
+	m := kv.NewMap(db.noms)
+	return r, makeCommit(db.Noms(), types.Ref{}, datetime.Epoch, db.noms.WriteValue(m.NomsMap()), types.String(m.Checksum().String()))
+}
+
+func (db *DB) HandleSync(from hash.Hash, fromChecksum string) ([]kv.Operation, error) {
 	r := []kv.Operation{}
 	v := db.Noms().ReadValue(from)
 	var fc Commit
 	var err error
 	if v == nil {
-		log.Printf("Requested sync basis %s could not be found - sending a fresh sync", from)
-		r = append(r, kv.Operation{
-			Op:   kv.OpRemove,
-			Path: "/",
-		})
-		m := kv.NewMap(db.noms)
-		fc = makeCommit(db.Noms(), types.Ref{}, datetime.Epoch, db.noms.WriteValue(m.NomsMap()), types.String(m.Checksum().String()))
+		r, fc = fullSync(db, from)
 	} else {
 		err = marshal.Unmarshal(v, &fc)
 		if err != nil {
@@ -38,6 +38,11 @@ func (db *DB) HandleSync(from hash.Hash) ([]kv.Operation, error) {
 		}
 	}
 
+	if string(fc.Value.Checksum) != fromChecksum {
+		r, fc = fullSync(db, from)
+	}
+
+	// why not since we can.
 	if !fc.Value.Data.Equals(db.head.Value.Data) {
 		fm := kv.NewMapFromNoms(db.Noms(), fc.Data(db.Noms()))
 		tm := kv.NewMapFromNoms(db.Noms(), db.head.Data(db.Noms()))

@@ -55,12 +55,13 @@ func newServer(cs chunks.ChunkStore, urlPrefix string) (*server, error) {
 			serverError(rw, err)
 			return
 		}
+
 		from, ok := hash.MaybeParse(hsreq.Basis)
 		if !ok {
 			clientError(rw, 400, "Invalid basis hash")
 			return
 		}
-		patch, err := s.db.HandleSync(from)
+		patch, err := s.db.HandleSync(from, hsreq.Checksum)
 		if err != nil {
 			serverError(rw, err)
 			return
