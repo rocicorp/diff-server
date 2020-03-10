@@ -66,7 +66,7 @@ func newServer(cs chunks.ChunkStore, urlPrefix string) (*server, error) {
 		if err != nil {
 			clientError(rw, 400, "Invalid checksum")
 		}
-		patch, err := s.db.HandleSync(from, fromChecksum)
+		patch, err := s.db.HandleSync(from, *fromChecksum)
 		if err != nil {
 			serverError(rw, err)
 			return

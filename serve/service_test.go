@@ -95,7 +95,7 @@ func TestCheckAccess(t *testing.T) {
 		svc := NewService(td, accounts)
 		res := httptest.NewRecorder()
 
-		req := httptest.NewRequest("POST", fmt.Sprintf("/%s/%s/handleSync", t.accountID, t.dbName), strings.NewReader(`{"basis": "00000000000000000000000000000000"}`))
+		req := httptest.NewRequest("POST", fmt.Sprintf("/%s/%s/handleSync", t.accountID, t.dbName), strings.NewReader(`{"basis": "00000000000000000000000000000000", "checksum": "00000000"}`))
 		req.Header.Add("Authorization", t.token)
 		svc.ServeHTTP(res, req)
 
