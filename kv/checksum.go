@@ -16,14 +16,13 @@ func (c Checksum) String() string {
 	return fmt.Sprintf("%08x", c.value)
 }
 
-// FromString parses a checksum value from a string.
-func (c *Checksum) FromString(s string) error {
+// ChecksumFromString parses a checksum value from a string.
+func ChecksumFromString(s string) (*Checksum, error) {
 	v, err := strconv.ParseUint(s, 16, 32)
 	if err != nil {
-		return err
+		return &Checksum{}, err
 	}
-	c.value = uint32(v)
-	return nil
+	return &Checksum{uint32(v)}, nil
 }
 
 func hashEntry(key string, value []byte) uint32 {

@@ -23,6 +23,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 
 	"roci.dev/diff-server/db"
+	"roci.dev/diff-server/kv"
 	servetypes "roci.dev/diff-server/serve/types"
 )
 
@@ -61,7 +62,11 @@ func newServer(cs chunks.ChunkStore, urlPrefix string) (*server, error) {
 			clientError(rw, 400, "Invalid basis hash")
 			return
 		}
-		patch, err := s.db.HandleSync(from, hsreq.Checksum)
+		fromChecksum, err := kv.ChecksumFromString(hsreq.Checksum)
+		if err != nil {
+			clientError(rw, 400, "Invalid checksum")
+		}
+		patch, err := s.db.HandleSync(from, fromChecksum)
 		if err != nil {
 			serverError(rw, err)
 			return

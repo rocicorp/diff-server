@@ -203,9 +203,12 @@ func TestHandleSync(t *testing.T) {
 
 	for _, t := range tc {
 		fromID = db.head.Original.Hash()
+		var err error
 		fromChecksum = string(db.head.Value.Checksum)
 		t.f()
-		r, err := db.HandleSync(fromID, fromChecksum)
+		c, err := kv.ChecksumFromString(fromChecksum)
+		assert.NoError(err)
+		r, err := db.HandleSync(fromID, *c)
 		if t.expectedError == "" {
 			assert.NoError(err, t.label)
 			expected, err := json.Marshal(t.expectedDiff)

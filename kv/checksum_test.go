@@ -54,33 +54,26 @@ func TestChecksumOperations(t *testing.T) {
 	assert.True(c3.Equal(c1))
 }
 
-func TestChecksum_FromString(t *testing.T) {
-	type fields struct {
-		value uint32
-	}
-	type args struct {
-		s string
-	}
+func TestChecksumFromString(t *testing.T) {
 	tests := []struct {
 		name    string
-		value   uint32
 		s       string
 		wantVal uint32
 		wantErr bool
 	}{
-		{"parses", 0, "00cf3d55", 13581653, false},
-		{"error", 0, "p00p", 0, true},
+		{"parses", "00cf3d55", 13581653, false},
+		{"empty", "", 0, true},
+		{"not a hex number", "00ps", 0, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &Checksum{
-				value: tt.value,
+			c, err := ChecksumFromString(tt.s)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ChecksumFromString() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			if err := c.FromString(tt.s); (err != nil) != tt.wantErr {
-				t.Errorf("Checksum.FromString() error = %v, wantErr %v", err, tt.wantErr)
-			}
-			if c.value != tt.wantVal {
-				t.Errorf("Checksum.FromString() got = %v, want %v", c.value, tt.wantVal)
+			if !tt.wantErr && c.value != tt.wantVal {
+				t.Errorf("ChecksumFromString() got = %v, want %v", c.value, tt.wantVal)
 			}
 		})
 	}

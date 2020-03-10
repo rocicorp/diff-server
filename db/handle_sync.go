@@ -23,7 +23,7 @@ func fullSync(db *DB, from hash.Hash) ([]kv.Operation, Commit) {
 	return r, makeCommit(db.Noms(), types.Ref{}, datetime.Epoch, db.noms.WriteValue(m.NomsMap()), types.String(m.Checksum().String()))
 }
 
-func (db *DB) HandleSync(from hash.Hash, fromChecksum string) ([]kv.Operation, error) {
+func (db *DB) HandleSync(from hash.Hash, fromChecksum kv.Checksum) ([]kv.Operation, error) {
 	r := []kv.Operation{}
 	v := db.Noms().ReadValue(from)
 	var fc Commit
@@ -38,11 +38,14 @@ func (db *DB) HandleSync(from hash.Hash, fromChecksum string) ([]kv.Operation, e
 		}
 	}
 
-	if string(fc.Value.Checksum) != fromChecksum {
+	fcChecksum, err := kv.ChecksumFromString(string(fc.Value.Checksum))
+	if err != nil {
+		log.Printf("Error: couldn't parse checksum from commit: %s", string(fc.Value.Checksum))
+		return nil, errors.New("unable to parse commit checksum from db")
+	} else if !fcChecksum.Equal(fromChecksum) {
 		r, fc = fullSync(db, from)
 	}
 
-	// why not since we can.
 	if !fc.Value.Data.Equals(db.head.Value.Data) {
 		fm := kv.NewMapFromNoms(db.Noms(), fc.Data(db.Noms()))
 		tm := kv.NewMapFromNoms(db.Noms(), db.head.Data(db.Noms()))
