@@ -59,7 +59,7 @@ func newServer(cs chunks.ChunkStore, urlPrefix string) (*server, error) {
 
 		from, ok := hash.MaybeParse(hsreq.BaseStateID)
 		if !ok {
-			clientError(rw, 400, "Invalid basis hash")
+			clientError(rw, 400, "Invalid baseStateID")
 			return
 		}
 		fromChecksum, err := kv.ChecksumFromString(hsreq.Checksum)
