@@ -77,8 +77,8 @@ func TestServe(t *testing.T) {
 		expectedResponse string
 		expectedError    string
 	}{
-		{"handleSync", `{"basis": "00000000000000000000000000000000", "checksum": "00000000"}`,
-			`{"commitID":"unhmo677duk3vbjpu0f01eusdep2k7ei","patch":[{"op":"remove","path":"/"}],"checksum":"00000000"}`, ""},
+		{"handlePullRequest", `{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000"}`,
+			`{"stateID":"unhmo677duk3vbjpu0f01eusdep2k7ei","patch":[{"op":"remove","path":"/"}],"checksum":"00000000"}`, ""},
 	}
 
 	for i, t := range tc {

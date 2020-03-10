@@ -42,7 +42,7 @@ func newServer(cs chunks.ChunkStore, urlPrefix string) (*server, error) {
 		return nil, err
 	}
 	s := &server{router: router, db: db}
-	s.router.POST(fmt.Sprintf("%s/handleSync", urlPrefix), func(rw http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+	s.router.POST(fmt.Sprintf("%s/handlePullRequest", urlPrefix), func(rw http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 		body := bytes.Buffer{}
 		_, err := io.Copy(&body, req.Body)
 		logPayload(req, body.Bytes(), db)
@@ -57,22 +57,22 @@ func newServer(cs chunks.ChunkStore, urlPrefix string) (*server, error) {
 			return
 		}
 
-		from, ok := hash.MaybeParse(hsreq.Basis)
+		from, ok := hash.MaybeParse(hsreq.BaseStateID)
 		if !ok {
-			clientError(rw, 400, "Invalid basis hash")
+			clientError(rw, 400, "Invalid baseStateID")
 			return
 		}
 		fromChecksum, err := kv.ChecksumFromString(hsreq.Checksum)
 		if err != nil {
 			clientError(rw, 400, "Invalid checksum")
 		}
-		patch, err := s.db.HandleSync(from, *fromChecksum)
+		patch, err := s.db.HandlePull(from, *fromChecksum)
 		if err != nil {
 			serverError(rw, err)
 			return
 		}
 		hsresp := servetypes.PullResponse{
-			CommitID: s.db.Head().Original.Hash().String(),
+			StateID:  s.db.Head().Original.Hash().String(),
 			Patch:    patch,
 			Checksum: string(s.db.Head().Value.Checksum),
 		}

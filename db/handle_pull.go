@@ -23,7 +23,7 @@ func fullSync(db *DB, from hash.Hash) ([]kv.Operation, Commit) {
 	return r, makeCommit(db.Noms(), types.Ref{}, datetime.Epoch, db.noms.WriteValue(m.NomsMap()), types.String(m.Checksum().String()))
 }
 
-func (db *DB) HandleSync(from hash.Hash, fromChecksum kv.Checksum) ([]kv.Operation, error) {
+func (db *DB) HandlePull(from hash.Hash, fromChecksum kv.Checksum) ([]kv.Operation, error) {
 	r := []kv.Operation{}
 	v := db.Noms().ReadValue(from)
 	var fc Commit
@@ -34,7 +34,7 @@ func (db *DB) HandleSync(from hash.Hash, fromChecksum kv.Checksum) ([]kv.Operati
 		err = marshal.Unmarshal(v, &fc)
 		if err != nil {
 			log.Printf("Error: Requested sync basis %s is not a commit: %#v", from, v)
-			return nil, errors.New("Invalid commitID")
+			return nil, errors.New("Invalid baseStateID")
 		}
 	}
 
