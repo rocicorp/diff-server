@@ -33,7 +33,7 @@ func TestLoadBadSpec(t *testing.T) {
 	assert.NoError(err)
 	db, err := Load(sp)
 	assert.Nil(db)
-	assert.EqualError(err, "Get \"http://localhost:6666/root/\": dial tcp [::1]:6666: connect: connection refused")
+	assert.Regexp(`Get "?http://localhost:6666/root/"?: dial tcp (.+?):6666: connect: connection refused`, err.Error())
 
 	srv := httptest.NewServer(http.NotFoundHandler())
 	sp, err = spec.ForDatabase(srv.URL)
