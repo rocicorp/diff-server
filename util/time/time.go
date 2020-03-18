@@ -22,7 +22,11 @@ func DateTime() datetime.DateTime {
 }
 
 func SetFake() (undo func()) {
-	f := time.Date(2014, 1, 24, 0, 0, 0, 0, time.Local)
+	loc, err := time.LoadLocation("US/Hawaii")
+	if err != nil {
+		panic(err)
+	}
+	f := time.Date(2014, 1, 24, 0, 0, 0, 0, loc)
 	fakeTime = &f
 	return ClearFake
 }
