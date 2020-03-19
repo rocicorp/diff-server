@@ -14,7 +14,8 @@ type ClientViewGetter struct {
 	url string
 }
 
-// Get fetches a client view. It returns an error if the last transaction id or state id is missing.
+// Get fetches a client view. It returns an error if the response from the data layer doesn't have
+// a lastTransactionID.
 func (g ClientViewGetter) Get(req servetypes.ClientViewRequest, authToken string) (servetypes.ClientViewResponse, error) {
 	reqBody, err := json.Marshal(req)
 	if err != nil {

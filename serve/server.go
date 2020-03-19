@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -25,7 +26,6 @@ import (
 	"roci.dev/diff-server/db"
 	"roci.dev/diff-server/kv"
 	servetypes "roci.dev/diff-server/serve/types"
-	"roci.dev/diff-server/util/chk"
 	nomsjson "roci.dev/diff-server/util/noms/json"
 )
 
@@ -41,6 +41,8 @@ type server struct {
 	mu     sync.Mutex
 }
 
+// cvg may be nil, in which case the server skips the client view request in pull, which is
+// useful if you are populating the db directly or in tests.
 func newServer(cs chunks.ChunkStore, urlPrefix string, cvg clientViewGetter) (*server, error) {
 	router := httprouter.New()
 	noms := datas.NewDatabase(cs)
@@ -81,7 +83,7 @@ func newServer(cs chunks.ChunkStore, urlPrefix string, cvg clientViewGetter) (*s
 		} else {
 			var cvgError error
 			cvreq := servetypes.ClientViewRequest{ClientID: preq.ClientID}
-			cvresp, cvgError := cvg.Get(cvreq, "") // auth token TODO
+			cvresp, cvgError := cvg.Get(cvreq, "") // TODO fritz pass auth token along
 			if cvgError == nil {
 				cvgError = storeNewClientView(db, cvresp.ClientView)
 			}
@@ -139,7 +141,7 @@ func storeNewClientView(db *db.DB, clientView json.RawMessage) error {
 	// back and forth. But after it works.
 	m := kv.NewMapFromNoms(db.Noms(), nm)
 	if m == nil {
-		chk.Fail("couldnt create a Map from a Noms Map")
+		return errors.New("couldnt create a Map from a Noms Map")
 	}
 	return db.PutData(m.NomsMap(), types.String(m.Checksum().String()))
 }
