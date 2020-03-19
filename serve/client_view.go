@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/pkg/errors"
 	servetypes "roci.dev/diff-server/serve/types"
 )
 
@@ -19,16 +18,16 @@ type ClientViewGetter struct {
 func (g ClientViewGetter) Get(req servetypes.ClientViewRequest, authToken string) (servetypes.ClientViewResponse, error) {
 	reqBody, err := json.Marshal(req)
 	if err != nil {
-		return servetypes.ClientViewResponse{}, errors.Wrap(err, "could not marshal ClientViewRequest")
+		return servetypes.ClientViewResponse{}, fmt.Errorf("could not marshal ClientViewRequest: %w", err)
 	}
 	httpReq, err := http.NewRequest("POST", g.url, bytes.NewReader(reqBody))
 	if err != nil {
-		return servetypes.ClientViewResponse{}, errors.Wrap(err, "could not create client view http request")
+		return servetypes.ClientViewResponse{}, fmt.Errorf("could not create client view http request: %w", err)
 	}
 	httpReq.Header.Add("Authorization", authToken)
 	httpResp, err := http.DefaultClient.Do(httpReq)
 	if err != nil {
-		return servetypes.ClientViewResponse{}, errors.Wrap(err, "error sending client view http request")
+		return servetypes.ClientViewResponse{}, fmt.Errorf("error sending client view http request: %w", err)
 	}
 	if httpResp.StatusCode != http.StatusOK {
 		return servetypes.ClientViewResponse{}, fmt.Errorf("client view fetch http request returned %s", httpResp.Status)
@@ -38,10 +37,7 @@ func (g ClientViewGetter) Get(req servetypes.ClientViewRequest, authToken string
 	defer httpResp.Body.Close()
 	err = json.NewDecoder(r).Decode(&resp)
 	if err != nil {
-		return servetypes.ClientViewResponse{}, errors.Wrap(err, "couldnt decode client view response")
-	}
-	if resp.StateID == "" {
-		return servetypes.ClientViewResponse{}, fmt.Errorf("malformed response %v missing stateID", resp)
+		return servetypes.ClientViewResponse{}, fmt.Errorf("couldnt decode client view response: %w", err)
 	}
 	if resp.LastTransactionID == "" {
 		return servetypes.ClientViewResponse{}, fmt.Errorf("malformed response %v missing lastTransactionID", resp)

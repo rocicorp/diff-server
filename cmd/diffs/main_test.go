@@ -77,7 +77,7 @@ func TestServe(t *testing.T) {
 		expectedResponse string
 		expectedError    string
 	}{
-		{"handlePullRequest", `{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000"}`,
+		{"handlePullRequest", `{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`,
 			`{"stateID":"unhmo677duk3vbjpu0f01eusdep2k7ei","patch":[{"op":"remove","path":"/"}],"checksum":"00000000"}`, ""},
 	}
 

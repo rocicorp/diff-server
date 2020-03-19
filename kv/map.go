@@ -115,7 +115,7 @@ func (me MapEditor) Get(key string) ([]byte, error) {
 
 // Set sets the value for a given key.
 func (me *MapEditor) Set(key string, value []byte) error {
-	nv, err := nomsjson.FromJSON(bytes.NewReader(value), me.noms, nomsjson.FromOptions{})
+	nv, err := nomsjson.FromJSON(bytes.NewReader(value), me.noms)
 	if err != nil {
 		return err
 	}

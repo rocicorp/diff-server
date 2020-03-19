@@ -92,10 +92,10 @@ func TestCheckAccess(t *testing.T) {
 			accounts = append(accounts, *t.addAccount)
 		}
 
-		svc := NewService(td, accounts)
+		svc := NewService(td, accounts, "")
 		res := httptest.NewRecorder()
 
-		req := httptest.NewRequest("POST", fmt.Sprintf("/%s/%s/handlePullRequest", t.accountID, t.dbName), strings.NewReader(`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000"}`))
+		req := httptest.NewRequest("POST", fmt.Sprintf("/%s/%s/handlePullRequest", t.accountID, t.dbName), strings.NewReader(`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`))
 		req.Header.Add("Authorization", t.token)
 		svc.ServeHTTP(res, req)
 
@@ -128,8 +128,8 @@ func TestConcurrentAccessUsingMultipleServices(t *testing.T) {
 		},
 	}
 
-	svc1 := NewService(td, accounts)
-	svc2 := NewService(td, accounts)
+	svc1 := NewService(td, accounts, "")
+	svc2 := NewService(td, accounts, "")
 
 	res := []*httptest.ResponseRecorder{
 		httptest.NewRecorder(),
@@ -137,9 +137,9 @@ func TestConcurrentAccessUsingMultipleServices(t *testing.T) {
 		httptest.NewRecorder(),
 	}
 
-	svc1.ServeHTTP(res[0], httptest.NewRequest("POST", "/sandbox/foo/handlePullRequest", strings.NewReader(`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000"}`)))
-	svc2.ServeHTTP(res[1], httptest.NewRequest("POST", "/sandbox/foo/handlePullRequest", strings.NewReader(`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000"}`)))
-	svc1.ServeHTTP(res[2], httptest.NewRequest("POST", "/sandbox/foo/handlePullRequest", strings.NewReader(`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000"}`)))
+	svc1.ServeHTTP(res[0], httptest.NewRequest("POST", "/sandbox/foo/handlePullRequest", strings.NewReader(`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`)))
+	svc2.ServeHTTP(res[1], httptest.NewRequest("POST", "/sandbox/foo/handlePullRequest", strings.NewReader(`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`)))
+	svc1.ServeHTTP(res[2], httptest.NewRequest("POST", "/sandbox/foo/handlePullRequest", strings.NewReader(`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`)))
 
 	for i, r := range res {
 		assert.Equal(http.StatusOK, r.Code, fmt.Sprintf("response %d: %s", i, string(r.Body.Bytes())))

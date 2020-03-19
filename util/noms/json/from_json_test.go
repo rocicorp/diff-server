@@ -32,10 +32,10 @@ func (suite *LibTestSuite) TearDownTest() {
 
 func (suite *LibTestSuite) TestPrimitiveTypes() {
 	vs := suite.vs
-	suite.EqualValues(types.String("expected"), NomsValueFromDecodedJSON(vs, "expected", false))
-	suite.EqualValues(types.Bool(false), NomsValueFromDecodedJSON(vs, false, false))
-	suite.EqualValues(types.Number(1.7), NomsValueFromDecodedJSON(vs, 1.7, false))
-	suite.False(NomsValueFromDecodedJSON(vs, 1.7, false).Equals(types.Bool(true)))
+	suite.EqualValues(types.String("expected"), NomsValueFromDecodedJSON(vs, "expected"))
+	suite.EqualValues(types.Bool(false), NomsValueFromDecodedJSON(vs, false))
+	suite.EqualValues(types.Number(1.7), NomsValueFromDecodedJSON(vs, 1.7))
+	suite.False(NomsValueFromDecodedJSON(vs, 1.7).Equals(types.Bool(true)))
 }
 
 func (suite *LibTestSuite) TestCompositeTypes() {
@@ -44,13 +44,13 @@ func (suite *LibTestSuite) TestCompositeTypes() {
 	// [false true]
 	suite.EqualValues(
 		types.NewList(vs).Edit().Append(types.Bool(false)).Append(types.Bool(true)).List(),
-		NomsValueFromDecodedJSON(vs, []interface{}{false, true}, false))
+		NomsValueFromDecodedJSON(vs, []interface{}{false, true}))
 
 	// [[false true]]
 	suite.EqualValues(
 		types.NewList(vs).Edit().Append(
 			types.NewList(vs).Edit().Append(types.Bool(false)).Append(types.Bool(true)).List()).List(),
-		NomsValueFromDecodedJSON(vs, []interface{}{[]interface{}{false, true}}, false))
+		NomsValueFromDecodedJSON(vs, []interface{}{[]interface{}{false, true}}))
 
 	// {"string": "string",
 	//  "list": [false true],
@@ -71,35 +71,12 @@ func (suite *LibTestSuite) TestCompositeTypes() {
 		"string": "string",
 		"list":   []interface{}{false, true},
 		"map":    map[string]interface{}{"nested": "string"},
-	}, false)
+	})
 
 	suite.True(m.Equals(o))
 }
 
-func (suite *LibTestSuite) TestCompositeTypeWithStruct() {
-	vs := suite.vs
-
-	// {"string": "string",
-	//  "list": [false true],
-	//  "struct": {"nested": "string"}
-	// }
-	tstruct := types.NewStruct("", types.StructData{
-		"string": types.String("string"),
-		"list":   types.NewList(vs).Edit().Append(types.Bool(false)).Append(types.Bool(true)).List(),
-		"struct": types.NewStruct("", types.StructData{
-			"nested": types.String("string"),
-		}),
-	})
-	o := NomsValueFromDecodedJSON(vs, map[string]interface{}{
-		"string": "string",
-		"list":   []interface{}{false, true},
-		"struct": map[string]interface{}{"nested": "string"},
-	}, true)
-
-	suite.True(tstruct.Equals(o))
-}
-
 func (suite *LibTestSuite) TestPanicOnUnsupportedType() {
 	vs := suite.vs
-	suite.Panics(func() { NomsValueFromDecodedJSON(vs, map[int]string{1: "one"}, false) }, "Should panic on map[int]string!")
+	suite.Panics(func() { NomsValueFromDecodedJSON(vs, map[int]string{1: "one"}) }, "Should panic on map[int]string!")
 }

@@ -30,8 +30,8 @@ func TestClientViewGetter_Get(t *testing.T) {
 			servetypes.ClientViewRequest{ClientID: "clientid"},
 			"authtoken",
 			http.StatusOK,
-			`{"clientView": "clientview", "stateID": "stateID", "lastTransactionID": "ltid"}`,
-			servetypes.ClientViewResponse{ClientView: []byte("\"clientview\""), StateID: "stateID", LastTransactionID: "ltid"},
+			`{"clientView": "clientview", "lastTransactionID": "ltid"}`,
+			servetypes.ClientViewResponse{ClientView: []byte("\"clientview\""), LastTransactionID: "ltid"},
 			"",
 		},
 		{
@@ -44,21 +44,11 @@ func TestClientViewGetter_Get(t *testing.T) {
 			"400",
 		},
 		{
-			"missing state id",
-			servetypes.ClientViewRequest{ClientID: "clientid"},
-			"authtoken",
-			http.StatusOK,
-			`{"clientView": "foo", "stateID": "", "lastTransactionID": "ltid"}`,
-			servetypes.ClientViewResponse{},
-			"stateID",
-		},
-
-		{
 			"missing last transaction id",
 			servetypes.ClientViewRequest{ClientID: "clientid"},
 			"authtoken",
 			http.StatusOK,
-			`{"clientView": "foo", "stateID": "stateID", "lastTransactionID": ""}`,
+			`{"clientView": "foo", "lastTransactionID": ""}`,
 			servetypes.ClientViewResponse{},
 			"lastTransactionID",
 		},

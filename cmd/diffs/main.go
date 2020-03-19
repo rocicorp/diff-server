@@ -136,10 +136,11 @@ type gsp func() (spec.Spec, error)
 func serve(parent *kingpin.Application, sps *string, errs io.Writer) {
 	kc := parent.Command("serve", "Starts a local diff-server.")
 	port := kc.Flag("port", "The port to run on").Default("7001").Int()
+	overrideClientViewURL := parent.Flag("clientview", "URL to always use for client view eg 'https://example.com/clientview'").Default("").String()
 	kc.Action(func(_ *kingpin.ParseContext) error {
 		ps := fmt.Sprintf(":%d", *port)
 		log.Printf("Listening on %s...", ps)
-		s := servepkg.NewService(*sps, accounts.Accounts())
+		s := servepkg.NewService(*sps, accounts.Accounts(), *overrideClientViewURL)
 		http.Handle("/", s)
 		return http.ListenAndServe(fmt.Sprintf(":%d", *port), nil)
 	})

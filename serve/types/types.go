@@ -9,6 +9,7 @@ import (
 type PullRequest struct {
 	BaseStateID string `'json:"baseStateID"`
 	Checksum    string `'json:"checksum"`
+	ClientID    string `json:"clientID`
 }
 
 type PullResponse struct {
@@ -23,6 +24,5 @@ type ClientViewRequest struct {
 
 type ClientViewResponse struct {
 	ClientView        json.RawMessage `json:clientView`
-	StateID           string          `json:stateID`
 	LastTransactionID string          `json:lastTransactionID`
 }

@@ -21,7 +21,7 @@ const (
 )
 
 var (
-	svc = serve.NewService("aws:replicant/aa-replicant2", accounts.Accounts())
+	svc = serve.NewService("aws:replicant/aa-replicant2", accounts.Accounts(), "")
 )
 
 func init() {
