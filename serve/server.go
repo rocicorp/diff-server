@@ -14,7 +14,6 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/attic-labs/noms/go/chunks"
 	"github.com/attic-labs/noms/go/datas"
@@ -38,7 +37,6 @@ type server struct {
 	router *httprouter.Router
 	db     *db.DB
 	cvg    clientViewGetter
-	mu     sync.Mutex
 }
 
 // cvg may be nil, in which case the server skips the client view request in pull, which is
