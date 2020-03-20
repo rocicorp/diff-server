@@ -13,7 +13,7 @@ import (
 	cjson "github.com/gibson042/canonicaljson-go"
 )
 
-func nomsValueFromDecodedJSONBase(vrw types.ValueReadWriter, o interface{}, useStruct bool) types.Value {
+func nomsValueFromDecodedJSONBase(vrw types.ValueReadWriter, o interface{}) types.Value {
 	switch o := o.(type) {
 	case string:
 		return types.String(o)
@@ -26,7 +26,7 @@ func nomsValueFromDecodedJSONBase(vrw types.ValueReadWriter, o interface{}, useS
 	case []interface{}:
 		items := make([]types.Value, 0, len(o))
 		for _, v := range o {
-			nv := nomsValueFromDecodedJSONBase(vrw, v, useStruct)
+			nv := nomsValueFromDecodedJSONBase(vrw, v)
 			if nv != nil {
 				items = append(items, nv)
 			}
@@ -34,27 +34,14 @@ func nomsValueFromDecodedJSONBase(vrw types.ValueReadWriter, o interface{}, useS
 		return types.NewList(vrw, items...)
 	case map[string]interface{}:
 		var v types.Value
-		if useStruct {
-			structName := ""
-			fields := make(types.StructData, len(o))
-			for k, v := range o {
-				nv := nomsValueFromDecodedJSONBase(vrw, v, useStruct)
-				if nv != nil {
-					k := types.EscapeStructField(k)
-					fields[k] = nv
-				}
+		kv := make([]types.Value, 0, len(o)*2)
+		for k, v := range o {
+			nv := nomsValueFromDecodedJSONBase(vrw, v)
+			if nv != nil {
+				kv = append(kv, types.String(k), nv)
 			}
-			v = types.NewStruct(structName, fields)
-		} else {
-			kv := make([]types.Value, 0, len(o)*2)
-			for k, v := range o {
-				nv := nomsValueFromDecodedJSONBase(vrw, v, useStruct)
-				if nv != nil {
-					kv = append(kv, types.String(k), nv)
-				}
-			}
-			v = types.NewMap(vrw, kv...)
 		}
+		v = types.NewMap(vrw, kv...)
 		return v
 
 	default:
@@ -77,11 +64,11 @@ func nomsValueFromDecodedJSONBase(vrw types.ValueReadWriter, o interface{}, useS
 // Composites:
 //  - []interface{}
 //  - map[string]interface{}
-func NomsValueFromDecodedJSON(vrw types.ValueReadWriter, o interface{}, useStruct bool) types.Value {
-	return nomsValueFromDecodedJSONBase(vrw, o, useStruct)
+func NomsValueFromDecodedJSON(vrw types.ValueReadWriter, o interface{}) types.Value {
+	return nomsValueFromDecodedJSONBase(vrw, o)
 }
 
-func FromJSON(r io.Reader, vrw types.ValueReadWriter, opts FromOptions) (types.Value, error) {
+func FromJSON(r io.Reader, vrw types.ValueReadWriter) (types.Value, error) {
 	dec := cjson.NewDecoder(r)
 	// TODO: This is pretty inefficient. It would be better to parse the JSON directly into Noms values,
 	// rather than going through a pile of Go interfaces.
@@ -90,11 +77,5 @@ func FromJSON(r io.Reader, vrw types.ValueReadWriter, opts FromOptions) (types.V
 	if err != nil {
 		return nil, err
 	}
-	return NomsValueFromDecodedJSON(vrw, pile, opts.Structs), nil
-}
-
-// FromOptions controls how FromJSON works.
-type FromOptions struct {
-	// If true, JSON objects are decoded into Noms Structs. Otherwise, they are decoded into Maps.
-	Structs bool
+	return NomsValueFromDecodedJSON(vrw, pile), nil
 }

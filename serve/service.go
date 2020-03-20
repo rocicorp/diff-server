@@ -13,6 +13,7 @@ import (
 
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/dgrijalva/jwt-go"
+	"roci.dev/diff-server/util/chk"
 	rlog "roci.dev/diff-server/util/log"
 	"roci.dev/diff-server/util/version"
 )
@@ -24,28 +25,31 @@ var (
 
 // Service is a running instance of the Replicant service. A service handles one or more servers.
 type Service struct {
-	storageRoot string
-	urlPrefix   string
-	accounts    []Account
-	servers     map[string]*server
-	mu          sync.Mutex
+	storageRoot          string
+	urlPrefix            string
+	accounts             []Account
+	servers              map[string]*server
+	overridClientViewURL string // Overrides account client view URL, eg for testing.
+	mu                   sync.Mutex
 }
 
 // Account is information about a customer of Replicant. This is a stand-in for what will eventually be
 // an accounts database.
 type Account struct {
-	ID     string
-	Name   string
-	Pubkey []byte // PEM-formatted ECDSA public key
+	ID            string
+	Name          string
+	Pubkey        []byte // PEM-formatted ECDSA public key
+	ClientViewURL string
 }
 
 // NewService creates a new instances of the Replicant web service.
-func NewService(storageRoot string, accounts []Account) *Service {
+func NewService(storageRoot string, accounts []Account, clientViewURL string) *Service {
 	return &Service{
-		storageRoot: storageRoot,
-		accounts:    accounts,
-		servers:     map[string]*server{},
-		mu:          sync.Mutex{},
+		storageRoot:          storageRoot,
+		accounts:             accounts,
+		servers:              map[string]*server{},
+		overridClientViewURL: clientViewURL,
+		mu:                   sync.Mutex{},
 	}
 }
 
@@ -92,13 +96,14 @@ func (s *Service) getServer(req *http.Request) (r *server, clientError string, a
 	}
 
 	token := req.Header.Get("Authorization")
-	clientErr, authErr := checkAccess(acc, db, token, s.accounts)
+	account, clientErr, authErr := checkAccess(acc, db, token, s.accounts)
 	if clientErr != nil {
 		return nil, clientErr.Error(), nil, nil
 	}
 	if authErr != nil {
 		return nil, "", authErr, nil
 	}
+	chk.NotNil(account)
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -119,7 +124,16 @@ func (s *Service) getServer(req *http.Request) (r *server, clientError string, a
 		return nil, "", nil, err
 	}
 
-	server, err := newServer(sp.NewChunkStore(), fmt.Sprintf("/%s/%s", acc, db))
+	clientViewURL := account.ClientViewURL
+	if s.overridClientViewURL != "" {
+		log.Printf("WARNING: overriding all client view URLs with %s", s.overridClientViewURL)
+		clientViewURL = s.overridClientViewURL
+	}
+	var cvg clientViewGetter
+	if clientViewURL != "" {
+		cvg = ClientViewGetter{url: clientViewURL}
+	}
+	server, err := newServer(sp.NewChunkStore(), fmt.Sprintf("/%s/%s", acc, db), cvg)
 	s.servers[key] = server
 	if err != nil {
 		return nil, "", nil, err
@@ -133,19 +147,19 @@ type Claims struct {
 	DB string `json:"db,omitempty"`
 }
 
-func checkAccess(accountID, dbName, token string, accounts []Account) (clientError, authError error) {
+func checkAccess(accountID, dbName, token string, accounts []Account) (*Account, error, error) {
 	acc, ok := lookupAccount(accountID, accounts)
 	if !ok {
-		return fmt.Errorf("No such account: '%s'", accountID), nil
+		return nil, fmt.Errorf("No such account: '%s'", accountID), nil
 	}
 
 	// If account has no public key, it's publicly available.
 	if acc.Pubkey == nil {
-		return nil, nil
+		return &acc, nil, nil
 	}
 
 	if token == "" {
-		return nil, errors.New("Authorization header is required")
+		return nil, nil, errors.New("Authorization header is required")
 	}
 
 	var claims Claims
@@ -157,12 +171,12 @@ func checkAccess(accountID, dbName, token string, accounts []Account) (clientErr
 		return pk, nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("Invalid JWT: %s", err.Error())
+		return nil, nil, fmt.Errorf("Invalid JWT: %s", err.Error())
 	}
 	if claims.DB != dbName {
-		return nil, errors.New("Token does not grant access to specified database")
+		return nil, nil, errors.New("Token does not grant access to specified database")
 	}
-	return nil, nil
+	return &acc, nil, nil
 }
 
 func lookupAccount(accountID string, accounts []Account) (acc Account, ok bool) {
