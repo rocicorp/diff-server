@@ -83,7 +83,7 @@ func newServer(cs chunks.ChunkStore, urlPrefix string, cvg clientViewGetter) (*s
 		} else {
 			var cvgError error
 			cvreq := servetypes.ClientViewRequest{ClientID: preq.ClientID}
-			cvresp, cvgError := cvg.Get(cvreq, "") // TODO fritz pass auth token along
+			cvresp, cvgError := cvg.Get(cvreq, req.Header.Get("Authorization"))
 			if cvgError == nil {
 				cvgError = storeNewClientView(db, cvresp.ClientView)
 			}
