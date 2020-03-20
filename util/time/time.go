@@ -34,3 +34,10 @@ func SetFake() (undo func()) {
 func ClearFake() {
 	fakeTime = nil
 }
+
+func String(t time.Time) string {
+	if fakeTime != nil {
+		t = t.In(fakeTime.Location())
+	}
+	return t.String()
+}
