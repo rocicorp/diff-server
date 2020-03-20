@@ -13,9 +13,10 @@ type PullRequest struct {
 }
 
 type PullResponse struct {
-	StateID  string         `json:"stateID"`
-	Patch    []kv.Operation `json:"patch"`
-	Checksum string         `json:"checksum"`
+	StateID           string         `json:"stateID"`
+	LastTransactionID string         `json:"lastTransactionID"`
+	Patch             []kv.Operation `json:"patch"`
+	Checksum          string         `json:"checksum"`
 }
 
 type ClientViewRequest struct {
@@ -23,6 +24,6 @@ type ClientViewRequest struct {
 }
 
 type ClientViewResponse struct {
-	ClientView        json.RawMessage `json:clientView`
-	LastTransactionID string          `json:lastTransactionID`
+	ClientView        json.RawMessage `json:"clientView"`
+	LastTransactionID string          `json:"lastTransactionID"`
 }

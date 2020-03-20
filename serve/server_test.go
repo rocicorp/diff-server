@@ -42,7 +42,7 @@ func TestAPI(t *testing.T) {
 			nil,
 			servetypes.ClientViewResponse{},
 			nil,
-			`{"stateID":"1pgvpub8mgd4jlsu17qmd3ro0gr3u6hp","patch":[{"op":"remove","path":"/"},{"op":"add","path":"/foo","value":"bar"}],"checksum":"c4e7090d"}`,
+			`{"stateID":"ae8gjt8cuhutiujhru7o6shica8pmlvn","lastTransactionID":"0","patch":[{"op":"remove","path":"/"},{"op":"add","path":"/foo","value":"bar"}],"checksum":"c4e7090d"}`,
 			""},
 
 		// Successful client view fetch, with an auth header.
@@ -52,7 +52,7 @@ func TestAPI(t *testing.T) {
 			&servetypes.ClientViewRequest{ClientID: "clientid"},
 			servetypes.ClientViewResponse{ClientView: []byte(`{"new": "value"}`), LastTransactionID: "1"},
 			nil,
-			`{"stateID":"mppk37oivnolpnqso4p0hshgas8fc6er","patch":[{"op":"remove","path":"/"},{"op":"add","path":"/new","value":"value"}],"checksum":"f9ef007b"}`,
+			`{"stateID":"dm0qknd6564g4f8v9o5rmd9oep25oiq9","lastTransactionID":"1","patch":[{"op":"remove","path":"/"},{"op":"add","path":"/new","value":"value"}],"checksum":"f9ef007b"}`,
 			""},
 
 		// Fetch errors out.
@@ -62,8 +62,7 @@ func TestAPI(t *testing.T) {
 			&servetypes.ClientViewRequest{ClientID: "clientid"},
 			servetypes.ClientViewResponse{ClientView: []byte(`{"new": "value"}`), LastTransactionID: "1"},
 			errors.New("boom"),
-			// TODO fritz when we return last transaction id in pull response we need to ensure it is 0 here and not 1
-			`{"stateID":"1pgvpub8mgd4jlsu17qmd3ro0gr3u6hp","patch":[{"op":"remove","path":"/"},{"op":"add","path":"/foo","value":"bar"}],"checksum":"c4e7090d"}`,
+			`{"stateID":"ae8gjt8cuhutiujhru7o6shica8pmlvn","lastTransactionID":"0","patch":[{"op":"remove","path":"/"},{"op":"add","path":"/foo","value":"bar"}],"checksum":"c4e7090d"}`,
 			""},
 
 		// No clientID passed in.
@@ -87,7 +86,7 @@ func TestAPI(t *testing.T) {
 
 		db, s := startTestServer(assert, cvg)
 		m := kv.NewMapFromNoms(db.Noms(), types.NewMap(db.Noms(), types.String("foo"), types.String("bar")))
-		err := db.PutData(m.NomsMap(), types.String(m.Checksum().String()))
+		err := db.PutData(m.NomsMap(), types.String(m.Checksum().String()), "0" /*lastTransactionID*/)
 		assert.NoError(err)
 
 		msg := fmt.Sprintf("test case %d: %s: %s", i, t.rpc, t.pullReq)
