@@ -38,7 +38,7 @@ func TestDrop(t *testing.T) {
 	for i, t := range tc {
 		d, dir := db.LoadTempDB(assert)
 		m := kv.NewMapFromNoms(d.Noms(), types.NewMap(d.Noms(), types.String("foo"), types.String("bar")))
-		err := d.PutData(m.NomsMap(), types.String(m.Checksum().String()))
+		err := d.PutData(m.NomsMap(), types.String(m.Checksum().String()), "1" /*lastTransactionID*/)
 		assert.NoError(err)
 
 		desc := fmt.Sprintf("test case %d, input: %s", i, t.in)
@@ -78,7 +78,7 @@ func TestServe(t *testing.T) {
 		expectedError    string
 	}{
 		{"handlePullRequest", `{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`,
-			`{"stateID":"unhmo677duk3vbjpu0f01eusdep2k7ei","patch":[{"op":"remove","path":"/"}],"checksum":"00000000"}`, ""},
+			`{"stateID":"79fflqibsuu1nd46t2f3sidkd3nn6nfj","lastTransactionID":"","patch":[{"op":"remove","path":"/"}],"checksum":"00000000"}`, ""},
 	}
 
 	for i, t := range tc {

@@ -28,6 +28,7 @@ func TestAPI(t *testing.T) {
 	tc := []struct {
 		rpc         string
 		pullReq     string
+		authHeader  string
 		expCVReq    *servetypes.ClientViewRequest
 		CVResponse  servetypes.ClientViewResponse
 		CVErr       error
@@ -37,34 +38,37 @@ func TestAPI(t *testing.T) {
 		// No client view to fetch from.
 		{"handlePullRequest",
 			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`,
+			"",
 			nil,
 			servetypes.ClientViewResponse{},
 			nil,
-			`{"stateID":"1pgvpub8mgd4jlsu17qmd3ro0gr3u6hp","patch":[{"op":"remove","path":"/"},{"op":"add","path":"/foo","value":"bar"}],"checksum":"c4e7090d"}`,
+			`{"stateID":"ae8gjt8cuhutiujhru7o6shica8pmlvn","lastTransactionID":"0","patch":[{"op":"remove","path":"/"},{"op":"add","path":"/foo","value":"bar"}],"checksum":"c4e7090d"}`,
 			""},
 
-		// Successful client view fetch.
+		// Successful client view fetch, with an auth header.
 		{"handlePullRequest",
 			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`,
+			"authtoken",
 			&servetypes.ClientViewRequest{ClientID: "clientid"},
 			servetypes.ClientViewResponse{ClientView: []byte(`{"new": "value"}`), LastTransactionID: "1"},
 			nil,
-			`{"stateID":"mppk37oivnolpnqso4p0hshgas8fc6er","patch":[{"op":"remove","path":"/"},{"op":"add","path":"/new","value":"value"}],"checksum":"f9ef007b"}`,
+			`{"stateID":"dm0qknd6564g4f8v9o5rmd9oep25oiq9","lastTransactionID":"1","patch":[{"op":"remove","path":"/"},{"op":"add","path":"/new","value":"value"}],"checksum":"f9ef007b"}`,
 			""},
 
 		// Fetch errors out.
 		{"handlePullRequest",
 			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`,
+			"",
 			&servetypes.ClientViewRequest{ClientID: "clientid"},
 			servetypes.ClientViewResponse{ClientView: []byte(`{"new": "value"}`), LastTransactionID: "1"},
 			errors.New("boom"),
-			// TODO fritz when we return last transaction id in pull response we need to ensure it is 0 here and not 1
-			`{"stateID":"1pgvpub8mgd4jlsu17qmd3ro0gr3u6hp","patch":[{"op":"remove","path":"/"},{"op":"add","path":"/foo","value":"bar"}],"checksum":"c4e7090d"}`,
+			`{"stateID":"ae8gjt8cuhutiujhru7o6shica8pmlvn","lastTransactionID":"0","patch":[{"op":"remove","path":"/"},{"op":"add","path":"/foo","value":"bar"}],"checksum":"c4e7090d"}`,
 			""},
 
 		// No clientID passed in.
 		{"handlePullRequest",
 			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000"}`,
+			"",
 			nil,
 			servetypes.ClientViewResponse{},
 			nil,
@@ -82,11 +86,17 @@ func TestAPI(t *testing.T) {
 
 		db, s := startTestServer(assert, cvg)
 		m := kv.NewMapFromNoms(db.Noms(), types.NewMap(db.Noms(), types.String("foo"), types.String("bar")))
-		err := db.PutData(m.NomsMap(), types.String(m.Checksum().String()))
+		err := db.PutData(m.NomsMap(), types.String(m.Checksum().String()), "0" /*lastTransactionID*/)
 		assert.NoError(err)
 
 		msg := fmt.Sprintf("test case %d: %s: %s", i, t.rpc, t.pullReq)
-		resp, err := http.Post(fmt.Sprintf("http://localhost:8674/%s", t.rpc), "application/json", strings.NewReader(t.pullReq))
+		req, err := http.NewRequest("POST", fmt.Sprintf("http://localhost:8674/%s", t.rpc), strings.NewReader(t.pullReq))
+		assert.NoError(err)
+		req.Header.Set("Content-type", "application/json")
+		if t.authHeader != "" {
+			req.Header.Set("Authorization", t.authHeader)
+		}
+		resp, err := http.DefaultClient.Do(req)
 		assert.NoError(err, msg)
 		body := bytes.Buffer{}
 		_, err = io.Copy(&body, resp.Body)
@@ -101,6 +111,9 @@ func TestAPI(t *testing.T) {
 			assert.True(fcvg.called)
 			assert.Equal(*t.expCVReq, fcvg.gotReq)
 		}
+		if t.authHeader != "" {
+			assert.Equal(t.authHeader, fcvg.gotAuth)
+		}
 
 		s.Shutdown(context.Background())
 	}
@@ -110,13 +123,15 @@ type fakeClientViewGet struct {
 	resp servetypes.ClientViewResponse
 	err  error
 
-	called bool
-	gotReq servetypes.ClientViewRequest
+	called  bool
+	gotReq  servetypes.ClientViewRequest
+	gotAuth string
 }
 
 func (f *fakeClientViewGet) Get(req servetypes.ClientViewRequest, authToken string) (servetypes.ClientViewResponse, error) {
 	f.called = true
 	f.gotReq = req
+	f.gotAuth = authToken
 	return f.resp, f.err
 }
 

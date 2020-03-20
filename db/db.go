@@ -60,7 +60,12 @@ func (db *DB) init() error {
 	ds := db.noms.GetDataset(LOCAL_DATASET)
 	if !ds.HasHead() {
 		m := kv.NewMap(db.Noms())
-		genesis := makeCommit(db.noms, types.Ref{}, time.DateTime(), db.Noms().WriteValue(m.NomsMap()), types.String(m.Checksum().String()))
+		genesis := makeCommit(db.noms,
+			types.Ref{},
+			time.DateTime(),
+			db.Noms().WriteValue(m.NomsMap()),
+			types.String(m.Checksum().String()),
+			"" /*lastTransactionID*/)
 		genRef := db.noms.WriteValue(genesis.Original)
 		_, err := db.noms.FastForward(ds, genRef)
 		if err != nil {
@@ -110,10 +115,10 @@ func (db *DB) lock() func() {
 	}
 }
 
-func (db *DB) PutData(newData types.Map, checksum types.String) error {
+func (db *DB) PutData(newData types.Map, checksum types.String, lastTransactionID string) error {
 	defer db.lock()()
 	basis := types.NewRef(db.head.Original)
-	commit := makeCommit(db.noms, basis, time.DateTime(), db.noms.WriteValue(newData), checksum)
+	commit := makeCommit(db.noms, basis, time.DateTime(), db.noms.WriteValue(newData), checksum, lastTransactionID)
 	commitRef := db.noms.WriteValue(commit.Original)
 
 	// FastForward not strictly needed here because we should have already ensured that we were

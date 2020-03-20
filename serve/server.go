@@ -78,19 +78,9 @@ func newServer(cs chunks.ChunkStore, urlPrefix string, cvg clientViewGetter) (*s
 			clientError(rw, 400, "Missing ClientID")
 			return
 		}
-		if cvg == nil {
-			log.Print("WARNING: not fetching new client view: no url provided via account or --clientview")
-		} else {
-			var cvgError error
-			cvreq := servetypes.ClientViewRequest{ClientID: preq.ClientID}
-			cvresp, cvgError := cvg.Get(cvreq, "") // TODO fritz pass auth token along
-			if cvgError == nil {
-				cvgError = storeNewClientView(db, cvresp.ClientView)
-			}
-			if cvgError != nil {
-				log.Printf("WARNING: got error fetching clientview: %s", cvgError)
-			}
-		}
+
+		cvReq := servetypes.ClientViewRequest{ClientID: preq.ClientID}
+		maybeGetAndStoreNewClientView(db, req, cvg, cvReq)
 
 		patch, err := s.db.Diff(from, *fromChecksum)
 		if err != nil {
@@ -98,9 +88,10 @@ func newServer(cs chunks.ChunkStore, urlPrefix string, cvg clientViewGetter) (*s
 			return
 		}
 		hsresp := servetypes.PullResponse{
-			StateID:  s.db.Head().Original.Hash().String(),
-			Patch:    patch,
-			Checksum: string(s.db.Head().Value.Checksum),
+			StateID:           s.db.Head().Original.Hash().String(),
+			LastTransactionID: string(db.Head().Value.LastTransactionID),
+			Patch:             patch,
+			Checksum:          string(s.db.Head().Value.Checksum),
 		}
 		resp, err := json.Marshal(hsresp)
 		if err != nil {
@@ -128,22 +119,39 @@ func newServer(cs chunks.ChunkStore, urlPrefix string, cvg clientViewGetter) (*s
 	return s, nil
 }
 
-func storeNewClientView(db *db.DB, clientView json.RawMessage) error {
-	v, err := nomsjson.FromJSON(bytes.NewReader(clientView), db.Noms())
+func maybeGetAndStoreNewClientView(db *db.DB, pullHttpReq *http.Request, cvg clientViewGetter, cvReq servetypes.ClientViewRequest) {
+	var err error
+	defer func() {
+		if err != nil {
+			log.Printf("WARNING: got error fetching clientview: %s", err)
+		}
+	}()
+
+	if cvg == nil {
+		err = errors.New("not fetching new client view: no url provided via account or --clientview")
+		return
+	}
+	cvResp, err := cvg.Get(cvReq, pullHttpReq.Header.Get("Authorization"))
 	if err != nil {
-		return err
+		return
+	}
+	v, err := nomsjson.FromJSON(bytes.NewReader(cvResp.ClientView), db.Noms())
+	if err != nil {
+		return
 	}
 	nm, ok := v.(types.Map)
 	if !ok {
-		return fmt.Errorf("clientview is not a Map, it's a %s", v.Kind().String())
+		err = fmt.Errorf("clientview is not a json object, it looks to noms like a %s", v.Kind().String())
+		return
 	}
 	// TODO fritz yes this is inefficient, will fix up Map so we don't have to go
 	// back and forth. But after it works.
 	m := kv.NewMapFromNoms(db.Noms(), nm)
 	if m == nil {
-		return errors.New("couldnt create a Map from a Noms Map")
+		err = errors.New("couldnt create a Map from a Noms Map")
 	}
-	return db.PutData(m.NomsMap(), types.String(m.Checksum().String()))
+	err = db.PutData(m.NomsMap(), types.String(m.Checksum().String()), cvResp.LastTransactionID)
+	return
 }
 
 func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
