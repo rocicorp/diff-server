@@ -2,8 +2,6 @@
 // plus a Replicant-specific sync endpoint that implements the server-side of the Replicant sync protocol.
 package serve
 
-// TODO: rename file "pull"
-
 import (
 	"bytes"
 	"compress/gzip"
