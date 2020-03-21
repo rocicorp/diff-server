@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"log"
@@ -10,13 +9,11 @@ import (
 	"os/signal"
 	"runtime/pprof"
 	"runtime/trace"
-	"strings"
 	"syscall"
 
 	"github.com/attic-labs/noms/go/spec"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
-	"roci.dev/diff-server/db"
 	servepkg "roci.dev/diff-server/serve"
 	"roci.dev/diff-server/serve/accounts"
 	rlog "roci.dev/diff-server/util/log"
@@ -46,18 +43,6 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 	sps := app.Flag("db", "The prefix to use for databases managed. Both local and remote databases are supported. For local databases, specify a directory path to store the database in. For remote databases, specify the http(s) URL to the database (usually https://serve.replicate.to/<mydb>).").PlaceHolder("/path/to/db").Required().String()
 	tf := app.Flag("trace", "Name of a file to write a trace to").OpenFile(os.O_RDWR|os.O_CREATE, 0644)
 	cpu := app.Flag("cpu", "Name of file to write CPU profile to").OpenFile(os.O_RDWR|os.O_CREATE, 0644)
-
-	var sp *spec.Spec
-	getSpec := func() (spec.Spec, error) {
-		if sp != nil {
-			return *sp, nil
-		}
-		s, err := spec.ForDatabase(*sps)
-		if err != nil {
-			return spec.Spec{}, err
-		}
-		return s, nil
-	}
 
 	app.PreAction(func(pc *kingpin.ParseContext) error {
 		if *v {
@@ -117,7 +102,6 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 	})
 
 	serve(app, sps, errs)
-	drop(app, getSpec, in, out)
 
 	if len(args) == 0 {
 		app.Usage(args)
@@ -143,31 +127,5 @@ func serve(parent *kingpin.Application, sps *string, errs io.Writer) {
 		s := servepkg.NewService(*sps, accounts.Accounts(), *overrideClientViewURL)
 		http.Handle("/", s)
 		return http.ListenAndServe(fmt.Sprintf(":%d", *port), nil)
-	})
-}
-
-func drop(parent *kingpin.Application, gsp gsp, in io.Reader, out io.Writer) {
-	kc := parent.Command("drop", "Deletes a diff-server database and its history.")
-
-	r := bufio.NewReader(in)
-	w := bufio.NewWriter(out)
-	kc.Action(func(_ *kingpin.ParseContext) error {
-		w.WriteString(dropWarning)
-		w.Flush()
-		answer, err := r.ReadString('\n')
-		if err != nil {
-			return err
-		}
-		answer = strings.TrimSpace(answer)
-		if answer != "y" {
-			return nil
-		}
-		sp, err := gsp()
-		if err != nil {
-			return err
-		}
-		noms := sp.GetDatabase()
-		_, err = noms.Delete(noms.GetDataset(db.LOCAL_DATASET))
-		return err
 	})
 }

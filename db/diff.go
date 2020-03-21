@@ -19,8 +19,8 @@ func fullSync(db *DB, from hash.Hash) ([]kv.Operation, Commit) {
 			Path: "/",
 		},
 	}
-	m := kv.NewMap(db.noms)
-	return r, makeCommit(db.Noms(), types.Ref{}, datetime.Epoch, db.noms.WriteValue(m.NomsMap()), types.String(m.Checksum().String()), "" /*lastTransactionID*/)
+	m := kv.NewMap(db.Noms())
+	return r, makeCommit(db.Noms(), types.Ref{}, datetime.Epoch, db.ds.Database().WriteValue(m.NomsMap()), types.String(m.Checksum().String()), "" /*lastTransactionID*/)
 }
 
 func (db *DB) Diff(from hash.Hash, fromChecksum kv.Checksum) ([]kv.Operation, error) {

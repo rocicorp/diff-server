@@ -8,12 +8,16 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"runtime/debug"
 	"strings"
 	"sync"
 
+	"github.com/attic-labs/noms/go/datas"
 	"github.com/attic-labs/noms/go/spec"
+	"github.com/attic-labs/noms/go/util/verbose"
 	"github.com/dgrijalva/jwt-go"
-	"roci.dev/diff-server/util/chk"
+	"roci.dev/diff-server/db"
+	servetypes "roci.dev/diff-server/serve/types"
 	rlog "roci.dev/diff-server/util/log"
 	"roci.dev/diff-server/util/version"
 )
@@ -28,9 +32,17 @@ type Service struct {
 	storageRoot          string
 	urlPrefix            string
 	accounts             []Account
-	servers              map[string]*server
+	nomsen               map[string]datas.Database
 	overridClientViewURL string // Overrides account client view URL, eg for testing.
 	mu                   sync.Mutex
+
+	// cvg may be nil, in which case the server skips the client view request in pull, which is
+	// useful if you are populating the db directly or in tests.
+	cvg clientViewGetter
+}
+
+type clientViewGetter interface {
+	Get(req servetypes.ClientViewRequest, authToken string) (servetypes.ClientViewResponse, error)
 }
 
 // Account is information about a customer of Replicant. This is a stand-in for what will eventually be
@@ -47,7 +59,7 @@ func NewService(storageRoot string, accounts []Account, clientViewURL string) *S
 	return &Service{
 		storageRoot:          storageRoot,
 		accounts:             accounts,
-		servers:              map[string]*server{},
+		nomsen:               map[string]datas.Database{},
 		overridClientViewURL: clientViewURL,
 		mu:                   sync.Mutex{},
 	}
@@ -56,89 +68,63 @@ func NewService(storageRoot string, accounts []Account, clientViewURL string) *S
 func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	rlog.Init(os.Stderr, rlog.Options{Prefix: true})
 
+	verbose.SetVerbose(true)
+	log.Println("Handling request: ", r.URL.String())
+
+	defer func() {
+		err := recover()
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			log.Printf("handler panicked: %+v\n", err)
+			debug.PrintStack()
+		}
+	}()
+
 	if r.URL.Path == "/" {
 		w.Header().Add("Content-type", "text/plain")
 		w.Write([]byte("Hello from Replicache\n"))
 		w.Write([]byte(fmt.Sprintf("Version: %s\n\n", version.Version())))
-		w.Write([]byte("This is the root of the service.\n"))
-		w.Write([]byte("To access an individual DB, try: /<accountid>/<dbname>/<cmd>\n"))
 		return
 	}
 
-	server, cErr, authErr, sErr := s.getServer(r)
-	if cErr != "" {
-		clientError(w, http.StatusBadRequest, cErr)
+	if r.URL.Path == "/pull" {
+		s.pull(w, r)
 		return
 	}
-	if authErr != nil {
-		clientError(w, http.StatusForbidden, authErr.Error())
-		return
-	}
-	if sErr != nil {
-		serverError(w, sErr)
-		return
-	}
-	server.ServeHTTP(w, r)
+
+	w.WriteHeader(http.StatusNotFound)
+	w.Write([]byte("Invalid route"))
 }
 
-func (s *Service) getServer(req *http.Request) (r *server, clientError string, authError, serverError error) {
-	match := pathRegex.FindStringSubmatch(req.URL.Path)
-	if match == nil {
-		return nil, fmt.Sprintf("Invalid request path"), nil, nil
+func (s *Service) GetDB(accountID, clientID string) (*db.DB, error) {
+	noms, err := s.getNoms(accountID)
+	if err != nil {
+		return nil, err
 	}
+	dsName := fmt.Sprintf("client/%s", clientID)
+	db, err := db.New(noms.GetDataset(dsName))
+	if err != nil {
+		return nil, err
+	}
+	return db, nil
+}
 
-	acc, db := match[1], match[2]
-	if acc == "" {
-		return nil, "account parameter is required", nil, nil
-	}
-	if db == "" {
-		return nil, "db parameter is required", nil, nil
-	}
-
-	token := req.Header.Get("Authorization")
-	account, clientErr, authErr := checkAccess(acc, db, token, s.accounts)
-	if clientErr != nil {
-		return nil, clientErr.Error(), nil, nil
-	}
-	if authErr != nil {
-		return nil, "", authErr, nil
-	}
-	chk.NotNil(account)
-
+func (s *Service) getNoms(accountID string) (datas.Database, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	key := fmt.Sprintf("%s/%s", acc, db)
-	r = s.servers[key]
-	if r != nil {
-		err := r.db.Reload()
+	n := s.nomsen[accountID]
+	if n == nil {
+		sp, err := spec.ForDatabase(fmt.Sprintf("%s/%s", s.storageRoot, accountID))
 		if err != nil {
-			return nil, "", nil, err
+			return nil, err
 		}
-		return r, "", nil, nil
+		n = sp.GetDatabase()
+		s.nomsen[accountID] = n
+	} else {
+		n.Rebase()
 	}
-
-	ss := s.storageRoot + "/" + key
-	sp, err := spec.ForDatabase(ss)
-	if err != nil {
-		return nil, "", nil, err
-	}
-
-	clientViewURL := account.ClientViewURL
-	if s.overridClientViewURL != "" {
-		log.Printf("WARNING: overriding all client view URLs with %s", s.overridClientViewURL)
-		clientViewURL = s.overridClientViewURL
-	}
-	var cvg clientViewGetter
-	if clientViewURL != "" {
-		cvg = ClientViewGetter{url: clientViewURL}
-	}
-	server, err := newServer(sp.NewChunkStore(), fmt.Sprintf("/%s/%s", acc, db), cvg)
-	s.servers[key] = server
-	if err != nil {
-		return nil, "", nil, err
-	}
-	return server, "", nil, nil
+	return n, nil
 }
 
 // Claims are the JWT claims Replicant uses for authentication.

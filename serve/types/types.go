@@ -7,9 +7,10 @@ import (
 )
 
 type PullRequest struct {
+	AccountID   string `json:"accountID"`
+	ClientID    string `json:"clientID`
 	BaseStateID string `'json:"baseStateID"`
 	Checksum    string `'json:"checksum"`
-	ClientID    string `json:"clientID`
 }
 
 type PullResponse struct {

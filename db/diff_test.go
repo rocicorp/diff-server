@@ -33,7 +33,7 @@ func TestDiff(t *testing.T) {
 		{
 			"change-1",
 			func() {
-				m := kv.NewMapFromNoms(db.noms, types.NewMap(db.noms,
+				m := kv.NewMapFromNoms(db.Noms(), types.NewMap(db.Noms(),
 					types.String("foo"), types.String("bar"),
 					types.String("hot"), types.String("dog")))
 				err := db.PutData(m.NomsMap(), types.String(m.Checksum().String()), "" /*lastTransactionID*/)
@@ -56,7 +56,7 @@ func TestDiff(t *testing.T) {
 		{
 			"change-2",
 			func() {
-				m := kv.NewMapFromNoms(db.noms, types.NewMap(db.noms,
+				m := kv.NewMapFromNoms(db.Noms(), types.NewMap(db.Noms(),
 					types.String("foo"), types.String("baz"),
 					types.String("mon"), types.String("key")))
 				err := db.PutData(m.NomsMap(), types.String(m.Checksum().String()), "" /*lastTransactionID*/)
@@ -91,7 +91,7 @@ func TestDiff(t *testing.T) {
 			func() {
 				db, dir = LoadTempDB(assert)
 				fmt.Println("newdir", dir)
-				me := kv.NewMap(db.noms).Edit()
+				me := kv.NewMap(db.Noms()).Edit()
 				for _, s := range []string{"a", "b", "c"} {
 					assert.NoError(me.Set(s, []byte(fmt.Sprintf("\"%s\"", s))))
 				}
@@ -153,7 +153,7 @@ func TestDiff(t *testing.T) {
 		{
 			"invalid-checksum",
 			func() {
-				m := kv.NewMapFromNoms(db.noms, types.NewMap(db.noms,
+				m := kv.NewMapFromNoms(db.Noms(), types.NewMap(db.Noms(),
 					types.String("foo"), types.String("bar")))
 				err := db.PutData(m.NomsMap(), types.String(m.Checksum().String()), "" /*lastTransactionID*/)
 				assert.NoError(err)
