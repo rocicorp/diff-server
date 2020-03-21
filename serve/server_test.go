@@ -2,16 +2,14 @@ package serve
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
-	"github.com/attic-labs/noms/go/spec"
 	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
 
@@ -26,7 +24,6 @@ func TestAPI(t *testing.T) {
 	defer time.SetFake()()
 
 	tc := []struct {
-		rpc         string
 		pullReq     string
 		authHeader  string
 		expCVReq    *servetypes.ClientViewRequest
@@ -36,8 +33,7 @@ func TestAPI(t *testing.T) {
 		expPullErr  string
 	}{
 		// No client view to fetch from.
-		{"handlePullRequest",
-			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`,
+		{`{"accountID": "accountID", "baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`,
 			"",
 			nil,
 			servetypes.ClientViewResponse{},
@@ -46,8 +42,7 @@ func TestAPI(t *testing.T) {
 			""},
 
 		// Successful client view fetch, with an auth header.
-		{"handlePullRequest",
-			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`,
+		{`{"accountID": "accountID", "baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`,
 			"authtoken",
 			&servetypes.ClientViewRequest{ClientID: "clientid"},
 			servetypes.ClientViewResponse{ClientView: []byte(`{"new": "value"}`), LastTransactionID: "1"},
@@ -56,8 +51,7 @@ func TestAPI(t *testing.T) {
 			""},
 
 		// Fetch errors out.
-		{"handlePullRequest",
-			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`,
+		{`{"accountID": "accountID", "baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`,
 			"",
 			&servetypes.ClientViewRequest{ClientID: "clientid"},
 			servetypes.ClientViewResponse{ClientView: []byte(`{"new": "value"}`), LastTransactionID: "1"},
@@ -65,44 +59,84 @@ func TestAPI(t *testing.T) {
 			`{"stateID":"ae8gjt8cuhutiujhru7o6shica8pmlvn","lastTransactionID":"0","patch":[{"op":"remove","path":"/"},{"op":"add","path":"/foo","value":"bar"}],"checksum":"c4e7090d"}`,
 			""},
 
-		// No clientID passed in.
-		{"handlePullRequest",
-			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000"}`,
+		// No accountID passed in.
+		{`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000"}`,
 			"",
 			nil,
 			servetypes.ClientViewResponse{},
 			nil,
 			``,
-			"Missing ClientID"},
+			"Missing accountID"},
+
+		// Unknown accountID passed in.
+		{`{"accountID": "bonk", "baseStateID": "00000000000000000000000000000000", "checksum": "00000000"}`,
+			"",
+			nil,
+			servetypes.ClientViewResponse{},
+			nil,
+			``,
+			"Unknown accountID"},
+
+		// No clientID passed in.
+		{`{"accountID": "accountID", "baseStateID": "00000000000000000000000000000000", "checksum": "00000000"}`,
+			"",
+			nil,
+			servetypes.ClientViewResponse{},
+			nil,
+			``,
+			"Missing clientID"},
+
+		// Invalid baseStateID.
+		{`{"accountID": "accountID", "baseStateID": "beep", "checksum": "00000000", "clientID": "clientid"}`,
+			"",
+			nil,
+			servetypes.ClientViewResponse{},
+			nil,
+			``,
+			"Invalid baseStateID"},
+
+		// Invalid checksum.
+		{`{"accountID": "accountID", "baseStateID": "00000000000000000000000000000000", "checksum": "not", "clientID": "clientid"}`,
+			"",
+			nil,
+			servetypes.ClientViewResponse{},
+			nil,
+			``,
+			"Invalid checksum"},
 	}
 
 	for i, t := range tc {
-		var cvg clientViewGetter
-		var fcvg *fakeClientViewGet
-		if t.expCVReq != nil {
-			fcvg = &fakeClientViewGet{resp: t.CVResponse, err: t.CVErr}
-			cvg = fcvg
+		td, _ := ioutil.TempDir("", "")
+		s := NewService(td, []Account{Account{ID: "accountID", Name: "accountID", Pubkey: nil}}, "")
+		noms, err := s.getNoms("accountID")
+		assert.NoError(err)
+		db, err := db.New(noms.GetDataset("client/clientid"))
+		assert.NoError(err)
+		m := kv.NewMapFromNoms(noms, types.NewMap(noms, types.String("foo"), types.String("bar")))
+		err = db.PutData(m.NomsMap(), types.String(m.Checksum().String()), "0" /*lastTransactionID*/)
+		assert.NoError(err)
+
+		fcvg := fakeClientViewGet{resp: t.CVResponse, err: t.CVErr}
+		if t.expCVReq == nil {
+			s.cvg = nil
+		} else {
+			s.cvg = &fcvg
 		}
 
-		db, s := startTestServer(assert, cvg)
-		m := kv.NewMapFromNoms(db.Noms(), types.NewMap(db.Noms(), types.String("foo"), types.String("bar")))
-		err := db.PutData(m.NomsMap(), types.String(m.Checksum().String()), "0" /*lastTransactionID*/)
-		assert.NoError(err)
-
-		msg := fmt.Sprintf("test case %d: %s: %s", i, t.rpc, t.pullReq)
-		req, err := http.NewRequest("POST", fmt.Sprintf("http://localhost:8674/%s", t.rpc), strings.NewReader(t.pullReq))
-		assert.NoError(err)
+		msg := fmt.Sprintf("test case %d: %s", i, t.pullReq)
+		req := httptest.NewRequest("POST", "/sync", strings.NewReader(t.pullReq))
 		req.Header.Set("Content-type", "application/json")
 		if t.authHeader != "" {
 			req.Header.Set("Authorization", t.authHeader)
 		}
-		resp, err := http.DefaultClient.Do(req)
-		assert.NoError(err, msg)
+		resp := httptest.NewRecorder()
+		s.pull(resp, req)
+
 		body := bytes.Buffer{}
-		_, err = io.Copy(&body, resp.Body)
+		_, err = io.Copy(&body, resp.Result().Body)
 		assert.NoError(err, msg)
 		if t.expPullErr == "" {
-			assert.Equal("application/json", resp.Header.Get("Content-type"))
+			assert.Equal("application/json", resp.Result().Header.Get("Content-type"))
 			assert.Equal(t.expPullResp+"\n", string(body.Bytes()), msg)
 		} else {
 			assert.Regexp(t.expPullErr, string(body.Bytes()), msg)
@@ -114,8 +148,6 @@ func TestAPI(t *testing.T) {
 		if t.authHeader != "" {
 			assert.Equal(t.authHeader, fcvg.gotAuth)
 		}
-
-		s.Shutdown(context.Background())
 	}
 }
 
@@ -133,27 +165,4 @@ func (f *fakeClientViewGet) Get(req servetypes.ClientViewRequest, authToken stri
 	f.gotReq = req
 	f.gotAuth = authToken
 	return f.resp, f.err
-}
-
-func startTestServer(assert *assert.Assertions, cvg clientViewGetter) (*db.DB, *http.Server) {
-	svr := make(chan *http.Server)
-	var d *db.DB
-	go func() {
-		serverDir, err := ioutil.TempDir("", "")
-		fmt.Printf("server dir: %s\n", serverDir)
-		assert.NoError(err)
-		sp, err := spec.ForDatabase(serverDir)
-		assert.NoError(err)
-		s, err := newServer(sp.NewChunkStore(), "", cvg)
-		assert.NoError(err)
-		d = s.db
-		hs := http.Server{
-			Addr:    ":8674",
-			Handler: s,
-		}
-		svr <- &hs
-		err = hs.ListenAndServe()
-		assert.Equal(http.ErrServerClosed, err)
-	}()
-	return d, <-svr
 }

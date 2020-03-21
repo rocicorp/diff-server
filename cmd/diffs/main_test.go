@@ -10,54 +10,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/attic-labs/noms/go/spec"
-	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
 
 	"roci.dev/diff-server/db"
-	"roci.dev/diff-server/kv"
 	"roci.dev/diff-server/util/time"
 )
-
-func TestDrop(t *testing.T) {
-	assert := assert.New(t)
-	tc := []struct {
-		in      string
-		errs    string
-		deleted bool
-	}{
-		{"no\n", "", false},
-		{"N\n", "", false},
-		{"balls\n", "", false},
-		{"n\n", "", false},
-		{"windows\r\n", "", false},
-		{"y\n", "", true},
-		{"y\r\n", "", true},
-	}
-
-	for i, t := range tc {
-		d, dir := db.LoadTempDB(assert)
-		m := kv.NewMapFromNoms(d.Noms(), types.NewMap(d.Noms(), types.String("foo"), types.String("bar")))
-		err := d.PutData(m.NomsMap(), types.String(m.Checksum().String()), "1" /*lastTransactionID*/)
-		assert.NoError(err)
-
-		desc := fmt.Sprintf("test case %d, input: %s", i, t.in)
-		args := append([]string{"--db=" + dir, "drop"})
-		out := strings.Builder{}
-		errs := strings.Builder{}
-		code := 0
-		impl(args, strings.NewReader(t.in), &out, &errs, func(c int) { code = c })
-
-		assert.Equal(dropWarning, out.String(), desc)
-		assert.Equal(t.errs, errs.String(), desc)
-		assert.Equal(0, code, desc)
-		sp, err := spec.ForDatabase(dir)
-		assert.NoError(err)
-		noms := sp.GetDatabase()
-		ds := noms.GetDataset(db.LOCAL_DATASET)
-		assert.Equal(!t.deleted, ds.HasHead())
-	}
-}
 
 func TestServe(t *testing.T) {
 	assert := assert.New(t)
@@ -77,13 +34,13 @@ func TestServe(t *testing.T) {
 		expectedResponse string
 		expectedError    string
 	}{
-		{"handlePullRequest", `{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`,
+		{"pull", `{"accountID": "sandbox", "baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`,
 			`{"stateID":"79fflqibsuu1nd46t2f3sidkd3nn6nfj","lastTransactionID":"","patch":[{"op":"remove","path":"/"}],"checksum":"00000000"}`, ""},
 	}
 
 	for i, t := range tc {
 		msg := fmt.Sprintf("test case %d: %s: %s", i, t.rpc, t.req)
-		resp, err := http.Post(fmt.Sprintf("http://localhost:8674/sandbox/foo/%s", t.rpc), "application/json", strings.NewReader(t.req))
+		resp, err := http.Post(fmt.Sprintf("http://localhost:8674/%s", t.rpc), "application/json", strings.NewReader(t.req))
 		assert.NoError(err, msg)
 		assert.Equal("application/json", resp.Header.Get("Content-type"))
 		body := bytes.Buffer{}

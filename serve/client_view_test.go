@@ -77,7 +77,7 @@ func TestClientViewGetter_Get(t *testing.T) {
 				assert.Regexp(tt.wantErr, err.Error(), tt.name)
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ClientViewGetter.Get() case %s got %v (clientview=%s), want %v (clientview=%s)", tt.name, got, string(got.ClientView), tt.want, string(tt.want.ClientView))
+				t.Errorf("ClientViewGetter.Get() case %s got %v (clientview=%s), want %v (clientview=%s)", tt.name, got, string([]byte(got.ClientView)), tt.want, string(tt.want.ClientView))
 			}
 		})
 	}
