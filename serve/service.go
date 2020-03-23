@@ -80,20 +80,19 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	if r.URL.Path == "/" {
+	switch r.URL.Path {
+	case "/":
 		w.Header().Add("Content-type", "text/plain")
 		w.Write([]byte("Hello from Replicache\n"))
 		w.Write([]byte(fmt.Sprintf("Version: %s\n\n", version.Version())))
-		return
-	}
-
-	if r.URL.Path == "/pull" {
+	case "/pull":
 		s.pull(w, r)
-		return
+	case "/inject":
+		s.inject(w, r)
+	default:
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("Invalid route"))
 	}
-
-	w.WriteHeader(http.StatusNotFound)
-	w.Write([]byte("Invalid route"))
 }
 
 func (s *Service) GetDB(accountID, clientID string) (*db.DB, error) {
