@@ -30,8 +30,8 @@ func TestClientViewGetter_Get(t *testing.T) {
 			servetypes.ClientViewRequest{ClientID: "clientid"},
 			"authtoken",
 			http.StatusOK,
-			`{"clientView": "clientview", "lastTransactionID": "ltid"}`,
-			servetypes.ClientViewResponse{ClientView: []byte("\"clientview\""), LastTransactionID: "ltid"},
+			`{"clientView": {"key": "value"}, "lastMutationID": "ltid"}`,
+			servetypes.ClientViewResponse{ClientView: map[string]interface{}{"key": "value"}, LastMutationID: "ltid"},
 			"",
 		},
 		{
@@ -44,13 +44,13 @@ func TestClientViewGetter_Get(t *testing.T) {
 			"400",
 		},
 		{
-			"missing last transaction id",
+			"missing last mutation id",
 			servetypes.ClientViewRequest{ClientID: "clientid"},
 			"authtoken",
 			http.StatusOK,
-			`{"clientView": "foo", "lastTransactionID": ""}`,
+			`{"clientView": {"foo": "bar"}, "lastMutationID": ""}`,
 			servetypes.ClientViewResponse{},
-			"lastTransactionID",
+			"lastMutationID",
 		},
 	}
 	for _, tt := range tests {
@@ -77,7 +77,7 @@ func TestClientViewGetter_Get(t *testing.T) {
 				assert.Regexp(tt.wantErr, err.Error(), tt.name)
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ClientViewGetter.Get() case %s got %v (clientview=%s), want %v (clientview=%s)", tt.name, got, string([]byte(got.ClientView)), tt.want, string(tt.want.ClientView))
+				t.Errorf("ClientViewGetter.Get() case %s got %v (clientview=%v), want %v (clientview=%v)", tt.name, got, got.ClientView, tt.want, tt.want.ClientView)
 			}
 		})
 	}

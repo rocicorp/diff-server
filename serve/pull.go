@@ -84,10 +84,10 @@ func (s *Service) pull(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 	hsresp := servetypes.PullResponse{
-		StateID:           db.Head().Original.Hash().String(),
-		LastTransactionID: string(db.Head().Value.LastTransactionID),
-		Patch:             patch,
-		Checksum:          string(db.Head().Value.Checksum),
+		StateID:        db.Head().Original.Hash().String(),
+		LastMutationID: string(db.Head().Value.LastMutationID),
+		Patch:          patch,
+		Checksum:       string(db.Head().Value.Checksum),
 	}
 	resp, err := json.Marshal(hsresp)
 	if err != nil {
@@ -135,10 +135,8 @@ func maybeGetAndStoreNewClientView(db *db.DB, pullHttpReq *http.Request, cvg cli
 }
 
 func storeClientView(db *db.DB, cvResp servetypes.ClientViewResponse) error {
-	v, err := nomsjson.FromJSON(bytes.NewReader(cvResp.ClientView), db.Noms())
-	if err != nil {
-		return err
-	}
+	var err error
+	v := nomsjson.NomsValueFromDecodedJSON(db.Noms(), cvResp.ClientView)
 	nm, ok := v.(types.Map)
 	if !ok {
 		err = fmt.Errorf("clientview is not a json object, it looks to noms like a %s", v.Kind().String())
@@ -151,7 +149,7 @@ func storeClientView(db *db.DB, cvResp servetypes.ClientViewResponse) error {
 		err = errors.New("couldnt create a Map from a Noms Map")
 		return err
 	}
-	err = db.PutData(m.NomsMap(), types.String(m.Checksum().String()), cvResp.LastTransactionID)
+	err = db.PutData(m.NomsMap(), types.String(m.Checksum().String()), cvResp.LastMutationID)
 	return err
 }
 

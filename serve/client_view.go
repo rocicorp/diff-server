@@ -15,7 +15,7 @@ type ClientViewGetter struct {
 }
 
 // Get fetches a client view. It returns an error if the response from the data layer doesn't have
-// a lastTransactionID.
+// a lastMutationID.
 func (g ClientViewGetter) Get(req servetypes.ClientViewRequest, authToken string) (servetypes.ClientViewResponse, error) {
 	reqBody, err := json.Marshal(req)
 	if err != nil {
@@ -40,8 +40,8 @@ func (g ClientViewGetter) Get(req servetypes.ClientViewRequest, authToken string
 	if err != nil {
 		return servetypes.ClientViewResponse{}, fmt.Errorf("couldnt decode client view response: %w", err)
 	}
-	if resp.LastTransactionID == "" {
-		return servetypes.ClientViewResponse{}, fmt.Errorf("malformed response %v missing lastTransactionID", resp)
+	if resp.LastMutationID == "" {
+		return servetypes.ClientViewResponse{}, fmt.Errorf("malformed response %v missing lastMutationID", resp)
 	}
 	return resp, nil
 }

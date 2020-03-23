@@ -38,7 +38,7 @@ func (db *DB) init() error {
 			time.DateTime(),
 			db.Noms().WriteValue(m.NomsMap()),
 			types.String(m.Checksum().String()),
-			"" /*lastTransactionID*/)
+			"" /*lastMutationID*/)
 		genRef := db.Noms().WriteValue(genesis.Original)
 		_, err := db.ds.Database().FastForward(db.ds, genRef)
 		if err != nil {
@@ -80,9 +80,9 @@ func (db *DB) Reload() error {
 	return db.init()
 }
 
-func (db *DB) PutData(newData types.Map, checksum types.String, lastTransactionID string) error {
+func (db *DB) PutData(newData types.Map, checksum types.String, lastMutationID string) error {
 	basis := types.NewRef(db.head.Original)
-	commit := makeCommit(db.Noms(), basis, time.DateTime(), db.Noms().WriteValue(newData), checksum, lastTransactionID)
+	commit := makeCommit(db.Noms(), basis, time.DateTime(), db.Noms().WriteValue(newData), checksum, lastMutationID)
 	commitRef := db.Noms().WriteValue(commit.Original)
 
 	// FastForward not strictly needed here because we should have already ensured that we were
