@@ -27,6 +27,10 @@ import (
 func (s *Service) pull(rw http.ResponseWriter, req *http.Request) {
 	body := bytes.Buffer{}
 	_, err := io.Copy(&body, req.Body)
+	if err != nil {
+		serverError(rw, err)
+		return
+	}
 
 	var preq servetypes.PullRequest
 	err = json.Unmarshal(body.Bytes(), &preq)
@@ -125,23 +129,30 @@ func maybeGetAndStoreNewClientView(db *db.DB, pullHttpReq *http.Request, cvg cli
 	if err != nil {
 		return
 	}
+
+	err = storeClientView(db, cvResp)
+	return
+}
+
+func storeClientView(db *db.DB, cvResp servetypes.ClientViewResponse) error {
 	v, err := nomsjson.FromJSON(bytes.NewReader(cvResp.ClientView), db.Noms())
 	if err != nil {
-		return
+		return err
 	}
 	nm, ok := v.(types.Map)
 	if !ok {
 		err = fmt.Errorf("clientview is not a json object, it looks to noms like a %s", v.Kind().String())
-		return
+		return err
 	}
 	// TODO fritz yes this is inefficient, will fix up Map so we don't have to go
 	// back and forth. But after it works.
 	m := kv.NewMapFromNoms(db.Noms(), nm)
 	if m == nil {
 		err = errors.New("couldnt create a Map from a Noms Map")
+		return err
 	}
 	err = db.PutData(m.NomsMap(), types.String(m.Checksum().String()), cvResp.LastTransactionID)
-	return
+	return err
 }
 
 func logPayload(req *http.Request, body []byte, noms datas.Database) {

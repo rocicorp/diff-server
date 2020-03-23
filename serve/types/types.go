@@ -28,3 +28,9 @@ type ClientViewResponse struct {
 	ClientView        json.RawMessage `json:"clientView"`
 	LastTransactionID string          `json:"lastTransactionID"`
 }
+
+type InjectRequest struct {
+	AccountID          string             `json:"accountID"`
+	ClientID           string             `json:"clientID"`
+	ClientViewResponse ClientViewResponse `json:"clientViewResponse"`
+}
