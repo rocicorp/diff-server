@@ -19,12 +19,12 @@ func TestMarshal(t *testing.T) {
 	noms := types.NewValueStore((&chunks.TestStorage{}).NewView())
 	emptyMap := noms.WriteValue(types.NewMap(noms))
 	checksum1 := types.String("1")
-	lastMutationID1 := "1t"
+	lastMutationID1 := uint64(1)
 
 	d := datetime.Now()
 	dr := noms.WriteValue(types.NewMap(noms, types.String("foo"), types.String("bar")))
 	checksum2 := types.String("2")
-	lastMutationID2 := "2t"
+	lastMutationID2 := uint64(2)
 	c1 := makeCommit(noms, types.Ref{}, d, noms.WriteValue(types.NewMap(noms)), checksum1, lastMutationID1)
 	c2 := makeCommit(noms, noms.WriteValue(c1.Original), d, dr, checksum2, lastMutationID2)
 	noms.WriteValue(c2.Original)
@@ -43,7 +43,7 @@ func TestMarshal(t *testing.T) {
 				"value": types.NewStruct("", types.StructData{
 					"checksum":       types.String("1"),
 					"data":           emptyMap,
-					"lastMutationID": types.String(lastMutationID1),
+					"lastMutationID": types.Number(lastMutationID1),
 				}),
 			}),
 		},
@@ -57,7 +57,7 @@ func TestMarshal(t *testing.T) {
 				"value": types.NewStruct("", types.StructData{
 					"checksum":       types.String("2"),
 					"data":           dr,
-					"lastMutationID": types.String(lastMutationID2),
+					"lastMutationID": types.Number(lastMutationID2),
 				}),
 			}),
 		},

@@ -35,7 +35,7 @@ func TestServe(t *testing.T) {
 		expectedError    string
 	}{
 		{"pull", `{"accountID": "sandbox", "baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`,
-			`{"stateID":"qpaldhaakt0clr1l2mis0it72k069v9t","lastMutationID":"","patch":[{"op":"remove","path":"/"}],"checksum":"00000000"}`, ""},
+			`{"stateID":"r0d74qu25vi4dr8fmf58oike0cj4jpth","lastMutationID":0,"patch":[{"op":"remove","path":"/"}],"checksum":"00000000"}`, ""},
 	}
 
 	for i, t := range tc {

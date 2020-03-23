@@ -13,7 +13,7 @@ type PullRequest struct {
 
 type PullResponse struct {
 	StateID        string         `json:"stateID"`
-	LastMutationID string         `json:"lastMutationID"`
+	LastMutationID uint64         `json:"lastMutationID"`
 	Patch          []kv.Operation `json:"patch"`
 	Checksum       string         `json:"checksum"`
 }
@@ -24,7 +24,7 @@ type ClientViewRequest struct {
 
 type ClientViewResponse struct {
 	ClientView     map[string]interface{} `json:"clientView"`
-	LastMutationID string                 `json:"lastMutationID"`
+	LastMutationID uint64                 `json:"lastMutationID"`
 }
 
 type InjectRequest struct {
