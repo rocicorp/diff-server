@@ -36,7 +36,7 @@ func TestDiff(t *testing.T) {
 				m := kv.NewMapFromNoms(db.Noms(), types.NewMap(db.Noms(),
 					types.String("foo"), types.String("bar"),
 					types.String("hot"), types.String("dog")))
-				err := db.PutData(m.NomsMap(), types.String(m.Checksum().String()), "" /*lastMutationID*/)
+				err := db.PutData(m.NomsMap(), types.String(m.Checksum().String()), 0 /*lastMutationID*/)
 				assert.NoError(err)
 			},
 			[]kv.Operation{
@@ -59,7 +59,7 @@ func TestDiff(t *testing.T) {
 				m := kv.NewMapFromNoms(db.Noms(), types.NewMap(db.Noms(),
 					types.String("foo"), types.String("baz"),
 					types.String("mon"), types.String("key")))
-				err := db.PutData(m.NomsMap(), types.String(m.Checksum().String()), "" /*lastMutationID*/)
+				err := db.PutData(m.NomsMap(), types.String(m.Checksum().String()), 0 /*lastMutationID*/)
 				assert.NoError(err)
 			},
 			[]kv.Operation{
@@ -96,7 +96,7 @@ func TestDiff(t *testing.T) {
 					assert.NoError(me.Set(s, []byte(fmt.Sprintf("\"%s\"", s))))
 				}
 				m := me.Build()
-				err := db.PutData(m.NomsMap(), types.String(m.Checksum().String()), "" /*lastMutationID*/)
+				err := db.PutData(m.NomsMap(), types.String(m.Checksum().String()), 0 /*lastMutationID*/)
 				assert.NoError(err)
 			},
 			[]kv.Operation{
@@ -155,7 +155,7 @@ func TestDiff(t *testing.T) {
 			func() {
 				m := kv.NewMapFromNoms(db.Noms(), types.NewMap(db.Noms(),
 					types.String("foo"), types.String("bar")))
-				err := db.PutData(m.NomsMap(), types.String(m.Checksum().String()), "" /*lastMutationID*/)
+				err := db.PutData(m.NomsMap(), types.String(m.Checksum().String()), 0 /*lastMutationID*/)
 				assert.NoError(err)
 				fromChecksum = "00000000"
 			},

@@ -38,25 +38,25 @@ func TestAPI(t *testing.T) {
 			nil,
 			servetypes.ClientViewResponse{},
 			nil,
-			`{"stateID":"2q4oq1fkqci21m5h20o1912akm26crku","lastMutationID":"0","patch":[{"op":"remove","path":"/"},{"op":"add","path":"/foo","value":"bar"}],"checksum":"c4e7090d"}`,
+			`{"stateID":"s3n5j759kirvvs3fqeott07a43lk41ud","lastMutationID":1,"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/foo","value":"bar"}],"checksum":"c4e7090d"}`,
 			""},
 
 		// Successful client view fetch, with an auth header.
 		{`{"accountID": "accountID", "baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`,
 			"authtoken",
 			&servetypes.ClientViewRequest{ClientID: "clientid"},
-			servetypes.ClientViewResponse{ClientView: map[string]interface{}{"new": "value"}, LastMutationID: "1"},
+			servetypes.ClientViewResponse{ClientView: map[string]interface{}{"new": "value"}, LastMutationID: 2},
 			nil,
-			`{"stateID":"6mf999c2kqbm1q2bte40mm1aapjqpgeo","lastMutationID":"1","patch":[{"op":"remove","path":"/"},{"op":"add","path":"/new","value":"value"}],"checksum":"f9ef007b"}`,
+			`{"stateID":"hoc705ifecv1c858qgbqr9jghh4d9l96","lastMutationID":2,"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/new","value":"value"}],"checksum":"f9ef007b"}`,
 			""},
 
 		// Fetch errors out.
 		{`{"accountID": "accountID", "baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`,
 			"",
 			&servetypes.ClientViewRequest{ClientID: "clientid"},
-			servetypes.ClientViewResponse{ClientView: map[string]interface{}{"new": "value"}, LastMutationID: "1"},
+			servetypes.ClientViewResponse{ClientView: map[string]interface{}{"new": "value"}, LastMutationID: 2},
 			errors.New("boom"),
-			`{"stateID":"2q4oq1fkqci21m5h20o1912akm26crku","lastMutationID":"0","patch":[{"op":"remove","path":"/"},{"op":"add","path":"/foo","value":"bar"}],"checksum":"c4e7090d"}`,
+			`{"stateID":"s3n5j759kirvvs3fqeott07a43lk41ud","lastMutationID":1,"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/foo","value":"bar"}],"checksum":"c4e7090d"}`,
 			""},
 
 		// No accountID passed in.
@@ -113,7 +113,7 @@ func TestAPI(t *testing.T) {
 		db, err := db.New(noms.GetDataset("client/clientid"))
 		assert.NoError(err)
 		m := kv.NewMapFromNoms(noms, types.NewMap(noms, types.String("foo"), types.String("bar")))
-		err = db.PutData(m.NomsMap(), types.String(m.Checksum().String()), "0" /*lastMutationID*/)
+		err = db.PutData(m.NomsMap(), types.String(m.Checksum().String()), 1 /*lastMutationID*/)
 		assert.NoError(err)
 
 		fcvg := fakeClientViewGet{resp: t.CVResponse, err: t.CVErr}

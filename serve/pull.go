@@ -85,7 +85,7 @@ func (s *Service) pull(rw http.ResponseWriter, req *http.Request) {
 	}
 	hsresp := servetypes.PullResponse{
 		StateID:        db.Head().Original.Hash().String(),
-		LastMutationID: string(db.Head().Value.LastMutationID),
+		LastMutationID: uint64(db.Head().Value.LastMutationID),
 		Patch:          patch,
 		Checksum:       string(db.Head().Value.Checksum),
 	}
