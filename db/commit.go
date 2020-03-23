@@ -18,7 +18,7 @@ Struct Commit {
 	},
 	value: Struct {
 		checksum: String,
-		lastTransactionID: String,
+		lastMutationID: String,
 		data: Ref<Map<String, Value>>,
 	},
 }`)
@@ -30,9 +30,9 @@ type Commit struct {
 		Date datetime.DateTime
 	}
 	Value struct {
-		Checksum          types.String
-		LastTransactionID types.String
-		Data              types.Ref `noms:",omitempty"`
+		Checksum       types.String
+		LastMutationID types.String
+		Data           types.Ref `noms:",omitempty"`
 	}
 	Original types.Struct `noms:",original"`
 }
@@ -45,14 +45,14 @@ func (c Commit) Data(noms types.ValueReadWriter) types.Map {
 	return c.Value.Data.TargetValue(noms).(types.Map)
 }
 
-func makeCommit(noms types.ValueReadWriter, basis types.Ref, d datetime.DateTime, newData types.Ref, checksum types.String, lastTransactionID string) Commit {
+func makeCommit(noms types.ValueReadWriter, basis types.Ref, d datetime.DateTime, newData types.Ref, checksum types.String, lastMutationID string) Commit {
 	c := Commit{}
 	if !basis.IsZeroValue() {
 		c.Parents = []types.Ref{basis}
 	}
 	c.Meta.Date = d
 	c.Value.Checksum = checksum
-	c.Value.LastTransactionID = types.String(lastTransactionID)
+	c.Value.LastMutationID = types.String(lastMutationID)
 	c.Value.Data = newData
 	c.Original = marshal.MustMarshal(noms, c).(types.Struct)
 	return c

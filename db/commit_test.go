@@ -19,14 +19,14 @@ func TestMarshal(t *testing.T) {
 	noms := types.NewValueStore((&chunks.TestStorage{}).NewView())
 	emptyMap := noms.WriteValue(types.NewMap(noms))
 	checksum1 := types.String("1")
-	lastTransactionID1 := "1t"
+	lastMutationID1 := "1t"
 
 	d := datetime.Now()
 	dr := noms.WriteValue(types.NewMap(noms, types.String("foo"), types.String("bar")))
 	checksum2 := types.String("2")
-	lastTransactionID2 := "2t"
-	c1 := makeCommit(noms, types.Ref{}, d, noms.WriteValue(types.NewMap(noms)), checksum1, lastTransactionID1)
-	c2 := makeCommit(noms, noms.WriteValue(c1.Original), d, dr, checksum2, lastTransactionID2)
+	lastMutationID2 := "2t"
+	c1 := makeCommit(noms, types.Ref{}, d, noms.WriteValue(types.NewMap(noms)), checksum1, lastMutationID1)
+	c2 := makeCommit(noms, noms.WriteValue(c1.Original), d, dr, checksum2, lastMutationID2)
 	noms.WriteValue(c2.Original)
 
 	tc := []struct {
@@ -41,9 +41,9 @@ func TestMarshal(t *testing.T) {
 				}),
 				"parents": types.NewSet(noms),
 				"value": types.NewStruct("", types.StructData{
-					"checksum": types.String("1"),
-					"data":     emptyMap,
-					"lastTransactionID": types.String(lastTransactionID1),
+					"checksum":       types.String("1"),
+					"data":           emptyMap,
+					"lastMutationID": types.String(lastMutationID1),
 				}),
 			}),
 		},
@@ -55,9 +55,9 @@ func TestMarshal(t *testing.T) {
 					"date": marshal.MustMarshal(noms, d),
 				}),
 				"value": types.NewStruct("", types.StructData{
-					"checksum": types.String("2"),
-					"data":     dr,
-					"lastTransactionID": types.String(lastTransactionID2),
+					"checksum":       types.String("2"),
+					"data":           dr,
+					"lastMutationID": types.String(lastMutationID2),
 				}),
 			}),
 		},
