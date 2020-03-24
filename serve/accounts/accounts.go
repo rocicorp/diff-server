@@ -7,10 +7,10 @@ import (
 var (
 	a = []serve.Account{
 		serve.Account{
-			ID:     "sandbox",
-			Name:   "Sandbox",
-			Pubkey: nil,
-			// ClientViewURL: "<url>",
+			ID:            "sandbox",
+			Name:          "Sandbox",
+			Pubkey:        nil,
+			ClientViewURL: "https://replicache-sample-todo.now.sh/serve/client-view",
 		},
 		serve.Account{
 			ID:     "1",
