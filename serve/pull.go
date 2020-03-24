@@ -44,7 +44,7 @@ func (s *Service) pull(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	_, ok := lookupAccount(preq.AccountID, s.accounts)
+	acct, ok := lookupAccount(preq.AccountID, s.accounts)
 	if !ok {
 		clientError(rw, http.StatusBadRequest, "Unknown accountID")
 		return
@@ -75,8 +75,18 @@ func (s *Service) pull(rw http.ResponseWriter, req *http.Request) {
 		clientError(rw, http.StatusBadRequest, "Invalid checksum")
 	}
 
+	// TODO fritz HACK, the cvg should take a url to Get and should be passed in as a depenency to the service.
+	clientViewURL := acct.ClientViewURL
+	if s.overridClientViewURL != "" {
+		log.Printf("WARNING: overriding all client view URLs with %s", s.overridClientViewURL)
+		clientViewURL = s.overridClientViewURL
+	}
+	if clientViewURL != "" {
+		s.cvg = ClientViewGetter{url: clientViewURL}
+	}
 	cvReq := servetypes.ClientViewRequest{ClientID: preq.ClientID}
 	maybeGetAndStoreNewClientView(db, req, s.cvg, cvReq)
+	s.cvg = nil
 
 	patch, err := db.Diff(from, *fromChecksum)
 	if err != nil {
