@@ -66,7 +66,7 @@ func (s *Service) pull(rw http.ResponseWriter, req *http.Request) {
 	logPayload(req, body.Bytes(), db.Noms())
 
 	from, ok := hash.MaybeParse(preq.BaseStateID)
-	if !ok {
+	if preq.BaseStateID != "" && !ok {
 		clientError(rw, http.StatusBadRequest, "Invalid baseStateID")
 		return
 	}

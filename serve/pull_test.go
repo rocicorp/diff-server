@@ -95,6 +95,15 @@ func TestAPI(t *testing.T) {
 			``,
 			"Invalid baseStateID"},
 
+		// No baseStateID is fine (first pull).
+		{`{"accountID": "accountID", "baseStateID": "", "checksum": "00000000", "clientID": "clientid"}`,
+			"",
+			&servetypes.ClientViewRequest{ClientID: "clientid"},
+			servetypes.ClientViewResponse{ClientView: map[string]interface{}{"new": "value"}, LastMutationID: 2},
+			nil,
+			`{"stateID":"hoc705ifecv1c858qgbqr9jghh4d9l96","lastMutationID":2,"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/new","value":"value"}],"checksum":"f9ef007b"}`,
+			""},
+
 		// Invalid checksum.
 		{`{"accountID": "accountID", "baseStateID": "00000000000000000000000000000000", "checksum": "not", "clientID": "clientid"}`,
 			"",
