@@ -19,7 +19,6 @@ import (
 	"roci.dev/diff-server/db"
 	servetypes "roci.dev/diff-server/serve/types"
 	rlog "roci.dev/diff-server/util/log"
-	"roci.dev/diff-server/util/version"
 )
 
 var (
@@ -82,9 +81,7 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	switch r.URL.Path {
 	case "/":
-		w.Header().Add("Content-type", "text/plain")
-		w.Write([]byte("Hello from Replicache\n"))
-		w.Write([]byte(fmt.Sprintf("Version: %s\n\n", version.Version())))
+		s.hello(w, r)
 	case "/pull":
 		s.pull(w, r)
 	case "/inject":
@@ -171,6 +168,10 @@ func lookupAccount(accountID string, accounts []Account) (acc Account, ok bool) 
 		}
 	}
 	return Account{}, false
+}
+
+func unsupportedMethodError(w http.ResponseWriter, m string) {
+	clientError(w, http.StatusBadRequest, fmt.Sprintf("Unsupported method: %s", m))
 }
 
 func clientError(w http.ResponseWriter, code int, body string) {

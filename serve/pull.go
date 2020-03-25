@@ -25,6 +25,11 @@ import (
 )
 
 func (s *Service) pull(rw http.ResponseWriter, req *http.Request) {
+	if req.Method != "POST" {
+		unsupportedMethodError(rw, req.Method)
+		return
+	}
+
 	body := bytes.Buffer{}
 	_, err := io.Copy(&body, req.Body)
 	if err != nil {

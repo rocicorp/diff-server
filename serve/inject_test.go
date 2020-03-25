@@ -21,25 +21,29 @@ func TestInject(t *testing.T) {
 	defer time.SetFake()()
 
 	tc := []struct {
+		method       string
 		req          string
 		wantRespCode int
 		wantRespBody string
 		wantChange   bool
 	}{
+		// Invalid method
+		{"GET", ``, http.StatusBadRequest, `Unsupported method: GET`, false},
+
 		// Empty request
-		{``, http.StatusBadRequest, `Bad request payload: EOF`, false},
+		{"POST", ``, http.StatusBadRequest, `Bad request payload: EOF`, false},
 
 		// Invalid JSON request
-		{`!!`, http.StatusBadRequest, `Bad request payload: invalid character '!' looking for beginning of value`, false},
+		{"POST", `!!`, http.StatusBadRequest, `Bad request payload: invalid character '!' looking for beginning of value`, false},
 
 		// Missing account ID
-		{`{"clientID": "clientID", "clientViewResponse": {"clientView":{}, "lastTransactionID":"1"}}`, http.StatusBadRequest, `Missing accountID`, false},
+		{"POST", `{"clientID": "clientID", "clientViewResponse": {"clientView":{}, "lastTransactionID":"1"}}`, http.StatusBadRequest, `Missing accountID`, false},
 
 		// Unknown accountID
-		{`{"accountID": "bonk", "clientID": "clientID", "clientViewResponse": {"clientView":{}, "lastTransactionID":"1"}}`, http.StatusBadRequest, `Unknown accountID`, false},
+		{"POST", `{"accountID": "bonk", "clientID": "clientID", "clientViewResponse": {"clientView":{}, "lastTransactionID":"1"}}`, http.StatusBadRequest, `Unknown accountID`, false},
 
 		// OK
-		{`{"accountID": "accountID", "clientID": "clientID", "clientViewResponse": {"clientView":{"foo": "bar"}, "lastTransactionID":"1"}}`, http.StatusOK, ``, true},
+		{"POST", `{"accountID": "accountID", "clientID": "clientID", "clientViewResponse": {"clientView":{"foo": "bar"}, "lastTransactionID":"1"}}`, http.StatusOK, ``, true},
 	}
 
 	for i, t := range tc {
@@ -47,7 +51,7 @@ func TestInject(t *testing.T) {
 		s := NewService(td, []Account{Account{ID: "accountID", Name: "accountID", Pubkey: nil}}, "")
 
 		msg := fmt.Sprintf("test case %d", i)
-		req := httptest.NewRequest("POST", "/inject", strings.NewReader(t.req))
+		req := httptest.NewRequest(t.method, "/inject", strings.NewReader(t.req))
 		req.Header.Set("Content-type", "application/json")
 		resp := httptest.NewRecorder()
 		s.inject(resp, req)

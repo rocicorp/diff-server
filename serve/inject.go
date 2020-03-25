@@ -13,6 +13,11 @@ import (
 // inject inserts a client view into the cache. This is primarily useful for testing without
 // having to have a data layer running.
 func (s *Service) inject(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		unsupportedMethodError(w, r.Method)
+		return
+	}
+
 	var req servetypes.InjectRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {

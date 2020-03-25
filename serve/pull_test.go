@@ -24,6 +24,7 @@ func TestAPI(t *testing.T) {
 	defer time.SetFake()()
 
 	tc := []struct {
+		pullMethod  string
 		pullReq     string
 		authHeader  string
 		expCVReq    *servetypes.ClientViewRequest
@@ -32,8 +33,19 @@ func TestAPI(t *testing.T) {
 		expPullResp string
 		expPullErr  string
 	}{
+		// Unsupported method
+		{"GET",
+			`{"accountID": "accountID", "baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`,
+			"",
+			nil,
+			servetypes.ClientViewResponse{},
+			nil,
+			``,
+			"Unsupported method: GET"},
+
 		// No client view to fetch from.
-		{`{"accountID": "accountID", "baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`,
+		{"POST",
+			`{"accountID": "accountID", "baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`,
 			"",
 			nil,
 			servetypes.ClientViewResponse{},
@@ -42,7 +54,8 @@ func TestAPI(t *testing.T) {
 			""},
 
 		// Successful client view fetch, with an auth header.
-		{`{"accountID": "accountID", "baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`,
+		{"POST",
+			`{"accountID": "accountID", "baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`,
 			"authtoken",
 			&servetypes.ClientViewRequest{ClientID: "clientid"},
 			servetypes.ClientViewResponse{ClientView: map[string]interface{}{"new": "value"}, LastMutationID: 2},
@@ -51,7 +64,8 @@ func TestAPI(t *testing.T) {
 			""},
 
 		// Fetch errors out.
-		{`{"accountID": "accountID", "baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`,
+		{"POST",
+			`{"accountID": "accountID", "baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`,
 			"",
 			&servetypes.ClientViewRequest{ClientID: "clientid"},
 			servetypes.ClientViewResponse{ClientView: map[string]interface{}{"new": "value"}, LastMutationID: 2},
@@ -60,7 +74,8 @@ func TestAPI(t *testing.T) {
 			""},
 
 		// No accountID passed in.
-		{`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000"}`,
+		{"POST",
+			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000"}`,
 			"",
 			nil,
 			servetypes.ClientViewResponse{},
@@ -69,7 +84,8 @@ func TestAPI(t *testing.T) {
 			"Missing accountID"},
 
 		// Unknown accountID passed in.
-		{`{"accountID": "bonk", "baseStateID": "00000000000000000000000000000000", "checksum": "00000000"}`,
+		{"POST",
+			`{"accountID": "bonk", "baseStateID": "00000000000000000000000000000000", "checksum": "00000000"}`,
 			"",
 			nil,
 			servetypes.ClientViewResponse{},
@@ -78,7 +94,8 @@ func TestAPI(t *testing.T) {
 			"Unknown accountID"},
 
 		// No clientID passed in.
-		{`{"accountID": "accountID", "baseStateID": "00000000000000000000000000000000", "checksum": "00000000"}`,
+		{"POST",
+			`{"accountID": "accountID", "baseStateID": "00000000000000000000000000000000", "checksum": "00000000"}`,
 			"",
 			nil,
 			servetypes.ClientViewResponse{},
@@ -87,7 +104,8 @@ func TestAPI(t *testing.T) {
 			"Missing clientID"},
 
 		// Invalid baseStateID.
-		{`{"accountID": "accountID", "baseStateID": "beep", "checksum": "00000000", "clientID": "clientid"}`,
+		{"POST",
+			`{"accountID": "accountID", "baseStateID": "beep", "checksum": "00000000", "clientID": "clientid"}`,
 			"",
 			nil,
 			servetypes.ClientViewResponse{},
@@ -96,7 +114,8 @@ func TestAPI(t *testing.T) {
 			"Invalid baseStateID"},
 
 		// No baseStateID is fine (first pull).
-		{`{"accountID": "accountID", "baseStateID": "", "checksum": "00000000", "clientID": "clientid"}`,
+		{"POST",
+			`{"accountID": "accountID", "baseStateID": "", "checksum": "00000000", "clientID": "clientid"}`,
 			"",
 			&servetypes.ClientViewRequest{ClientID: "clientid"},
 			servetypes.ClientViewResponse{ClientView: map[string]interface{}{"new": "value"}, LastMutationID: 2},
@@ -105,7 +124,8 @@ func TestAPI(t *testing.T) {
 			""},
 
 		// Invalid checksum.
-		{`{"accountID": "accountID", "baseStateID": "00000000000000000000000000000000", "checksum": "not", "clientID": "clientid"}`,
+		{"POST",
+			`{"accountID": "accountID", "baseStateID": "00000000000000000000000000000000", "checksum": "not", "clientID": "clientid"}`,
 			"",
 			nil,
 			servetypes.ClientViewResponse{},
@@ -133,7 +153,7 @@ func TestAPI(t *testing.T) {
 		}
 
 		msg := fmt.Sprintf("test case %d: %s", i, t.pullReq)
-		req := httptest.NewRequest("POST", "/sync", strings.NewReader(t.pullReq))
+		req := httptest.NewRequest(t.pullMethod, "/sync", strings.NewReader(t.pullReq))
 		req.Header.Set("Content-type", "application/json")
 		if t.authHeader != "" {
 			req.Header.Set("Authorization", t.authHeader)
