@@ -33,36 +33,35 @@ func (s *Service) pull(rw http.ResponseWriter, req *http.Request) {
 	body := bytes.Buffer{}
 	_, err := io.Copy(&body, req.Body)
 	if err != nil {
-		serverError(rw, err)
+		serverError(rw, fmt.Errorf("could not read body: %w", err))
 		return
 	}
 
 	var preq servetypes.PullRequest
 	err = json.Unmarshal(body.Bytes(), &preq)
 	if err != nil {
-		serverError(rw, err)
+		serverError(rw, fmt.Errorf("could not unmarshal body to json: %w", err))
 		return
 	}
 
-	if preq.AccountID == "" {
-		clientError(rw, http.StatusBadRequest, "Missing accountID")
+	// TODO auth
+	accountName := req.Header.Get("Authorization")
+	if accountName == "" {
+		clientError(rw, http.StatusBadRequest, "Missing Authorization header")
 		return
 	}
-
-	acct, ok := lookupAccount(preq.AccountID, s.accounts)
+	acct, ok := lookupAccount(accountName, s.accounts)
 	if !ok {
-		clientError(rw, http.StatusBadRequest, "Unknown accountID")
+		clientError(rw, http.StatusBadRequest, fmt.Sprintf("Unknown account: %s", accountName))
 		return
 	}
-
-	// TODO: auth
 
 	if preq.ClientID == "" {
 		clientError(rw, http.StatusBadRequest, "Missing clientID")
 		return
 	}
 
-	db, err := s.GetDB(preq.AccountID, preq.ClientID)
+	db, err := s.GetDB(accountName, preq.ClientID)
 	if err != nil {
 		serverError(rw, err)
 		return
@@ -89,8 +88,8 @@ func (s *Service) pull(rw http.ResponseWriter, req *http.Request) {
 	if clientViewURL != "" {
 		s.cvg = ClientViewGetter{url: clientViewURL}
 	}
-	cvReq := servetypes.ClientViewRequest{ClientID: preq.ClientID}
-	maybeGetAndStoreNewClientView(db, req, s.cvg, cvReq)
+	cvReq := servetypes.ClientViewRequest{}
+	maybeGetAndStoreNewClientView(db, preq.ClientViewAuth, s.cvg, cvReq)
 	s.cvg = nil
 
 	patch, err := db.Diff(from, *fromChecksum)
@@ -128,7 +127,7 @@ func (s *Service) pull(rw http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func maybeGetAndStoreNewClientView(db *db.DB, pullHttpReq *http.Request, cvg clientViewGetter, cvReq servetypes.ClientViewRequest) {
+func maybeGetAndStoreNewClientView(db *db.DB, clientViewAuth string, cvg clientViewGetter, cvReq servetypes.ClientViewRequest) {
 	var err error
 	defer func() {
 		if err != nil {
@@ -140,7 +139,7 @@ func maybeGetAndStoreNewClientView(db *db.DB, pullHttpReq *http.Request, cvg cli
 		err = errors.New("not fetching new client view: no url provided via account or --clientview")
 		return
 	}
-	cvResp, err := cvg.Get(cvReq, pullHttpReq.Header.Get("Authorization"))
+	cvResp, err := cvg.Get(cvReq, clientViewAuth)
 	if err != nil {
 		return
 	}
