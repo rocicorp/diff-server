@@ -24,7 +24,7 @@ func TestHello(t *testing.T) {
 		wantRespBody string
 	}{
 		// Invalid method
-		{"POST", http.StatusBadRequest, `Unsupported method: POST`},
+		{"POST", http.StatusMethodNotAllowed, `Unsupported method: POST`},
 
 		// OK
 		{"GET", http.StatusOK, `Hello from Replicache`},

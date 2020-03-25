@@ -172,7 +172,7 @@ func lookupAccount(accountID string, accounts []Account) (acc Account, ok bool) 
 }
 
 func unsupportedMethodError(w http.ResponseWriter, m string) {
-	clientError(w, http.StatusBadRequest, fmt.Sprintf("Unsupported method: %s", m))
+	clientError(w, http.StatusMethodNotAllowed, fmt.Sprintf("Unsupported method: %s", m))
 }
 
 func clientError(w http.ResponseWriter, code int, body string) {
