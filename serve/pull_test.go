@@ -168,9 +168,6 @@ func TestAPI(t *testing.T) {
 	}
 
 	for i, t := range tc {
-		if i == 3 {
-			fmt.Printf("hi")
-		}
 		td, _ := ioutil.TempDir("", "")
 		s := NewService(td, []Account{Account{ID: "accountID", Name: "accountID", Pubkey: nil}}, "")
 		noms, err := s.getNoms("accountID")
