@@ -17,17 +17,17 @@ func TestClientViewGetter_Get(t *testing.T) {
 	type args struct {
 	}
 	tests := []struct {
-		name      string
-		req       servetypes.ClientViewRequest
-		authToken string
-		respCode  int
-		respBody  string
-		want      servetypes.ClientViewResponse
-		wantErr   string
+		name           string
+		req            servetypes.ClientViewRequest
+		clientViewAuth string
+		respCode       int
+		respBody       string
+		want           servetypes.ClientViewResponse
+		wantErr        string
 	}{
 		{
 			"ok",
-			servetypes.ClientViewRequest{ClientID: "clientid"},
+			servetypes.ClientViewRequest{},
 			"authtoken",
 			http.StatusOK,
 			`{"clientView": {"key": "value"}, "lastMutationID": 2}`,
@@ -36,7 +36,7 @@ func TestClientViewGetter_Get(t *testing.T) {
 		},
 		{
 			"error",
-			servetypes.ClientViewRequest{ClientID: "clientid"},
+			servetypes.ClientViewRequest{},
 			"authtoken",
 			http.StatusBadRequest,
 			``,
@@ -45,7 +45,7 @@ func TestClientViewGetter_Get(t *testing.T) {
 		},
 		{
 			"missing last mutation id",
-			servetypes.ClientViewRequest{ClientID: "clientid"},
+			servetypes.ClientViewRequest{},
 			"authtoken",
 			http.StatusOK,
 			`{"clientView": {"foo": "bar"}}`,
@@ -60,8 +60,7 @@ func TestClientViewGetter_Get(t *testing.T) {
 				var reqBody servetypes.ClientViewRequest
 				err := json.NewDecoder(r.Body).Decode(&reqBody)
 				assert.NoError(err, tt.name)
-				assert.Equal(tt.req.ClientID, reqBody.ClientID, tt.name)
-				assert.Equal(tt.authToken, r.Header.Get("Authorization"), tt.name)
+				assert.Equal(tt.clientViewAuth, r.Header.Get("Authorization"), tt.name)
 				w.WriteHeader(tt.respCode)
 				w.Write([]byte(tt.respBody))
 			}))
@@ -69,7 +68,7 @@ func TestClientViewGetter_Get(t *testing.T) {
 			g := ClientViewGetter{
 				url: server.URL,
 			}
-			got, err := g.Get(tt.req, tt.authToken)
+			got, err := g.Get(tt.req, tt.clientViewAuth)
 			if tt.wantErr == "" {
 				assert.NoError(err)
 			} else {

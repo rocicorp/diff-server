@@ -31,16 +31,24 @@ func TestServe(t *testing.T) {
 	tc := []struct {
 		rpc              string
 		req              string
+		authHeader       string
 		expectedResponse string
 		expectedError    string
 	}{
-		{"pull", `{"accountID": "sandbox", "baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`,
-			`{"stateID":"r0d74qu25vi4dr8fmf58oike0cj4jpth","lastMutationID":0,"patch":[{"op":"remove","path":"/"}],"checksum":"00000000"}`, ""},
+		{"pull",
+			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`,
+			"sandbox",
+			`{"stateID":"r0d74qu25vi4dr8fmf58oike0cj4jpth","lastMutationID":0,"patch":[{"op":"remove","path":"/"}],"checksum":"00000000"}`,
+			""},
 	}
 
 	for i, t := range tc {
 		msg := fmt.Sprintf("test case %d: %s: %s", i, t.rpc, t.req)
-		resp, err := http.Post(fmt.Sprintf("http://localhost:8674/%s", t.rpc), "application/json", strings.NewReader(t.req))
+		httpReq, err := http.NewRequest("POST", fmt.Sprintf("http://localhost:8674/%s", t.rpc), strings.NewReader(t.req))
+		assert.NoError(err)
+		httpReq.Header.Add("Authorization", t.authHeader)
+		httpReq.Header.Add("Content-type", "application/json")
+		resp, err := http.DefaultClient.Do(httpReq)
 		assert.NoError(err, msg)
 		assert.Equal("application/json", resp.Header.Get("Content-type"))
 		body := bytes.Buffer{}
