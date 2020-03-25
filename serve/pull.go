@@ -77,6 +77,7 @@ func (s *Service) pull(rw http.ResponseWriter, req *http.Request) {
 	fromChecksum, err := kv.ChecksumFromString(preq.Checksum)
 	if err != nil {
 		clientError(rw, http.StatusBadRequest, "Invalid checksum")
+		return
 	}
 
 	// TODO fritz HACK, the cvg should take a url to Get and should be passed in as a depenency to the service.
@@ -149,21 +150,27 @@ func maybeGetAndStoreNewClientView(db *db.DB, clientViewAuth string, cvg clientV
 }
 
 func storeClientView(db *db.DB, cvResp servetypes.ClientViewResponse) error {
-	var err error
 	v := nomsjson.NomsValueFromDecodedJSON(db.Noms(), cvResp.ClientView)
 	nm, ok := v.(types.Map)
 	if !ok {
-		err = fmt.Errorf("clientview is not a json object, it looks to noms like a %s", v.Kind().String())
-		return err
+		return fmt.Errorf("clientview is not a json object, it looks to noms like a %s", v.Kind().String())
 	}
 	// TODO fritz yes this is inefficient, will fix up Map so we don't have to go
 	// back and forth. But after it works.
 	m := kv.NewMapFromNoms(db.Noms(), nm)
 	if m == nil {
-		err = errors.New("couldnt create a Map from a Noms Map")
-		return err
+		return errors.New("couldnt create a Map from a Noms Map")
 	}
-	err = db.PutData(m.NomsMap(), types.String(m.Checksum().String()), cvResp.LastMutationID)
+	hv := db.Head().Value
+	hvc, err := kv.ChecksumFromString(string(hv.Checksum))
+	if err != nil {
+		return fmt.Errorf("couldnt parse checksum from commit: %w", err)
+	}
+	if cvResp.LastMutationID == uint64(hv.LastMutationID) && m.Checksum().Equal(*hvc) {
+		log.Print("INFO: neither lastMutationID nor checksum changed; nop")
+	} else {
+		err = db.PutData(m.NomsMap(), types.String(m.Checksum().String()), cvResp.LastMutationID)
+	}
 	return err
 }
 

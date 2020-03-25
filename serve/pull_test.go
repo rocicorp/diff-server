@@ -67,6 +67,28 @@ func TestAPI(t *testing.T) {
 			`{"stateID":"hoc705ifecv1c858qgbqr9jghh4d9l96","lastMutationID":2,"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/new","value":"value"}],"checksum":"f9ef007b"}`,
 			""},
 
+		// Successful nop client view fetch where lastMutationID does not change.
+		{"POST",
+			`{"baseStateID": "s3n5j759kirvvs3fqeott07a43lk41ud", "checksum": "c4e7090d", "clientID": "clientid", "clientViewAuth": "clientauth"}`,
+			"accountID",
+			&servetypes.ClientViewRequest{},
+			"clientauth",
+			servetypes.ClientViewResponse{ClientView: map[string]interface{}{"foo": "bar"}, LastMutationID: 1},
+			nil,
+			`{"stateID":"s3n5j759kirvvs3fqeott07a43lk41ud","lastMutationID":1,"patch":[],"checksum":"c4e7090d"}`,
+			""},
+
+		// Successful nop client view fetch where lastMutationID does change.
+		{"POST",
+			`{"baseStateID": "s3n5j759kirvvs3fqeott07a43lk41ud", "checksum": "c4e7090d", "clientID": "clientid", "clientViewAuth": "clientauth"}`,
+			"accountID",
+			&servetypes.ClientViewRequest{},
+			"clientauth",
+			servetypes.ClientViewResponse{ClientView: map[string]interface{}{"foo": "bar"}, LastMutationID: 77},
+			nil,
+			`{"stateID":"pi99ftvp6nchoej3i58flsqm8enqg4vd","lastMutationID":77,"patch":[],"checksum":"c4e7090d"}`,
+			""},
+
 		// Fetch errors out.
 		{"POST",
 			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid", "clientViewAuth": "clientauth"}`,
@@ -146,6 +168,9 @@ func TestAPI(t *testing.T) {
 	}
 
 	for i, t := range tc {
+		if i == 3 {
+			fmt.Printf("hi")
+		}
 		td, _ := ioutil.TempDir("", "")
 		s := NewService(td, []Account{Account{ID: "accountID", Name: "accountID", Pubkey: nil}}, "")
 		noms, err := s.getNoms("accountID")
@@ -155,6 +180,7 @@ func TestAPI(t *testing.T) {
 		m := kv.NewMapFromNoms(noms, types.NewMap(noms, types.String("foo"), types.String("bar")))
 		err = db.PutData(m.NomsMap(), types.String(m.Checksum().String()), 1 /*lastMutationID*/)
 		assert.NoError(err)
+		fmt.Printf("hash %s checksum %s", db.Head().Original.Hash(), m.Checksum())
 
 		fcvg := fakeClientViewGet{resp: t.CVResponse, err: t.CVErr}
 		if t.expCVReq == nil {
