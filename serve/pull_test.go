@@ -177,7 +177,6 @@ func TestAPI(t *testing.T) {
 		m := kv.NewMapFromNoms(noms, types.NewMap(noms, types.String("foo"), types.String("bar")))
 		err = db.PutData(m.NomsMap(), types.String(m.Checksum().String()), 1 /*lastMutationID*/)
 		assert.NoError(err)
-		fmt.Printf("hash %s checksum %s", db.Head().Original.Hash(), m.Checksum())
 
 		fcvg := fakeClientViewGet{resp: t.CVResponse, err: t.CVErr}
 		if t.expCVReq == nil {
