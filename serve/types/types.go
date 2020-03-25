@@ -7,8 +7,8 @@ import (
 type PullRequest struct {
 	ClientViewAuth string `json:"clientViewAuth"`
 	ClientID       string `json:"clientID"`
-	BaseStateID    string `'json:"baseStateID"`
-	Checksum       string `'json:"checksum"`
+	BaseStateID    string `json:"baseStateID"`
+	Checksum       string `json:"checksum"`
 }
 
 type PullResponse struct {
@@ -18,7 +18,7 @@ type PullResponse struct {
 	Checksum       string         `json:"checksum"`
 }
 
-type ClientViewRequest struct {}
+type ClientViewRequest struct{}
 
 type ClientViewResponse struct {
 	ClientView     map[string]interface{} `json:"clientView"`
