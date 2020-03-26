@@ -89,7 +89,6 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.inject(w, r)
 	default:
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("Invalid route"))
 	}
 }
 

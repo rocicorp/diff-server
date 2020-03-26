@@ -178,5 +178,5 @@ func TestNo301(t *testing.T) {
 
 	svc.ServeHTTP(r, httptest.NewRequest("POST", "//pull", strings.NewReader(`{"accountID": "sandbox", "baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`)))
 	assert.Equal(http.StatusNotFound, r.Code)
-	assert.Equal("Invalid route", string(r.Body.Bytes()))
+	assert.Equal("", string(r.Body.Bytes()))
 }
