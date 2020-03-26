@@ -157,18 +157,6 @@ func TestConcurrentAccessUsingMultipleServices(t *testing.T) {
 	}
 }
 
-func TestInvalidMethodPull(t *testing.T) {
-	assert := assert.New(t)
-	td, _ := ioutil.TempDir("", "")
-
-	svc := NewService(td, getAccounts(), "", nil)
-	r := httptest.NewRecorder()
-
-	svc.ServeHTTP(r, httptest.NewRequest("GET", "/pull", strings.NewReader(`{"accountID": "sandbox", "baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`)))
-	assert.Equal(http.StatusMethodNotAllowed, r.Code)
-	assert.Equal("Unsupported method: GET", string(r.Body.Bytes()))
-}
-
 func TestNo301(t *testing.T) {
 	assert := assert.New(t)
 	td, _ := ioutil.TempDir("", "")
