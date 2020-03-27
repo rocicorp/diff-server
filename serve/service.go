@@ -26,7 +26,7 @@ var (
 	pathRegex = regexp.MustCompile(`^\/([\w-]+)\/([\w-]+)\/([\w-]+)\/?$`)
 )
 
-// Service is a running instance of the Replicant service. A service handles one or more servers.
+// Service is a running instance of the Replicant service.
 type Service struct {
 	storageRoot          string
 	urlPrefix            string
@@ -37,11 +37,11 @@ type Service struct {
 
 	// cvg may be nil, in which case the server skips the client view request in pull, which is
 	// useful if you are populating the db directly or in tests.
-	cvg clientViewGetter
+	clientViewGetter clientViewGetter
 }
 
 type clientViewGetter interface {
-	Get(req servetypes.ClientViewRequest, authToken string) (servetypes.ClientViewResponse, error)
+	Get(url string, req servetypes.ClientViewRequest, authToken string) (servetypes.ClientViewResponse, error)
 }
 
 // Account is information about a customer of Replicant. This is a stand-in for what will eventually be
@@ -54,13 +54,14 @@ type Account struct {
 }
 
 // NewService creates a new instances of the Replicant web service.
-func NewService(storageRoot string, accounts []Account, clientViewURL string) *Service {
+func NewService(storageRoot string, accounts []Account, overrideClientViewURL string, cvg clientViewGetter) *Service {
 	return &Service{
 		storageRoot:          storageRoot,
 		accounts:             accounts,
 		nomsen:               map[string]datas.Database{},
-		overridClientViewURL: clientViewURL,
+		overridClientViewURL: overrideClientViewURL,
 		mu:                   sync.Mutex{},
+		clientViewGetter:     cvg,
 	}
 }
 

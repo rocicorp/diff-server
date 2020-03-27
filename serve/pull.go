@@ -80,18 +80,13 @@ func (s *Service) pull(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// TODO fritz HACK, the cvg should take a url to Get and should be passed in as a depenency to the service.
 	clientViewURL := acct.ClientViewURL
 	if s.overridClientViewURL != "" {
 		log.Printf("WARNING: overriding all client view URLs with %s", s.overridClientViewURL)
 		clientViewURL = s.overridClientViewURL
 	}
-	if clientViewURL != "" {
-		s.cvg = ClientViewGetter{url: clientViewURL}
-	}
 	cvReq := servetypes.ClientViewRequest{}
-	maybeGetAndStoreNewClientView(db, preq.ClientViewAuth, s.cvg, cvReq)
-	s.cvg = nil
+	maybeGetAndStoreNewClientView(db, preq.ClientViewAuth, clientViewURL, s.clientViewGetter, cvReq)
 
 	patch, err := db.Diff(from, *fromChecksum)
 	if err != nil {
@@ -128,7 +123,7 @@ func (s *Service) pull(rw http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func maybeGetAndStoreNewClientView(db *db.DB, clientViewAuth string, cvg clientViewGetter, cvReq servetypes.ClientViewRequest) {
+func maybeGetAndStoreNewClientView(db *db.DB, clientViewAuth string, url string, cvg clientViewGetter, cvReq servetypes.ClientViewRequest) {
 	var err error
 	defer func() {
 		if err != nil {
@@ -140,7 +135,7 @@ func maybeGetAndStoreNewClientView(db *db.DB, clientViewAuth string, cvg clientV
 		err = errors.New("not fetching new client view: no url provided via account or --clientview")
 		return
 	}
-	cvResp, err := cvg.Get(cvReq, clientViewAuth)
+	cvResp, err := cvg.Get(url, cvReq, clientViewAuth)
 	if err != nil {
 		return
 	}

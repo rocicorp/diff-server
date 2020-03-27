@@ -124,7 +124,7 @@ func serve(parent *kingpin.Application, sps *string, errs io.Writer) {
 	kc.Action(func(_ *kingpin.ParseContext) error {
 		ps := fmt.Sprintf(":%d", *port)
 		log.Printf("Listening on %s...", ps)
-		s := servepkg.NewService(*sps, accounts.Accounts(), *overrideClientViewURL)
+		s := servepkg.NewService(*sps, accounts.Accounts(), *overrideClientViewURL, servepkg.ClientViewGetter{})
 		http.Handle("/", s)
 		return http.ListenAndServe(fmt.Sprintf(":%d", *port), nil)
 	})

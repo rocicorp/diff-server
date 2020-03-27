@@ -92,7 +92,7 @@ func DISABLED_TestCheckAccess(t *testing.T) {
 			accounts = append(accounts, *t.addAccount)
 		}
 
-		svc := NewService(td, accounts, "")
+		svc := NewService(td, accounts, "", nil)
 		res := httptest.NewRecorder()
 
 		req := httptest.NewRequest("POST", fmt.Sprintf("/%s/pull", t.dbName),
@@ -117,7 +117,6 @@ func DISABLED_TestCheckAccess(t *testing.T) {
 }
 
 func TestConcurrentAccessUsingMultipleServices(t *testing.T) {
-	// TO
 	assert := assert.New(t)
 	td, _ := ioutil.TempDir("", "")
 
@@ -129,8 +128,8 @@ func TestConcurrentAccessUsingMultipleServices(t *testing.T) {
 		},
 	}
 
-	svc1 := NewService(td, accounts, "")
-	svc2 := NewService(td, accounts, "")
+	svc1 := NewService(td, accounts, "", nil)
+	svc2 := NewService(td, accounts, "", nil)
 
 	res := []*httptest.ResponseRecorder{
 		httptest.NewRecorder(),
