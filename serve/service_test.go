@@ -127,7 +127,6 @@ func getAccounts() []Account {
 }
 
 func TestConcurrentAccessUsingMultipleServices(t *testing.T) {
-	// TO
 	assert := assert.New(t)
 	td, _ := ioutil.TempDir("", "")
 
