@@ -116,17 +116,21 @@ func DISABLED_TestCheckAccess(t *testing.T) {
 	}
 }
 
-func TestConcurrentAccessUsingMultipleServices(t *testing.T) {
-	assert := assert.New(t)
-	td, _ := ioutil.TempDir("", "")
-
-	accounts := []Account{
+func getAccounts() []Account {
+	return []Account{
 		Account{
 			ID:     "sandbox",
 			Name:   "Sandbox",
 			Pubkey: nil,
 		},
 	}
+}
+
+func TestConcurrentAccessUsingMultipleServices(t *testing.T) {
+	assert := assert.New(t)
+	td, _ := ioutil.TempDir("", "")
+
+	accounts := getAccounts()
 
 	svc1 := NewService(td, accounts, "", nil)
 	svc2 := NewService(td, accounts, "", nil)
@@ -150,4 +154,16 @@ func TestConcurrentAccessUsingMultipleServices(t *testing.T) {
 	for i, r := range res {
 		assert.Equal(http.StatusOK, r.Code, fmt.Sprintf("response %d: %s", i, string(r.Body.Bytes())))
 	}
+}
+
+func TestNo301(t *testing.T) {
+	assert := assert.New(t)
+	td, _ := ioutil.TempDir("", "")
+
+	svc := NewService(td, getAccounts(), "", nil)
+	r := httptest.NewRecorder()
+
+	svc.ServeHTTP(r, httptest.NewRequest("POST", "//pull", strings.NewReader(`{"accountID": "sandbox", "baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`)))
+	assert.Equal(http.StatusNotFound, r.Code)
+	assert.Equal("", string(r.Body.Bytes()))
 }

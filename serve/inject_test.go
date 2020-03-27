@@ -28,7 +28,7 @@ func TestInject(t *testing.T) {
 		wantChange   bool
 	}{
 		// Invalid method
-		{"GET", ``, http.StatusBadRequest, `Unsupported method: GET`, false},
+		{"GET", ``, http.StatusMethodNotAllowed, `Unsupported method: GET`, false},
 
 		// Empty request
 		{"POST", ``, http.StatusBadRequest, `Bad request payload: EOF`, false},
