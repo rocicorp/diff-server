@@ -35,44 +35,37 @@ func (suite *ToJSONSuite) TestToJSON() {
 	tc := []struct {
 		desc     string
 		in       types.Value
-		opts     ToOptions
 		exp      string
 		expError string
 	}{
-		{"true", types.Bool(true), ToOptions{}, "true", ""},
-		{"false", types.Bool(false), ToOptions{}, "false", ""},
-		{"42", types.Number(42), ToOptions{}, "42", ""},
-		{"88.8", types.Number(88.8), ToOptions{}, "8.88E1", ""},
-		{"empty string", types.String(""), ToOptions{}, `""`, ""},
-		{"foobar", types.String("foobar"), ToOptions{}, `"foobar"`, ""},
-		{"strings with newlines", types.String(`"\nmonkey`), ToOptions{}, `"\"\\nmonkey"`, ""},
-		{"structs when not enabled", types.NewStruct("", types.StructData{}), ToOptions{}, "", "Struct marshaling not enabled"},
-		{"named struct", types.NewStruct("Person", types.StructData{}), ToOptions{Structs: true}, "", "Named struct marshaling not supported"},
-		{"struct nested errors", types.NewStruct("", types.StructData{"foo": types.NewList(suite.vs)}), ToOptions{Structs: true}, "", "List marshaling not enabled"},
-		{"empty struct", types.NewStruct("", types.StructData{}), ToOptions{Structs: true}, "{}", ""},
-		{"non-empty struct", types.NewStruct("", types.StructData{"str": types.String("bar"), "num": types.Number(42)}), ToOptions{Structs: true}, `{"num":42,"str":"bar"}`, ""},
-		{"list when not enabled", types.NewList(suite.vs), ToOptions{}, "", "List marshaling not enabled"},
-		{"list nested errors", types.NewList(suite.vs, types.NewSet(suite.vs)), ToOptions{Lists: true}, "", "Set marshaling not enabled"},
-		{"empty list", types.NewList(suite.vs), ToOptions{Lists: true}, "[]", ""},
-		{"non-empty list", types.NewList(suite.vs, types.Number(42), types.String("foo")), ToOptions{Lists: true}, `[42,"foo"]`, ""},
-		{"sets when not enabled", types.NewSet(suite.vs), ToOptions{}, "", "Set marshaling not enabled"},
-		{"set nested errors", types.NewSet(suite.vs, types.NewList(suite.vs)), ToOptions{Sets: true}, "", "List marshaling not enabled"},
-		{"empty set", types.NewSet(suite.vs), ToOptions{Sets: true}, "[]", ""},
-		{"non-empty set", types.NewSet(suite.vs, types.Number(42), types.String("foo")), ToOptions{Sets: true}, `[42,"foo"]`, ""},
-		{"maps when not enabled", types.NewMap(suite.vs), ToOptions{}, "", "Map marshaling not enabled"},
-		{"map nested errors", types.NewMap(suite.vs, types.String("foo"), types.NewSet(suite.vs)), ToOptions{Maps: true}, "", "Set marshaling not enabled"},
-		{"map non-string key", types.NewMap(suite.vs, types.Number(42), types.Number(42)), ToOptions{Maps: true}, "", "Map key kind Number not supported"},
-		{"empty map", types.NewMap(suite.vs), ToOptions{Maps: true}, "{}", ""},
-		{"non-empty map", types.NewMap(suite.vs, types.String("foo"), types.String("bar"), types.String("baz"), types.Number(42)), ToOptions{Maps: true}, `{"baz":42,"foo":"bar"}`, ""},
-		{"complex value", types.NewStruct("", types.StructData{
-			"list": types.NewList(suite.vs,
-				types.NewSet(suite.vs,
-					types.NewMap(suite.vs, types.String("foo"), types.String("bar"), types.String("hot"), types.Number(42))))}), ToOptions{Structs: true, Lists: true, Sets: true, Maps: true}, `{"list":[[{"foo":"bar","hot":42}]]}`, ""},
+		{"null", Null(), `null`, ""},
+		{"true", types.Bool(true), "true", ""},
+		{"false", types.Bool(false), "false", ""},
+		{"42", types.Number(42), "42", ""},
+		{"88.8", types.Number(88.8), "8.88E1", ""},
+		{"empty string", types.String(""), `""`, ""},
+		{"foobar", types.String("foobar"), `"foobar"`, ""},
+		{"strings with newlines", types.String(`"\nmonkey`), `"\"\\nmonkey"`, ""},
+		{"unnamed struct", types.NewStruct("", types.StructData{}), "", "Unsupported struct type: Struct {}"},
+		{"named struct", types.NewStruct("Person", types.StructData{}), "", "Unsupported struct type: Struct Person {}"},
+		{"bad null struct", types.NewStruct("Null", types.StructData{"foo": types.String("bar")}), "", "Unsupported struct type: Struct Null {\n  foo: String,\n}"},
+		{"empty list", types.NewList(suite.vs), "[]", ""},
+		{"non-empty list", types.NewList(suite.vs, types.Number(42), types.String("foo")), `[42,"foo"]`, ""},
+		{"sets", types.NewSet(suite.vs), "", "Unsupported kind: Set"},
+		{"map non-string key", types.NewMap(suite.vs, types.Number(42), types.Number(42)), "", "Map key kind Number not supported"},
+		{"empty map", types.NewMap(suite.vs), "{}", ""},
+		{"non-empty map", types.NewMap(suite.vs, types.String("foo"), types.String("bar"), types.String("baz"), types.Number(42)), `{"baz":42,"foo":"bar"}`, ""},
+		{"complex value", types.NewMap(suite.vs,
+			types.String("list"), types.NewList(suite.vs,
+				types.NewMap(suite.vs,
+					types.String("foo"), types.String("bar"),
+					types.String("hot"), types.Number(42),
+					types.String("null"), Null()))), `{"list":[{"foo":"bar","hot":42,"null":null}]}`, ""},
 	}
 
 	for _, t := range tc {
 		buf := &bytes.Buffer{}
-		err := ToJSON(t.in, buf, t.opts)
+		err := ToJSON(t.in, buf)
 		if t.expError != "" {
 			suite.EqualError(err, t.expError, t.desc)
 			suite.Equal("", string(buf.Bytes()), t.desc)

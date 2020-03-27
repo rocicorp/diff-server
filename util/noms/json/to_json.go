@@ -5,7 +5,6 @@
 package json
 
 import (
-	"errors"
 	"fmt"
 	"io"
 
@@ -16,10 +15,10 @@ import (
 // ToJSON encodes a Noms value as canonical JSON.
 // It would be nice to have an option like the original noms
 // ops.Indent which would enable pretty printing via the default json library.
-func ToJSON(v types.Value, w io.Writer, opts ToOptions) error {
+func ToJSON(v types.Value, w io.Writer) error {
 	// TODO: This is a quick hack that is expedient. We should marshal directly to the writer without
 	// allocating a bunch of Go values.
-	p, err := toPile(v, opts)
+	p, err := toPile(v)
 	if err != nil {
 		return err
 	}
@@ -28,19 +27,7 @@ func ToJSON(v types.Value, w io.Writer, opts ToOptions) error {
 	return enc.Encode(p)
 }
 
-// ToOptions controls how ToJSON works.
-type ToOptions struct {
-	// Enable support for encoding Noms Lists. Lists are encoded as JSON arrays.
-	Lists bool
-	// Enable support for encoding Noms Maps. Maps are encoded as JSON objects.
-	Maps bool
-	// Enable support for encoding Noms Sets. Sets are encoded as JSON arrays.
-	Sets bool
-	// Enable support for encoding Noms Structs. Structs are encoded as JSON objects.
-	Structs bool
-}
-
-func toPile(v types.Value, opts ToOptions) (ret interface{}, err error) {
+func toPile(v types.Value) (ret interface{}, err error) {
 	switch v := v.(type) {
 	case types.Bool:
 		return bool(v), nil
@@ -49,27 +36,11 @@ func toPile(v types.Value, opts ToOptions) (ret interface{}, err error) {
 	case types.String:
 		return string(v), nil
 	case types.Struct:
-		if !opts.Structs {
-			return nil, errors.New("Struct marshaling not enabled")
+		if !Null().Equals(v) {
+			return nil, fmt.Errorf("Unsupported struct type: %s", types.TypeOf(v).Describe())
 		}
-		r := map[string]interface{}{}
-		if v.Name() != "" {
-			return nil, errors.New("Named struct marshaling not supported")
-		}
-		v.IterFields(func(k string, cv types.Value) (stop bool) {
-			var cp interface{}
-			cp, err = toPile(cv, opts)
-			if err != nil {
-				return true
-			}
-			r[k] = cp
-			return false
-		})
-		return r, err
+		return nil, nil
 	case types.Map:
-		if !opts.Maps {
-			return nil, errors.New("Map marshaling not enabled")
-		}
 		r := make(map[string]interface{}, v.Len())
 		v.Iter(func(k, cv types.Value) (stop bool) {
 			sk, ok := k.(types.String)
@@ -78,7 +49,7 @@ func toPile(v types.Value, opts ToOptions) (ret interface{}, err error) {
 				return true
 			}
 			var cp interface{}
-			cp, err = toPile(cv, opts)
+			cp, err = toPile(cv)
 			if err != nil {
 				return true
 			}
@@ -87,32 +58,14 @@ func toPile(v types.Value, opts ToOptions) (ret interface{}, err error) {
 		})
 		return r, err
 	case types.List:
-		if !opts.Lists {
-			return nil, errors.New("List marshaling not enabled")
-		}
 		r := make([]interface{}, v.Len())
 		v.Iter(func(cv types.Value, i uint64) (stop bool) {
 			var cp interface{}
-			cp, err = toPile(cv, opts)
+			cp, err = toPile(cv)
 			if err != nil {
 				return true
 			}
 			r[i] = cp
-			return false
-		})
-		return r, err
-	case types.Set:
-		if !opts.Sets {
-			return nil, errors.New("Set marshaling not enabled")
-		}
-		r := make([]interface{}, 0, v.Len())
-		v.Iter(func(cv types.Value) (stop bool) {
-			var cp interface{}
-			cp, err = toPile(cv, opts)
-			if err != nil {
-				return true
-			}
-			r = append(r, cp)
 			return false
 		})
 		return r, err

@@ -13,6 +13,14 @@ import (
 	cjson "github.com/gibson042/canonicaljson-go"
 )
 
+var (
+	null = types.NewStruct("Null", types.StructData{})
+)
+
+func Null() types.Struct {
+	return null
+}
+
 func nomsValueFromDecodedJSONBase(vrw types.ValueReadWriter, o interface{}) types.Value {
 	switch o := o.(type) {
 	case string:
@@ -22,7 +30,7 @@ func nomsValueFromDecodedJSONBase(vrw types.ValueReadWriter, o interface{}) type
 	case float64:
 		return types.Number(o)
 	case nil:
-		return nil
+		return types.NewStruct("Null", types.StructData{})
 	case []interface{}:
 		items := make([]types.Value, 0, len(o))
 		for _, v := range o {

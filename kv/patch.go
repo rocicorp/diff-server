@@ -78,10 +78,7 @@ func Diff(from, to *Map, r []Operation) ([]Operation, error) {
 					op.Op = OpRemove
 				case types.DiffChangeAdded, types.DiffChangeModified:
 					b := &bytes.Buffer{}
-					err = nomsjson.ToJSON(d.NewValue, b, nomsjson.ToOptions{
-						Lists: true,
-						Maps:  true,
-					})
+					err = nomsjson.ToJSON(d.NewValue, b)
 					if err != nil {
 						// Would be nice to return an error out of here but there is no plumbing
 						// for it. If you have time feel free.
