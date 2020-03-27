@@ -65,10 +65,8 @@ func TestClientViewGetter_Get(t *testing.T) {
 				w.Write([]byte(tt.respBody))
 			}))
 
-			g := ClientViewGetter{
-				url: server.URL,
-			}
-			got, err := g.Get(tt.req, tt.clientViewAuth)
+			g := ClientViewGetter{}
+			got, err := g.Get(server.URL, tt.req, tt.clientViewAuth)
 			if tt.wantErr == "" {
 				assert.NoError(err)
 			} else {

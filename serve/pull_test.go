@@ -168,8 +168,14 @@ func TestAPI(t *testing.T) {
 	}
 
 	for i, t := range tc {
+		fcvg := fakeClientViewGet{resp: t.CVResponse, err: t.CVErr}
+		var cvg clientViewGetter
+		if t.expCVReq != nil {
+			cvg = &fcvg
+		}
+
 		td, _ := ioutil.TempDir("", "")
-		s := NewService(td, []Account{Account{ID: "accountID", Name: "accountID", Pubkey: nil}}, "")
+		s := NewService(td, []Account{Account{ID: "accountID", Name: "accountID", Pubkey: nil}}, "", cvg)
 		noms, err := s.getNoms("accountID")
 		assert.NoError(err)
 		db, err := db.New(noms.GetDataset("client/clientid"))
@@ -177,13 +183,6 @@ func TestAPI(t *testing.T) {
 		m := kv.NewMapFromNoms(noms, types.NewMap(noms, types.String("foo"), types.String("bar")))
 		err = db.PutData(m.NomsMap(), types.String(m.Checksum().String()), 1 /*lastMutationID*/)
 		assert.NoError(err)
-
-		fcvg := fakeClientViewGet{resp: t.CVResponse, err: t.CVErr}
-		if t.expCVReq == nil {
-			s.cvg = nil
-		} else {
-			s.cvg = &fcvg
-		}
 
 		msg := fmt.Sprintf("test case %d: %s", i, t.pullReq)
 		req := httptest.NewRequest(t.pullMethod, "/sync", strings.NewReader(t.pullReq))
@@ -220,7 +219,7 @@ type fakeClientViewGet struct {
 	gotAuth string
 }
 
-func (f *fakeClientViewGet) Get(req servetypes.ClientViewRequest, authToken string) (servetypes.ClientViewResponse, error) {
+func (f *fakeClientViewGet) Get(url string, req servetypes.ClientViewRequest, authToken string) (servetypes.ClientViewResponse, error) {
 	f.called = true
 	f.gotReq = req
 	f.gotAuth = authToken
