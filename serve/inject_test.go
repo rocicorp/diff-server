@@ -68,7 +68,7 @@ func TestInject(t *testing.T) {
 			m := kv.NewMapFromNoms(db.Noms(), db.Head().Data(db.Noms()))
 			v, err := m.Get("foo")
 			assert.NoError(err, msg)
-			assert.Equal(`"bar"`, string(v), msg)
+			assert.Equal("\"bar\"\n", string(v), msg)
 		}
 	}
 }
