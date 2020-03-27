@@ -66,16 +66,7 @@ func bytesFromNomsValue(value types.Valuable) ([]byte, error) {
 	}); err != nil {
 		return []byte{}, err
 	}
-
-	// nomsjson uses Encoder, which assumes it is encoding a stream
-	// of values and therefore appends a newline. Values in our store
-	// can only be a single json value. Here we trim the newline.
-	bb := b.Bytes()
-	if len(bb) == 0 || bb[len(bb)-1] != '\n' {
-		chk.Fail("unexpected json encoding: %s", bb)
-	}
-	bb = bb[:len(bb)-1]
-	return bb, nil
+	return b.Bytes(), nil
 }
 
 // Checksum is the Cheksum over the Map of k/vs.
