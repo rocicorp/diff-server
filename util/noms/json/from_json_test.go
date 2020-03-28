@@ -35,22 +35,23 @@ func (suite *LibTestSuite) TestPrimitiveTypes() {
 	suite.EqualValues(types.String("expected"), NomsValueFromDecodedJSON(vs, "expected"))
 	suite.EqualValues(types.Bool(false), NomsValueFromDecodedJSON(vs, false))
 	suite.EqualValues(types.Number(1.7), NomsValueFromDecodedJSON(vs, 1.7))
+	suite.True(NomsValueFromDecodedJSON(vs, nil).Equals(Null()))
 	suite.False(NomsValueFromDecodedJSON(vs, 1.7).Equals(types.Bool(true)))
 }
 
 func (suite *LibTestSuite) TestCompositeTypes() {
 	vs := suite.vs
 
-	// [false true]
-	suite.EqualValues(
-		types.NewList(vs).Edit().Append(types.Bool(false)).Append(types.Bool(true)).List(),
-		NomsValueFromDecodedJSON(vs, []interface{}{false, true}))
+	// [false true null]
+	suite.True(
+		types.NewList(vs).Edit().Append(types.Bool(false)).Append(types.Bool(true)).Append(Null()).List().Equals(
+			NomsValueFromDecodedJSON(vs, []interface{}{false, true, nil})))
 
-	// [[false true]]
-	suite.EqualValues(
+	// [[false true null]]
+	suite.True(
 		types.NewList(vs).Edit().Append(
-			types.NewList(vs).Edit().Append(types.Bool(false)).Append(types.Bool(true)).List()).List(),
-		NomsValueFromDecodedJSON(vs, []interface{}{[]interface{}{false, true}}))
+			types.NewList(vs).Edit().Append(types.Bool(false)).Append(types.Bool(true)).Append(Null()).List()).List().Equals(
+			NomsValueFromDecodedJSON(vs, []interface{}{[]interface{}{false, true, nil}})))
 
 	// {"string": "string",
 	//  "list": [false true],

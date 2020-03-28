@@ -110,3 +110,15 @@ func TestMapGetSetRemove(t *testing.T) {
 	assertGetEqual(assert, m1, k1, v1)
 	assertGetEqual(assert, m1, k2, v2)
 }
+func TestNull(t *testing.T) {
+	assert := assert.New(t)
+	noms := memstore.New()
+	m1 := kv.NewMap(noms)
+	m1e := m1.Edit()
+	err := m1e.Set("foo", []byte("null"))
+	m1 = m1e.Build()
+	assert.NoError(err)
+	act, err := m1.Get("foo")
+	assert.NoError(err)
+	assert.Equal([]byte("null"), act)
+}

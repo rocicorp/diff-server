@@ -60,10 +60,7 @@ func (m Map) Get(key string) ([]byte, error) {
 func bytesFromNomsValue(value types.Valuable) ([]byte, error) {
 	// Here we could check value.Kind() if we wanted.
 	var b bytes.Buffer
-	if err := nomsjson.ToJSON(value.Value(), &b, nomsjson.ToOptions{
-		Lists: true,
-		Maps:  true,
-	}); err != nil {
+	if err := nomsjson.ToJSON(value.Value(), &b); err != nil {
 		return []byte{}, err
 	}
 	return b.Bytes(), nil
