@@ -2,6 +2,7 @@ package kv
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 
 	"roci.dev/diff-server/util/chk"
@@ -103,6 +104,10 @@ func (me MapEditor) Get(key string) ([]byte, error) {
 
 // Set sets the value for a given key.
 func (me *MapEditor) Set(key string, value []byte) error {
+	if key == "" {
+		return errors.New("key must be non-empty")
+	}
+
 	nv, err := nomsjson.FromJSON(bytes.NewReader(value), me.noms)
 	if err != nil {
 		return err
