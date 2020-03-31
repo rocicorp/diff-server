@@ -86,7 +86,7 @@ func (s *Service) pull(rw http.ResponseWriter, req *http.Request) {
 		clientViewURL = s.overridClientViewURL
 	}
 	cvReq := servetypes.ClientViewRequest{}
-	maybeGetAndStoreNewClientView(db, preq.ClientViewAuth, clientViewURL, s.clientViewGetter, cvReq)
+	cvInfo := maybeGetAndStoreNewClientView(db, preq.ClientViewAuth, clientViewURL, s.clientViewGetter, cvReq)
 
 	patch, err := db.Diff(from, *fromChecksum)
 	if err != nil {
@@ -98,6 +98,7 @@ func (s *Service) pull(rw http.ResponseWriter, req *http.Request) {
 		LastMutationID: uint64(db.Head().Value.LastMutationID),
 		Patch:          patch,
 		Checksum:       string(db.Head().Value.Checksum),
+		ClientViewInfo: cvInfo,
 	}
 	resp, err := json.Marshal(hsresp)
 	if err != nil {
@@ -123,25 +124,28 @@ func (s *Service) pull(rw http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func maybeGetAndStoreNewClientView(db *db.DB, clientViewAuth string, url string, cvg clientViewGetter, cvReq servetypes.ClientViewRequest) {
+func maybeGetAndStoreNewClientView(db *db.DB, clientViewAuth string, url string, cvg clientViewGetter, cvReq servetypes.ClientViewRequest) servetypes.ClientViewInfo {
+	clientViewInfo := servetypes.ClientViewInfo{}
 	var err error
 	defer func() {
 		if err != nil {
 			log.Printf("WARNING: got error fetching clientview: %s", err)
+			clientViewInfo.ErrorMessage = err.Error()
 		}
 	}()
 
 	if cvg == nil {
 		err = errors.New("not fetching new client view: no url provided via account or --clientview")
-		return
+		return clientViewInfo
 	}
-	cvResp, err := cvg.Get(url, cvReq, clientViewAuth)
+	cvResp, cvCode, err := cvg.Get(url, cvReq, clientViewAuth)
+	clientViewInfo.HTTPStatusCode = cvCode
 	if err != nil {
-		return
+		return clientViewInfo
 	}
 
 	err = storeClientView(db, cvResp)
-	return
+	return clientViewInfo
 }
 
 func storeClientView(db *db.DB, cvResp servetypes.ClientViewResponse) error {

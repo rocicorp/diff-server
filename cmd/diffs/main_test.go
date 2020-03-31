@@ -13,11 +13,13 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"roci.dev/diff-server/db"
+	"roci.dev/diff-server/serve/accounts"
 	"roci.dev/diff-server/util/time"
 )
 
 func TestServe(t *testing.T) {
 	assert := assert.New(t)
+	accounts.AddTestAcccount()
 	dir, err := ioutil.TempDir("", "")
 	assert.NoError(err)
 	fmt.Println(dir)
@@ -37,8 +39,8 @@ func TestServe(t *testing.T) {
 	}{
 		{"pull",
 			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`,
-			"sandbox",
-			`{"stateID":"r0d74qu25vi4dr8fmf58oike0cj4jpth","lastMutationID":0,"patch":[{"op":"remove","path":"/"}],"checksum":"00000000"}`,
+			"unittest",
+			`{"stateID":"r0d74qu25vi4dr8fmf58oike0cj4jpth","lastMutationID":0,"patch":[{"op":"remove","path":"/"}],"checksum":"00000000","clientViewInfo":{"httpStatusCode":0,"errorMessage":""}}`,
 			""},
 	}
 

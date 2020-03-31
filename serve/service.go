@@ -41,7 +41,7 @@ type Service struct {
 }
 
 type clientViewGetter interface {
-	Get(url string, req servetypes.ClientViewRequest, authToken string) (servetypes.ClientViewResponse, error)
+	Get(url string, req servetypes.ClientViewRequest, authToken string) (servetypes.ClientViewResponse, int, error)
 }
 
 // Account is information about a customer of Replicant. This is a stand-in for what will eventually be
