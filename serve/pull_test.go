@@ -30,6 +30,7 @@ func TestAPI(t *testing.T) {
 		expCVReq    *servetypes.ClientViewRequest
 		expCVAuth   string
 		CVResponse  servetypes.ClientViewResponse
+		CVCode      int
 		CVErr       error
 		expPullResp string
 		expPullErr  string
@@ -41,6 +42,7 @@ func TestAPI(t *testing.T) {
 			nil,
 			"",
 			servetypes.ClientViewResponse{},
+			0,
 			nil,
 			``,
 			"Unsupported method: GET"},
@@ -52,8 +54,9 @@ func TestAPI(t *testing.T) {
 			nil,
 			"",
 			servetypes.ClientViewResponse{},
+			0,
 			nil,
-			`{"stateID":"o9ic5cumvag1ksqln6a4jf62qdip9m8p","lastMutationID":1,"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/foo","value":"bar"}],"checksum":"7d4a87ba"}`,
+			`{"stateID":"o9ic5cumvag1ksqln6a4jf62qdip9m8p","lastMutationID":1,"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/foo","value":"bar"}],"checksum":"7d4a87ba","clientViewInfo":{"httpStatusCode":0,"errorMessage":""}}`,
 			""},
 
 		// Successful client view fetch.
@@ -63,8 +66,9 @@ func TestAPI(t *testing.T) {
 			&servetypes.ClientViewRequest{},
 			"clientauth",
 			servetypes.ClientViewResponse{ClientView: map[string]interface{}{"new": "value"}, LastMutationID: 2},
+			200,
 			nil,
-			`{"stateID":"so63u0ngdmhknauno8o06nesijj74c4v","lastMutationID":2,"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/new","value":"value"}],"checksum":"2a408ef6"}`,
+			`{"stateID":"so63u0ngdmhknauno8o06nesijj74c4v","lastMutationID":2,"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/new","value":"value"}],"checksum":"2a408ef6","clientViewInfo":{"httpStatusCode":200,"errorMessage":""}}`,
 			""},
 
 		// Successful nop client view fetch where lastMutationID does not change.
@@ -74,8 +78,9 @@ func TestAPI(t *testing.T) {
 			&servetypes.ClientViewRequest{},
 			"clientauth",
 			servetypes.ClientViewResponse{ClientView: map[string]interface{}{"foo": "bar"}, LastMutationID: 1},
+			200,
 			nil,
-			`{"stateID":"o9ic5cumvag1ksqln6a4jf62qdip9m8p","lastMutationID":1,"patch":[],"checksum":"7d4a87ba"}`,
+			`{"stateID":"o9ic5cumvag1ksqln6a4jf62qdip9m8p","lastMutationID":1,"patch":[],"checksum":"7d4a87ba","clientViewInfo":{"httpStatusCode":200,"errorMessage":""}}`,
 			""},
 
 		// Successful nop client view fetch where lastMutationID does change.
@@ -85,8 +90,9 @@ func TestAPI(t *testing.T) {
 			&servetypes.ClientViewRequest{},
 			"clientauth",
 			servetypes.ClientViewResponse{ClientView: map[string]interface{}{"foo": "bar"}, LastMutationID: 77},
+			200,
 			nil,
-			`{"stateID":"3mrtvk68v6otl194pnqjrcehkir19mav","lastMutationID":77,"patch":[],"checksum":"7d4a87ba"}`,
+			`{"stateID":"3mrtvk68v6otl194pnqjrcehkir19mav","lastMutationID":77,"patch":[],"checksum":"7d4a87ba","clientViewInfo":{"httpStatusCode":200,"errorMessage":""}}`,
 			""},
 
 		// Fetch errors out.
@@ -96,8 +102,9 @@ func TestAPI(t *testing.T) {
 			&servetypes.ClientViewRequest{},
 			"clientauth",
 			servetypes.ClientViewResponse{ClientView: map[string]interface{}{"new": "value"}, LastMutationID: 2},
+			200,
 			errors.New("boom"),
-			`{"stateID":"o9ic5cumvag1ksqln6a4jf62qdip9m8p","lastMutationID":1,"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/foo","value":"bar"}],"checksum":"7d4a87ba"}`,
+			`{"stateID":"o9ic5cumvag1ksqln6a4jf62qdip9m8p","lastMutationID":1,"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/foo","value":"bar"}],"checksum":"7d4a87ba","clientViewInfo":{"httpStatusCode":200,"errorMessage":""}}`,
 			""},
 
 		// No Authorization header.
@@ -107,6 +114,7 @@ func TestAPI(t *testing.T) {
 			nil,
 			"",
 			servetypes.ClientViewResponse{},
+			0,
 			nil,
 			``,
 			"Missing Authorization"},
@@ -118,6 +126,7 @@ func TestAPI(t *testing.T) {
 			nil,
 			"",
 			servetypes.ClientViewResponse{},
+			0,
 			nil,
 			``,
 			"Unknown account"},
@@ -129,6 +138,7 @@ func TestAPI(t *testing.T) {
 			nil,
 			"",
 			servetypes.ClientViewResponse{},
+			0,
 			nil,
 			``,
 			"Missing clientID"},
@@ -140,6 +150,7 @@ func TestAPI(t *testing.T) {
 			nil,
 			"",
 			servetypes.ClientViewResponse{},
+			0,
 			nil,
 			``,
 			"Invalid baseStateID"},
@@ -151,8 +162,9 @@ func TestAPI(t *testing.T) {
 			&servetypes.ClientViewRequest{},
 			"clientauth",
 			servetypes.ClientViewResponse{ClientView: map[string]interface{}{"new": "value"}, LastMutationID: 2},
+			200,
 			nil,
-			`{"stateID":"so63u0ngdmhknauno8o06nesijj74c4v","lastMutationID":2,"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/new","value":"value"}],"checksum":"2a408ef6"}`,
+			`{"stateID":"so63u0ngdmhknauno8o06nesijj74c4v","lastMutationID":2,"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/new","value":"value"}],"checksum":"2a408ef6","clientViewInfo":{"httpStatusCode":200,"errorMessage":""}}`,
 			""},
 
 		// Invalid checksum.
@@ -162,13 +174,14 @@ func TestAPI(t *testing.T) {
 			nil,
 			"",
 			servetypes.ClientViewResponse{},
+			0,
 			nil,
 			``,
 			"Invalid checksum"},
 	}
 
 	for i, t := range tc {
-		fcvg := fakeClientViewGet{resp: t.CVResponse, err: t.CVErr}
+		fcvg := fakeClientViewGet{resp: t.CVResponse, code: t.CVCode, err: t.CVErr}
 		var cvg clientViewGetter
 		if t.expCVReq != nil {
 			cvg = &fcvg
@@ -212,6 +225,7 @@ func TestAPI(t *testing.T) {
 
 type fakeClientViewGet struct {
 	resp servetypes.ClientViewResponse
+	code int
 	err  error
 
 	called  bool
@@ -219,9 +233,9 @@ type fakeClientViewGet struct {
 	gotAuth string
 }
 
-func (f *fakeClientViewGet) Get(url string, req servetypes.ClientViewRequest, authToken string) (servetypes.ClientViewResponse, error) {
+func (f *fakeClientViewGet) Get(url string, req servetypes.ClientViewRequest, authToken string) (servetypes.ClientViewResponse, int, error) {
 	f.called = true
 	f.gotReq = req
 	f.gotAuth = authToken
-	return f.resp, f.err
+	return f.resp, f.code, f.err
 }

@@ -23,6 +23,7 @@ func TestClientViewGetter_Get(t *testing.T) {
 		respCode       int
 		respBody       string
 		want           servetypes.ClientViewResponse
+		wantCode       int
 		wantErr        string
 	}{
 		{
@@ -32,6 +33,7 @@ func TestClientViewGetter_Get(t *testing.T) {
 			http.StatusOK,
 			`{"clientView": {"key": "value"}, "lastMutationID": 2}`,
 			servetypes.ClientViewResponse{ClientView: map[string]interface{}{"key": "value"}, LastMutationID: 2},
+			http.StatusOK,
 			"",
 		},
 		{
@@ -41,6 +43,7 @@ func TestClientViewGetter_Get(t *testing.T) {
 			http.StatusBadRequest,
 			``,
 			servetypes.ClientViewResponse{},
+			http.StatusBadRequest,
 			"400",
 		},
 		{
@@ -50,6 +53,7 @@ func TestClientViewGetter_Get(t *testing.T) {
 			http.StatusOK,
 			`{"clientView": {"foo": "bar"}}`,
 			servetypes.ClientViewResponse{},
+			http.StatusOK,
 			"lastMutationID",
 		},
 	}
@@ -66,7 +70,8 @@ func TestClientViewGetter_Get(t *testing.T) {
 			}))
 
 			g := ClientViewGetter{}
-			got, err := g.Get(server.URL, tt.req, tt.clientViewAuth)
+			got, gotCode, err := g.Get(server.URL, tt.req, tt.clientViewAuth)
+			assert.Equal(tt.wantCode, gotCode)
 			if tt.wantErr == "" {
 				assert.NoError(err)
 			} else {

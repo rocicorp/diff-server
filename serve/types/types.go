@@ -16,6 +16,12 @@ type PullResponse struct {
 	LastMutationID uint64         `json:"lastMutationID"`
 	Patch          []kv.Operation `json:"patch"`
 	Checksum       string         `json:"checksum"`
+	ClientViewInfo ClientViewInfo `json:"clientViewInfo"`
+}
+
+type ClientViewInfo struct {
+	HTTPStatusCode int    `json:"httpStatusCode"`
+	ErrorMessage   string `json:"errorMessage"`
 }
 
 type ClientViewRequest struct{}
