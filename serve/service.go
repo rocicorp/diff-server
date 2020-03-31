@@ -33,6 +33,7 @@ type Service struct {
 	accounts             []Account
 	nomsen               map[string]datas.Database
 	overridClientViewURL string // Overrides account client view URL, eg for testing.
+	enableInject         bool
 	mu                   sync.Mutex
 
 	// cvg may be nil, in which case the server skips the client view request in pull, which is
@@ -54,12 +55,13 @@ type Account struct {
 }
 
 // NewService creates a new instances of the Replicant web service.
-func NewService(storageRoot string, accounts []Account, overrideClientViewURL string, cvg clientViewGetter) *Service {
+func NewService(storageRoot string, accounts []Account, overrideClientViewURL string, cvg clientViewGetter, enableInject bool) *Service {
 	return &Service{
 		storageRoot:          storageRoot,
 		accounts:             accounts,
 		nomsen:               map[string]datas.Database{},
 		overridClientViewURL: overrideClientViewURL,
+		enableInject:         enableInject,
 		mu:                   sync.Mutex{},
 		clientViewGetter:     cvg,
 	}

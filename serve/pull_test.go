@@ -188,7 +188,7 @@ func TestAPI(t *testing.T) {
 		}
 
 		td, _ := ioutil.TempDir("", "")
-		s := NewService(td, []Account{Account{ID: "accountID", Name: "accountID", Pubkey: nil}}, "", cvg)
+		s := NewService(td, []Account{Account{ID: "accountID", Name: "accountID", Pubkey: nil}}, "", cvg, true)
 		noms, err := s.getNoms("accountID")
 		assert.NoError(err)
 		db, err := db.New(noms.GetDataset("client/clientid"))

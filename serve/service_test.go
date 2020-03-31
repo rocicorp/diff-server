@@ -92,7 +92,7 @@ func DISABLED_TestCheckAccess(t *testing.T) {
 			accounts = append(accounts, *t.addAccount)
 		}
 
-		svc := NewService(td, accounts, "", nil)
+		svc := NewService(td, accounts, "", nil, true)
 		res := httptest.NewRecorder()
 
 		req := httptest.NewRequest("POST", fmt.Sprintf("/%s/pull", t.dbName),
@@ -132,8 +132,8 @@ func TestConcurrentAccessUsingMultipleServices(t *testing.T) {
 
 	accounts := getAccounts()
 
-	svc1 := NewService(td, accounts, "", nil)
-	svc2 := NewService(td, accounts, "", nil)
+	svc1 := NewService(td, accounts, "", nil, true)
+	svc2 := NewService(td, accounts, "", nil, true)
 
 	res := []*httptest.ResponseRecorder{
 		httptest.NewRecorder(),
@@ -160,7 +160,7 @@ func TestNo301(t *testing.T) {
 	assert := assert.New(t)
 	td, _ := ioutil.TempDir("", "")
 
-	svc := NewService(td, getAccounts(), "", nil)
+	svc := NewService(td, getAccounts(), "", nil, true)
 	r := httptest.NewRecorder()
 
 	svc.ServeHTTP(r, httptest.NewRequest("POST", "//pull", strings.NewReader(`{"accountID": "sandbox", "baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`)))
