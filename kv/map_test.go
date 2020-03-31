@@ -120,5 +120,5 @@ func TestNull(t *testing.T) {
 	assert.NoError(err)
 	act, err := m1.Get("foo")
 	assert.NoError(err)
-	assert.Equal([]byte("null"), act)
+	assert.Equal([]byte("null\n"), act)
 }
