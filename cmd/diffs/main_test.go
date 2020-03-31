@@ -19,8 +19,8 @@ import (
 
 func TestServe(t *testing.T) {
 	assert := assert.New(t)
-	dir, err := ioutil.TempDir("", "")
 	accounts.AddTestAcccount()
+	dir, err := ioutil.TempDir("", "")
 	assert.NoError(err)
 	fmt.Println(dir)
 
