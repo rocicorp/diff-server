@@ -122,3 +122,10 @@ func TestNull(t *testing.T) {
 	assert.NoError(err)
 	assert.Equal([]byte("null\n"), act)
 }
+
+func TestEmptyKey(t *testing.T) {
+	assert := assert.New(t)
+	noms := memstore.New()
+	me := kv.NewMap(noms).Edit()
+	assert.Error(me.Set("", []byte("true")), "key must be non-empty")
+}
