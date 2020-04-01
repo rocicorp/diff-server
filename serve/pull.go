@@ -156,10 +156,7 @@ func storeClientView(db *db.DB, cvResp servetypes.ClientViewResponse) error {
 	}
 	// TODO fritz yes this is inefficient, will fix up Map so we don't have to go
 	// back and forth. But after it works.
-	m := kv.NewMapFromNoms(db.Noms(), nm)
-	if m == nil {
-		return errors.New("couldnt create a Map from a Noms Map")
-	}
+	m := kv.WrapMapAndComputeChecksum(db.Noms(), nm)
 	hv := db.Head().Value
 	hvc, err := kv.ChecksumFromString(string(hv.Checksum))
 	if err != nil {

@@ -78,3 +78,23 @@ func TestChecksumFromString(t *testing.T) {
 		})
 	}
 }
+
+func TestMustChecksumFromString(t *testing.T) {
+	tests := []struct {
+		name      string
+		s         string
+		wantPanic bool
+	}{
+		{"parses", "00cf3d55", false},
+		{"panics", "boom", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.wantPanic {
+				assert.Panics(t, func() { MustChecksumFromString(tt.s) })
+			} else {
+				assert.NotPanics(t, func() { MustChecksumFromString(tt.s) })
+			}
+		})
+	}
+}

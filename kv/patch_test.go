@@ -49,9 +49,9 @@ func TestDiff(t *testing.T) {
 	noms := memstore.New()
 	for _, t := range tc {
 		fv := nomdl.MustParse(noms, t.from).(types.Map)
-		fm := NewMapFromNoms(noms, fv)
+		fm := WrapMapAndComputeChecksum(noms, fv)
 		tv := nomdl.MustParse(noms, t.to).(types.Map)
-		tm := NewMapFromNoms(noms, tv)
+		tm := WrapMapAndComputeChecksum(noms, tv)
 		r := []Operation{}
 		r, err := Diff(fm, tm, r)
 		if t.expectedError == "" {
@@ -77,9 +77,9 @@ func TestTopLevelRemove(t *testing.T) {
 
 	fs, ts := `map {"a":"a","b":"b"}`, `map {"b":"bb"}`
 	fv := nomdl.MustParse(noms, fs).(types.Map)
-	fm := NewMapFromNoms(noms, fv)
+	fm := WrapMapAndComputeChecksum(noms, fv)
 	tv := nomdl.MustParse(noms, ts).(types.Map)
-	tm := NewMapFromNoms(noms, tv)
+	tm := WrapMapAndComputeChecksum(noms, tv)
 
 	ops := []Operation{
 		Operation{OpRemove, "/", []byte{}},

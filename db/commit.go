@@ -5,6 +5,7 @@ import (
 	"github.com/attic-labs/noms/go/nomdl"
 	"github.com/attic-labs/noms/go/types"
 	"github.com/attic-labs/noms/go/util/datetime"
+	"roci.dev/diff-server/kv"
 )
 
 var (
@@ -41,8 +42,8 @@ func (c Commit) Ref() types.Ref {
 	return types.NewRef(c.Original)
 }
 
-func (c Commit) Data(noms types.ValueReadWriter) types.Map {
-	return c.Value.Data.TargetValue(noms).(types.Map)
+func (c Commit) Data(noms types.ValueReadWriter) kv.Map {
+	return kv.WrapMap(noms, c.Value.Data.TargetValue(noms).(types.Map), kv.MustChecksumFromString(string(c.Value.Checksum)))
 }
 
 func makeCommit(noms types.ValueReadWriter, basis types.Ref, d datetime.DateTime, newData types.Ref, checksum types.String, lastMutationID uint64) Commit {

@@ -47,7 +47,7 @@ func jsonPointerUnescape(s string) string {
 
 // Diff calculates the difference between two maps as a JSON patch. Presently only
 // creates ops at the top level, at the level of keys, so not super efficient.
-func Diff(from, to *Map, r []Operation) ([]Operation, error) {
+func Diff(from, to Map, r []Operation) ([]Operation, error) {
 	dChan := make(chan types.ValueChanged)
 	sChan := make(chan struct{})
 	out := make(chan Operation)
@@ -119,30 +119,30 @@ func Diff(from, to *Map, r []Operation) ([]Operation, error) {
 }
 
 // ApplyPath applies the given series of ops to the input Map.
-func ApplyPatch(to *Map, patch []Operation) (*Map, error) {
+func ApplyPatch(to Map, patch []Operation) (Map, error) {
 	if len(patch) == 0 {
 		return to, nil
 	}
 	ed := to.Edit()
 	for _, op := range patch {
 		if !strings.HasPrefix(op.Path, "/") {
-			return &Map{}, fmt.Errorf("Invalid path %s - must start with /", op.Path)
+			return Map{}, fmt.Errorf("Invalid path %s - must start with /", op.Path)
 		}
 		p := jsonPointerUnescape(op.Path[1:])
 		switch op.Op {
 		case OpAdd, OpReplace:
 			if err := ed.Set(p, op.Value); err != nil {
-				return &Map{}, err
+				return Map{}, err
 			}
 		case OpRemove:
 			if len(p) == 0 { // Remove("/")
 				emptyMap := NewMap(ed.noms)
 				ed = emptyMap.Edit()
 			} else if err := ed.Remove(p); err != nil {
-				return &Map{}, err
+				return Map{}, err
 			}
 		default:
-			return &Map{}, fmt.Errorf("Unknown JSON Patch operation: %s", op.Op)
+			return Map{}, fmt.Errorf("Unknown JSON Patch operation: %s", op.Op)
 		}
 	}
 	return ed.Build(), nil

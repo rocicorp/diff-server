@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"hash/crc32"
 	"strconv"
+
+	"roci.dev/diff-server/util/chk"
 )
 
 // Checksum represents a fast, incrementally computable,
@@ -23,6 +25,13 @@ func ChecksumFromString(s string) (*Checksum, error) {
 		return &Checksum{}, err
 	}
 	return &Checksum{uint32(v)}, nil
+}
+
+// MustChecksumFromString panic if it cannot parse a Checksum from s.
+func MustChecksumFromString(s string) Checksum {
+	c, err := ChecksumFromString(s)
+	chk.NoError(err)
+	return *c
 }
 
 func hashEntry(key string, value []byte) uint32 {

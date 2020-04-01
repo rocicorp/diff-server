@@ -12,7 +12,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"roci.dev/diff-server/kv"
 	"roci.dev/diff-server/util/time"
 )
 
@@ -69,7 +68,7 @@ func TestInject(t *testing.T) {
 		if t.wantChange {
 			db, err := s.GetDB("accountID", "clientID")
 			assert.NoError(err, msg)
-			m := kv.NewMapFromNoms(db.Noms(), db.Head().Data(db.Noms()))
+			m := db.Head().Data(db.Noms())
 			v, err := m.Get("foo")
 			assert.NoError(err, msg)
 			assert.Equal("\"bar\"\n", string(v), msg)

@@ -16,8 +16,8 @@ func TestNewMap(t *testing.T) {
 
 	// Ensure checksum matches if constructed vs built.
 	nm := types.NewMap(noms, types.String("key"), types.String("1"))
-	m := kv.NewMapFromNoms(noms, nm)
-	expectedm := kv.NewMapFromNoms(noms, types.NewMap(noms))
+	m := kv.WrapMapAndComputeChecksum(noms, nm)
+	expectedm := kv.WrapMapAndComputeChecksum(noms, types.NewMap(noms))
 	e := expectedm.Edit()
 	assert.NoError(e.Set("key", []byte(" \"1\" "))) // note spaces intentional to ensure canonicalizes
 	expectedm = e.Build()
@@ -128,4 +128,16 @@ func TestEmptyKey(t *testing.T) {
 	noms := memstore.New()
 	me := kv.NewMap(noms).Edit()
 	assert.Error(me.Set("", []byte("true")), "key must be non-empty")
+}
+
+func TestEmpty(t *testing.T) {
+	assert := assert.New(t)
+	noms := memstore.New()
+
+	m := kv.NewMap(noms)
+	assert.True(m.Empty())
+	me := kv.NewMap(noms).Edit()
+	assert.NoError(me.Set("foo", []byte("true")))
+	m = me.Build()
+	assert.False(m.Empty())
 }

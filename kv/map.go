@@ -20,16 +20,19 @@ type Map struct {
 }
 
 // NewMap returns a new, empty Map.
-func NewMap(noms types.ValueReadWriter) *Map {
-	return &Map{noms, types.NewMap(noms), Checksum{0}}
+func NewMap(noms types.ValueReadWriter) Map {
+	return Map{noms, types.NewMap(noms), Checksum{0}}
 }
 
-// NewMapFromNoms returns a new Map from an existing noms map. This
-// is mainly useful in testing, so far. Creates a full copy by iterating
-// the noms map, so be careful.
-func NewMapFromNoms(noms types.ValueReadWriter, nm types.Map) *Map {
-	// We dont want to just return a Map with the embedded noms map because
-	// that misses applying any logic in Map.Set eg canonicalization.
+// WrapMap wraps a noms Map with additional logic replicache needs.
+func WrapMap(noms types.ValueReadWriter, nm types.Map, c Checksum) Map {
+	return Map{noms, nm, c}
+}
+
+// WrapMapAndComputeChecksum returns a new Map from an existing noms map and
+// computes its checksum by iterating all keys and values, ensuring they are
+// canonicalized. This is useful in testing. It creates a full copy so - careful.
+func WrapMapAndComputeChecksum(noms types.ValueReadWriter, nm types.Map) Map {
 	m := NewMap(noms)
 	me := m.Edit()
 	for mi := nm.Iterator(); mi.Valid(); mi.Next() {
@@ -56,6 +59,11 @@ func (m Map) Get(key string) ([]byte, error) {
 	}
 
 	return bytesFromNomsValue(value)
+}
+
+// Empty returns true if the Map is empty.
+func (m Map) Empty() bool {
+	return m.nm.Empty()
 }
 
 func bytesFromNomsValue(value types.Valuable) ([]byte, error) {
@@ -153,8 +161,8 @@ func (me *MapEditor) Remove(key string) error {
 }
 
 // Build converts back into a Map.
-func (me *MapEditor) Build() *Map {
-	return &Map{me.noms, me.nme.Map(), me.c}
+func (me *MapEditor) Build() Map {
+	return Map{me.noms, me.nme.Map(), me.c}
 }
 
 // Checksum is the Cheksum over the Map of k/vs.
