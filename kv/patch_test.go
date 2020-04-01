@@ -7,7 +7,7 @@ import (
 
 	"github.com/attic-labs/noms/go/nomdl"
 	"github.com/attic-labs/noms/go/types"
-	"github.com/stretchr/testify/assert" 
+	"github.com/stretchr/testify/assert"
 	"roci.dev/diff-server/util/noms/memstore"
 )
 
@@ -62,7 +62,7 @@ func TestDiff(t *testing.T) {
 			got, err := ApplyPatch(fm, r)
 			es, gots := types.EncodedValue(tm.nm), types.EncodedValue(got.nm)
 			assert.Equal(es, gots, "%s expected %s got %s", t.label, es, gots)
-			assert.True(tm.Checksum().Equal(got.Checksum()), "%s expected %s got %s", t.label, es, gots)
+			assert.True(tm.Sum.Equal(got.Sum), "%s expected %s got %s", t.label, es, gots)
 		} else {
 			assert.EqualError(err, t.expectedError, t.label)
 			// buf might have arbitrary data, not part of the contract
@@ -89,6 +89,5 @@ func TestTopLevelRemove(t *testing.T) {
 	assert.NoError(err)
 	assert.NoError(err)
 	assert.Equal(types.EncodedValue(r.nm), types.EncodedValue(tm.nm))
-	// TODO uncomment when canonicalization works.
-	// assert.True(r.Checksum().Equal(tm.Checksum()))
+	assert.True(r.Sum.Equal(tm.Sum))
 }

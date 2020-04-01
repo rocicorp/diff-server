@@ -162,7 +162,7 @@ func storeClientView(db *db.DB, cvResp servetypes.ClientViewResponse) error {
 	if err != nil {
 		return fmt.Errorf("couldnt parse checksum from commit: %w", err)
 	}
-	if cvResp.LastMutationID == uint64(hv.LastMutationID) && m.Checksum().Equal(*hvc) {
+	if cvResp.LastMutationID == uint64(hv.LastMutationID) && m.Sum.Equal(*hvc) {
 		log.Print("INFO: neither lastMutationID nor checksum changed; nop")
 	} else {
 		err = db.PutData(m, cvResp.LastMutationID)

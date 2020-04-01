@@ -16,7 +16,7 @@ import (
 type Map struct {
 	noms types.ValueReadWriter
 	nm   types.Map
-	c    Checksum
+	Sum  Checksum
 }
 
 // NewMap returns a new, empty Map.
@@ -75,15 +75,20 @@ func bytesFromNomsValue(value types.Valuable) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-// Checksum is the Cheksum over the Map of k/vs.
-func (m Map) Checksum() Checksum {
-	return m.c
+// Checksum is the checksum of the Map.
+func (m Map) Checksum() string {
+	return m.Sum.String()
+}
+
+// NomsChecksum returns the checksum as a types.String.
+func (m Map) NomsChecksum() types.String {
+	return types.String(m.Checksum())
 }
 
 // Edit returns a MapEditor allowing mutation of the Map. The original
 // Map is not affected.
 func (m Map) Edit() *MapEditor {
-	return &MapEditor{m.noms, m.nm.Edit(), m.c}
+	return &MapEditor{m.noms, m.nm.Edit(), m.Sum}
 }
 
 // DebugString returns a nice string value of the Map, including the full underlying noms map.

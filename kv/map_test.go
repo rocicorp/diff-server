@@ -21,7 +21,7 @@ func TestNewMap(t *testing.T) {
 	e := expectedm.Edit()
 	assert.NoError(e.Set("key", []byte(" \"1\" "))) // note spaces intentional to ensure canonicalizes
 	expectedm = e.Build()
-	assert.True(expectedm.Checksum().Equal(m.Checksum()), "got checksum %v, wanted %v", m.DebugString(), expectedm.DebugString())
+	assert.True(expectedm.Sum.Equal(m.Sum), "got checksum %v, wanted %v", m.DebugString(), expectedm.DebugString())
 }
 
 func TestCanonicalizes(t *testing.T) {
@@ -46,7 +46,7 @@ func TestCanonicalizes(t *testing.T) {
 	assert.NoError(m2e.Set(k, expectedv))
 	assertGetEqual(assert, m2e, k, expectedv)
 	m2 = m2e.Build()
-	assert.True(m2.Checksum().Equal(m.Checksum()))
+	assert.True(m2.Sum.Equal(m.Sum))
 }
 
 type getter interface {
@@ -79,7 +79,7 @@ func TestMapGetSetRemove(t *testing.T) {
 	assert.NoError(m1e.Set(k1, v1))
 	assertGetEqual(assert, m1e, k1, v1)
 	m1 = m1e.Build()
-	assert.False(em.Checksum().Equal(m1.Checksum()))
+	assert.False(em.Sum.Equal(m1.Sum))
 	assertGetEqual(assert, m1, k1, v1)
 	m1e = m1.Edit()
 	m1e.Set(k1, v2)
@@ -87,7 +87,7 @@ func TestMapGetSetRemove(t *testing.T) {
 	assertGetEqual(assert, m1, k1, v1)
 	m2 := m1e.Build()
 	assertGetEqual(assert, m2, k1, v2)
-	assert.False(m2.Checksum().Equal(m1.Checksum()))
+	assert.False(m2.Sum.Equal(m1.Sum))
 
 	m2e := m2.Edit()
 	m2e.Remove(k1)
@@ -95,8 +95,8 @@ func TestMapGetSetRemove(t *testing.T) {
 	assert.NoError(m2e.Remove(k1))
 	m2got := m2e.Build()
 	assertGetEqual(assert, m2got, k1, nil)
-	assert.False(m2got.Checksum().Equal(m2.Checksum()))
-	assert.True(m2got.Checksum().Equal(em.Checksum()), "got=%s, want=%s", m2got.DebugString(), em.DebugString())
+	assert.False(m2got.Sum.Equal(m2.Sum))
+	assert.True(m2got.Sum.Equal(em.Sum), "got=%s, want=%s", m2got.DebugString(), em.DebugString())
 
 	// Test that if we do two edit operations both stick.
 	k2 := "k2"
