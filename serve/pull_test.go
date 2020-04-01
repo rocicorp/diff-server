@@ -194,7 +194,7 @@ func TestAPI(t *testing.T) {
 		db, err := db.New(noms.GetDataset("client/clientid"))
 		assert.NoError(err)
 		m := kv.WrapMapAndComputeChecksum(noms, types.NewMap(noms, types.String("foo"), types.String("bar")))
-		err = db.PutData(m.NomsMap(), types.String(m.Checksum().String()), 1 /*lastMutationID*/)
+		err = db.PutData(m, 1 /*lastMutationID*/)
 		assert.NoError(err)
 
 		msg := fmt.Sprintf("test case %d: %s", i, t.pullReq)

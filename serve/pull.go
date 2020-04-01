@@ -165,7 +165,7 @@ func storeClientView(db *db.DB, cvResp servetypes.ClientViewResponse) error {
 	if cvResp.LastMutationID == uint64(hv.LastMutationID) && m.Checksum().Equal(*hvc) {
 		log.Print("INFO: neither lastMutationID nor checksum changed; nop")
 	} else {
-		err = db.PutData(m.NomsMap(), types.String(m.Checksum().String()), cvResp.LastMutationID)
+		err = db.PutData(m, cvResp.LastMutationID)
 	}
 	return err
 }
