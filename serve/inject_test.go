@@ -21,34 +21,38 @@ func TestInject(t *testing.T) {
 	defer time.SetFake()()
 
 	tc := []struct {
-		method       string
-		req          string
-		wantRespCode int
-		wantRespBody string
-		wantChange   bool
+		injectEnabled bool
+		method        string
+		req           string
+		wantRespCode  int
+		wantRespBody  string
+		wantChange    bool
 	}{
+		// Inject not enabled
+		{false, "POST", `{"accountID": "accountID", "clientID": "clientID", "clientViewResponse": {"clientView":{"foo": "bar"}, "lastTransactionID":"1"}}`, http.StatusNotFound, ``, false},
+
 		// Invalid method
-		{"GET", ``, http.StatusMethodNotAllowed, `Unsupported method: GET`, false},
+		{true, "GET", ``, http.StatusMethodNotAllowed, `Unsupported method: GET`, false},
 
 		// Empty request
-		{"POST", ``, http.StatusBadRequest, `Bad request payload: EOF`, false},
+		{true, "POST", ``, http.StatusBadRequest, `Bad request payload: EOF`, false},
 
 		// Invalid JSON request
-		{"POST", `!!`, http.StatusBadRequest, `Bad request payload: invalid character '!' looking for beginning of value`, false},
+		{true, "POST", `!!`, http.StatusBadRequest, `Bad request payload: invalid character '!' looking for beginning of value`, false},
 
 		// Missing account ID
-		{"POST", `{"clientID": "clientID", "clientViewResponse": {"clientView":{}, "lastTransactionID":"1"}}`, http.StatusBadRequest, `Missing accountID`, false},
+		{true, "POST", `{"clientID": "clientID", "clientViewResponse": {"clientView":{}, "lastTransactionID":"1"}}`, http.StatusBadRequest, `Missing accountID`, false},
 
 		// Unknown accountID
-		{"POST", `{"accountID": "bonk", "clientID": "clientID", "clientViewResponse": {"clientView":{}, "lastTransactionID":"1"}}`, http.StatusBadRequest, `Unknown accountID`, false},
+		{true, "POST", `{"accountID": "bonk", "clientID": "clientID", "clientViewResponse": {"clientView":{}, "lastTransactionID":"1"}}`, http.StatusBadRequest, `Unknown accountID`, false},
 
 		// OK
-		{"POST", `{"accountID": "accountID", "clientID": "clientID", "clientViewResponse": {"clientView":{"foo": "bar"}, "lastTransactionID":"1"}}`, http.StatusOK, ``, true},
+		{true, "POST", `{"accountID": "accountID", "clientID": "clientID", "clientViewResponse": {"clientView":{"foo": "bar"}, "lastTransactionID":"1"}}`, http.StatusOK, ``, true},
 	}
 
 	for i, t := range tc {
 		td, _ := ioutil.TempDir("", "")
-		s := NewService(td, []Account{Account{ID: "accountID", Name: "accountID", Pubkey: nil}}, "", nil)
+		s := NewService(td, []Account{Account{ID: "accountID", Name: "accountID", Pubkey: nil}}, "", nil, t.injectEnabled)
 
 		msg := fmt.Sprintf("test case %d", i)
 		req := httptest.NewRequest(t.method, "/inject", strings.NewReader(t.req))

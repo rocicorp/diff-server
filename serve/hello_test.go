@@ -32,7 +32,7 @@ func TestHello(t *testing.T) {
 
 	for i, t := range tc {
 		td, _ := ioutil.TempDir("", "")
-		s := NewService(td, []Account{Account{ID: "accountID", Name: "accountID", Pubkey: nil}}, "", nil)
+		s := NewService(td, []Account{Account{ID: "accountID", Name: "accountID", Pubkey: nil}}, "", nil, true)
 
 		msg := fmt.Sprintf("test case %d", i)
 		req := httptest.NewRequest(t.method, "/hello", nil)
