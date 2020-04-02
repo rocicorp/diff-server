@@ -10,7 +10,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
 
 	"roci.dev/diff-server/db"
@@ -56,7 +55,7 @@ func TestAPI(t *testing.T) {
 			servetypes.ClientViewResponse{},
 			0,
 			nil,
-			`{"stateID":"o9ic5cumvag1ksqln6a4jf62qdip9m8p","lastMutationID":1,"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/foo","value":"bar"}],"checksum":"7d4a87ba","clientViewInfo":{"httpStatusCode":0,"errorMessage":""}}`,
+			`{"stateID":"s3n5j759kirvvs3fqeott07a43lk41ud","lastMutationID":1,"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/foo","value":"bar"}],"checksum":"c4e7090d","clientViewInfo":{"httpStatusCode":0,"errorMessage":""}}`,
 			""},
 
 		// Successful client view fetch.
@@ -68,31 +67,31 @@ func TestAPI(t *testing.T) {
 			servetypes.ClientViewResponse{ClientView: map[string]interface{}{"new": "value"}, LastMutationID: 2},
 			200,
 			nil,
-			`{"stateID":"so63u0ngdmhknauno8o06nesijj74c4v","lastMutationID":2,"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/new","value":"value"}],"checksum":"2a408ef6","clientViewInfo":{"httpStatusCode":200,"errorMessage":""}}`,
+			`{"stateID":"hoc705ifecv1c858qgbqr9jghh4d9l96","lastMutationID":2,"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/new","value":"value"}],"checksum":"f9ef007b","clientViewInfo":{"httpStatusCode":200,"errorMessage":""}}`,
 			""},
 
 		// Successful nop client view fetch where lastMutationID does not change.
 		{"POST",
-			`{"baseStateID": "o9ic5cumvag1ksqln6a4jf62qdip9m8p", "checksum": "7d4a87ba", "clientID": "clientid", "clientViewAuth": "clientauth"}`,
+			`{"baseStateID": "s3n5j759kirvvs3fqeott07a43lk41ud", "checksum": "c4e7090d", "clientID": "clientid", "clientViewAuth": "clientauth"}`,
 			"accountID",
 			&servetypes.ClientViewRequest{},
 			"clientauth",
 			servetypes.ClientViewResponse{ClientView: map[string]interface{}{"foo": "bar"}, LastMutationID: 1},
 			200,
 			nil,
-			`{"stateID":"o9ic5cumvag1ksqln6a4jf62qdip9m8p","lastMutationID":1,"patch":[],"checksum":"7d4a87ba","clientViewInfo":{"httpStatusCode":200,"errorMessage":""}}`,
+			`{"stateID":"s3n5j759kirvvs3fqeott07a43lk41ud","lastMutationID":1,"patch":[],"checksum":"c4e7090d","clientViewInfo":{"httpStatusCode":200,"errorMessage":""}}`,
 			""},
 
 		// Successful nop client view fetch where lastMutationID does change.
 		{"POST",
-			`{"baseStateID": "o9ic5cumvag1ksqln6a4jf62qdip9m8p", "checksum": "7d4a87ba", "clientID": "clientid", "clientViewAuth": "clientauth"}`,
+			`{"baseStateID": "s3n5j759kirvvs3fqeott07a43lk41ud", "checksum": "c4e7090d", "clientID": "clientid", "clientViewAuth": "clientauth"}`,
 			"accountID",
 			&servetypes.ClientViewRequest{},
 			"clientauth",
 			servetypes.ClientViewResponse{ClientView: map[string]interface{}{"foo": "bar"}, LastMutationID: 77},
 			200,
 			nil,
-			`{"stateID":"3mrtvk68v6otl194pnqjrcehkir19mav","lastMutationID":77,"patch":[],"checksum":"7d4a87ba","clientViewInfo":{"httpStatusCode":200,"errorMessage":""}}`,
+			`{"stateID":"pi99ftvp6nchoej3i58flsqm8enqg4vd","lastMutationID":77,"patch":[],"checksum":"c4e7090d","clientViewInfo":{"httpStatusCode":200,"errorMessage":""}}`,
 			""},
 
 		// Fetch errors out.
@@ -104,7 +103,7 @@ func TestAPI(t *testing.T) {
 			servetypes.ClientViewResponse{ClientView: map[string]interface{}{"new": "value"}, LastMutationID: 2},
 			200,
 			errors.New("boom"),
-			`{"stateID":"o9ic5cumvag1ksqln6a4jf62qdip9m8p","lastMutationID":1,"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/foo","value":"bar"}],"checksum":"7d4a87ba","clientViewInfo":{"httpStatusCode":200,"errorMessage":""}}`,
+			`{"stateID":"s3n5j759kirvvs3fqeott07a43lk41ud","lastMutationID":1,"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/foo","value":"bar"}],"checksum":"c4e7090d","clientViewInfo":{"httpStatusCode":200,"errorMessage":""}}`,
 			""},
 
 		// No Authorization header.
@@ -164,7 +163,7 @@ func TestAPI(t *testing.T) {
 			servetypes.ClientViewResponse{ClientView: map[string]interface{}{"new": "value"}, LastMutationID: 2},
 			200,
 			nil,
-			`{"stateID":"so63u0ngdmhknauno8o06nesijj74c4v","lastMutationID":2,"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/new","value":"value"}],"checksum":"2a408ef6","clientViewInfo":{"httpStatusCode":200,"errorMessage":""}}`,
+			`{"stateID":"hoc705ifecv1c858qgbqr9jghh4d9l96","lastMutationID":2,"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/new","value":"value"}],"checksum":"f9ef007b","clientViewInfo":{"httpStatusCode":200,"errorMessage":""}}`,
 			""},
 
 		// Invalid checksum.
@@ -193,7 +192,7 @@ func TestAPI(t *testing.T) {
 		assert.NoError(err)
 		db, err := db.New(noms.GetDataset("client/clientid"))
 		assert.NoError(err)
-		m := kv.WrapMapAndComputeChecksum(noms, types.NewMap(noms, types.String("foo"), types.String("bar")))
+		m := kv.NewMap(noms, "foo", `"bar"`)
 		err = db.PutData(m, 1 /*lastMutationID*/)
 		assert.NoError(err)
 

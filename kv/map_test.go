@@ -4,10 +4,15 @@ import (
 	"testing"
 
 	"github.com/attic-labs/noms/go/types"
+	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/stretchr/testify/assert"
 	"roci.dev/diff-server/kv"
 	"roci.dev/diff-server/util/noms/memstore"
 )
+
+func b(s string) []byte {
+	return []byte(s)
+}
 
 func TestNewMap(t *testing.T) {
 	assert := assert.New(t)
@@ -15,13 +20,59 @@ func TestNewMap(t *testing.T) {
 	noms := memstore.New()
 
 	// Ensure checksum matches if constructed vs built.
-	nm := types.NewMap(noms, types.String("key"), types.String("1"))
-	m := kv.WrapMapAndComputeChecksum(noms, nm)
-	expectedm := kv.WrapMapAndComputeChecksum(noms, types.NewMap(noms))
-	e := expectedm.Edit()
-	assert.NoError(e.Set("key", []byte(" \"1\" "))) // note spaces intentional to ensure canonicalizes
-	expectedm = e.Build()
-	assert.True(expectedm.Sum.Equal(m.Sum), "got checksum %v, wanted %v", m.DebugString(), expectedm.DebugString())
+	constructed := kv.NewMap(noms, "key1", "1", "key2", "2")
+	me := kv.NewMap(noms).Edit()
+	assert.NoError(me.Set("key1", b("1")))
+	assert.NoError(me.Set("key2", b("2")))
+	built := me.Build()
+	assert.Equal(constructed.Checksum(), built.Checksum(), "constructed %v, built %v", constructed.DebugString(), built.DebugString())
+}
+
+func TestComputeChecksum(t *testing.T) {
+	assert := assert.New(t)
+	noms := memstore.New()
+
+	// Ensure it matches when built.
+	me := kv.NewMap(noms).Edit()
+	assert.NoError(me.Set("foo", b("true")))
+	assert.NoError(me.Set("bar", b("true")))
+	assert.NoError(me.Remove("foo"))
+	m := me.Build()
+	assert.Equal(m.Checksum(), kv.ComputeChecksum(m.NomsMap()).String())
+
+	// Ensure it matches a noms map separately constructed.
+	nm := types.NewMap(noms, types.String("bar"), types.Bool(true))
+	assert.Equal(m.Checksum(), kv.ComputeChecksum(nm).String())
+}
+
+func TestNewMapFromPile(t *testing.T) {
+	assert := assert.New(t)
+	noms := memstore.New()
+
+	me := kv.NewMap(noms).Edit()
+	me.Set("foo", []byte("true"))
+	expected := me.Build()
+
+	pile := make(map[string]interface{})
+	assert.NoError(cjson.Unmarshal([]byte(`{"foo": true}`), &pile))
+	got, err := kv.NewMapFromPile(noms, pile)
+	assert.NoError(err)
+	assert.Equal(expected.Checksum(), got.Checksum(), "expected %s, got %s", expected.DebugString(), got.DebugString())
+}
+
+func TestSetCanonicalized(t *testing.T) {
+	assert := assert.New(t)
+	noms := memstore.New()
+
+	k := "key"
+	uncanonicalized := []byte("  {  \"z\"   : 1, \n \"a\":    2  } \r")
+	canonicalized := []byte("{\"a\":2,\"z\":1}")
+
+	ume := kv.NewMap(noms).Edit()
+	cme := kv.NewMap(noms).Edit()
+	assert.NoError(ume.Set(k, uncanonicalized))
+	assert.NoError(cme.SetCanonicalized(k, canonicalized))
+	assert.Equal(ume.Build().Checksum(), cme.Build().Checksum())
 }
 
 func TestCanonicalizes(t *testing.T) {

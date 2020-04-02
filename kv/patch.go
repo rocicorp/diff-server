@@ -84,12 +84,14 @@ func Diff(from, to Map, r []Operation) ([]Operation, error) {
 						// for it. If you have time feel free.
 						chk.Fail("Couldn't convert noms value to json: %#v", d)
 					}
+					// noms appends a newline when encoding to json, so strip it.
+					val := []byte(strings.TrimRight(string(b.Bytes()), "\n"))
 					if d.ChangeType == types.DiffChangeAdded {
 						op.Op = OpAdd
 					} else {
 						op.Op = OpReplace
 					}
-					op.Value = json.RawMessage(b.Bytes())
+					op.Value = json.RawMessage(val)
 				default:
 					chk.Fail("Unexpected ChangeType: %#v", d)
 				}

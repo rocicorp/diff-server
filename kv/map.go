@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"strings"
 
 	"roci.dev/diff-server/util/chk"
 
 	"github.com/attic-labs/noms/go/types"
+	cjson "github.com/gibson042/canonicaljson-go"
 	nomsjson "roci.dev/diff-server/util/noms/json"
 )
 
@@ -19,9 +21,15 @@ type Map struct {
 	Sum  Checksum
 }
 
-// NewMap returns a new, empty Map.
-func NewMap(noms types.ValueReadWriter) Map {
-	return Map{noms, types.NewMap(noms), Checksum{0}}
+// NewMap returns a new, empty Map. This constructor will panic if there is
+// an error setting any of the values, so don't use it with user data.
+func NewMap(noms types.ValueReadWriter, kv ...string) Map {
+	me := Map{noms, types.NewMap(noms), Checksum{0}}.Edit()
+	for i := 0; i < len(kv); i += 2 {
+		err := me.Set(kv[i], []byte(kv[i+1]))
+		chk.NoError(err)
+	}
+	return me.Build()
 }
 
 // WrapMap wraps a noms Map with additional logic replicache needs.
@@ -29,21 +37,36 @@ func WrapMap(noms types.ValueReadWriter, nm types.Map, c Checksum) Map {
 	return Map{noms, nm, c}
 }
 
-// WrapMapAndComputeChecksum returns a new Map from an existing noms map and
-// computes its checksum by iterating all keys and values, ensuring they are
-// canonicalized. This is useful in testing. It creates a full copy so - careful.
-func WrapMapAndComputeChecksum(noms types.ValueReadWriter, nm types.Map) Map {
-	m := NewMap(noms)
-	me := m.Edit()
+// NewMapFromPile returns a new map from a pile (which was presumably decoded from json).
+func NewMapFromPile(noms types.ValueReadWriter, pile map[string]interface{}) (Map, error) {
+	me := NewMap(noms).Edit()
+	for k, v := range pile {
+		canonicalizedValue, err := cjson.Marshal(v)
+		if err != nil {
+			return Map{}, fmt.Errorf("failed to convert value for key %s to json", k)
+		}
+		if err := me.SetCanonicalized(k, canonicalizedValue); err != nil {
+			return Map{}, err
+		}
+	}
+	return me.Build(), nil
+}
+
+// ComputeChecksum iterates a noms map and computes its checksum. The noms map is
+// assumed to be canonicalized.
+func ComputeChecksum(nm types.Map) Checksum {
+	c := Checksum{}
 	for mi := nm.Iterator(); mi.Valid(); mi.Next() {
 		k := string(mi.Key().(types.String))
 		v, err := bytesFromNomsValue(mi.Value())
 		if err != nil {
 			chk.Fail("Failed to serialize value to json.")
 		}
-		me.Set(k, v)
+		// noms adds a newline when encoding, so strip it.
+		v = []byte(strings.TrimRight(string(v), "\n"))
+		c.Add(k, v)
 	}
-	return me.Build()
+	return c
 }
 
 // NomsMap returns the underlying noms map.
@@ -52,6 +75,7 @@ func (m Map) NomsMap() types.Map {
 }
 
 // Get returns the json bytes for the given key, which must exist.
+// Note the json bytes gotten include a trailing newline.
 func (m Map) Get(key string) ([]byte, error) {
 	value, ok := m.nm.MaybeGet(types.String(key))
 	if !ok {
@@ -105,6 +129,7 @@ type MapEditor struct {
 
 // Get returns the value for a given key or an error if that key
 // doesn't exist.
+// Note the json bytes gotten include a trailing newline.
 func (me MapEditor) Get(key string) ([]byte, error) {
 	nk := types.String(key)
 	if !me.nme.Has(nk) {
@@ -115,8 +140,21 @@ func (me MapEditor) Get(key string) ([]byte, error) {
 	return bytesFromNomsValue(value)
 }
 
-// Set sets the value for a given key.
+// Set sets the value for a given key. Set canonicalizes value.
 func (me *MapEditor) Set(key string, value []byte) error {
+	var v interface{}
+	if err := cjson.Unmarshal(value, &v); err != nil {
+		return err
+	}
+	canonicalizedValue, err := cjson.Marshal(v)
+	if err != nil {
+		return err
+	}
+	return me.SetCanonicalized(key, canonicalizedValue)
+}
+
+// SetCanonicalized sets the value for a given key. It assumes value is canonicalized.
+func (me *MapEditor) SetCanonicalized(key string, value []byte) error {
 	if key == "" {
 		return errors.New("key must be non-empty")
 	}
@@ -134,16 +172,8 @@ func (me *MapEditor) Set(key string, value []byte) error {
 		}
 	}
 
-	// The value passed in might not be canonicalized. We have to round trip
-	// to get the canonicalized version which is what we want to checksum and store.
-	canonicalBytes, err := bytesFromNomsValue(nv)
-	if err != nil {
-		return err
-	}
-	// Note: here we are using the noms value unmarshalled from the *un*canonicalized json.
-	// Might be safer to unmarshal here from the canonical json and use that value instead?
 	me.nme.Set(nk, nv)
-	me.c.Add(key, canonicalBytes)
+	me.c.Add(key, value)
 	return nil
 }
 
@@ -159,6 +189,8 @@ func (me *MapEditor) Remove(key string) error {
 	if err != nil {
 		return err
 	}
+	// Strip the newline Get includes.
+	oldValue = []byte(strings.TrimRight(string(oldValue), "\n"))
 	me.c.Remove(key, oldValue)
 	me.nme.Remove(nk)
 

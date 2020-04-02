@@ -48,21 +48,21 @@ func TestDiff(t *testing.T) {
 
 	noms := memstore.New()
 	for _, t := range tc {
-		fv := nomdl.MustParse(noms, t.from).(types.Map)
-		fm := WrapMapAndComputeChecksum(noms, fv)
-		tv := nomdl.MustParse(noms, t.to).(types.Map)
-		tm := WrapMapAndComputeChecksum(noms, tv)
+		nm := nomdl.MustParse(noms, t.from).(types.Map)
+		from := WrapMap(noms, nm, ComputeChecksum(nm))
+		nm = nomdl.MustParse(noms, t.to).(types.Map)
+		to := WrapMap(noms, nm, ComputeChecksum(nm))
 		r := []Operation{}
-		r, err := Diff(fm, tm, r)
+		r, err := Diff(from, to, r)
 		if t.expectedError == "" {
 			assert.NoError(err, t.label)
 			j, err := json.Marshal(r)
 			assert.NoError(err, t.label)
 			assert.Equal("["+strings.Join(t.expectedResult, ",")+"]", string(j), t.label)
-			got, err := ApplyPatch(fm, r)
-			es, gots := types.EncodedValue(tm.nm), types.EncodedValue(got.nm)
+			got, err := ApplyPatch(from, r)
+			es, gots := types.EncodedValue(to.NomsMap()), types.EncodedValue(got.NomsMap())
 			assert.Equal(es, gots, "%s expected %s got %s", t.label, es, gots)
-			assert.True(tm.Sum.Equal(got.Sum), "%s expected %s got %s", t.label, es, gots)
+			assert.True(to.Sum.Equal(to.Sum), "%s expected %s got %s", t.label, es, gots)
 		} else {
 			assert.EqualError(err, t.expectedError, t.label)
 			// buf might have arbitrary data, not part of the contract
@@ -76,18 +76,30 @@ func TestTopLevelRemove(t *testing.T) {
 	noms := memstore.New()
 
 	fs, ts := `map {"a":"a","b":"b"}`, `map {"b":"bb"}`
-	fv := nomdl.MustParse(noms, fs).(types.Map)
-	fm := WrapMapAndComputeChecksum(noms, fv)
-	tv := nomdl.MustParse(noms, ts).(types.Map)
-	tm := WrapMapAndComputeChecksum(noms, tv)
+	nm := nomdl.MustParse(noms, fs).(types.Map)
+	from := WrapMap(noms, nm, ComputeChecksum(nm))
+	nm = nomdl.MustParse(noms, ts).(types.Map)
+	to := WrapMap(noms, nm, ComputeChecksum(nm))
 
 	ops := []Operation{
 		Operation{OpRemove, "/", []byte{}},
 		Operation{OpReplace, "/b", []byte("\"bb\"")},
 	}
-	r, err := ApplyPatch(fm, ops)
+	r, err := ApplyPatch(from, ops)
 	assert.NoError(err)
+	assert.Equal(types.EncodedValue(r.nm), types.EncodedValue(to.nm))
+	assert.True(r.Sum.Equal(to.Sum), "expected %s, got %s", to.DebugString(), r.DebugString())
+}
+
+// There was a bug where we were including trailing newlines in values.
+func TestDiffDoesntIncludeNewlines(t *testing.T) {
+	assert := assert.New(t)
+	noms := memstore.New()
+
+	from := NewMap(noms)
+	to := NewMap(noms, "key", "true")
+	ops, err := Diff(from, to, []Operation{})
 	assert.NoError(err)
-	assert.Equal(types.EncodedValue(r.nm), types.EncodedValue(tm.nm))
-	assert.True(r.Sum.Equal(tm.Sum))
+	assert.True(len(ops) == 1)
+	assert.NotContains(string(ops[0].Value), "\n")
 }

@@ -33,9 +33,7 @@ func TestDiff(t *testing.T) {
 		{
 			"change-1",
 			func() {
-				m := kv.WrapMapAndComputeChecksum(db.Noms(), types.NewMap(db.Noms(),
-					types.String("foo"), types.String("bar"),
-					types.String("hot"), types.String("dog")))
+				m := kv.NewMap(db.Noms(), "foo", `"bar"`, "hot", `"dog"`)
 				err := db.PutData(m, 0 /*lastMutationID*/)
 				assert.NoError(err)
 			},
@@ -56,9 +54,7 @@ func TestDiff(t *testing.T) {
 		{
 			"change-2",
 			func() {
-				m := kv.WrapMapAndComputeChecksum(db.Noms(), types.NewMap(db.Noms(),
-					types.String("foo"), types.String("baz"),
-					types.String("mon"), types.String("key")))
+				m := kv.NewMap(db.Noms(), "foo", `"baz"`, "mon", `"key"`)
 				err := db.PutData(m, 0 /*lastMutationID*/)
 				assert.NoError(err)
 			},
@@ -153,8 +149,7 @@ func TestDiff(t *testing.T) {
 		{
 			"invalid-checksum",
 			func() {
-				m := kv.WrapMapAndComputeChecksum(db.Noms(), types.NewMap(db.Noms(),
-					types.String("foo"), types.String("bar")))
+				m := kv.NewMap(db.Noms(), "foo", `"bar"`)
 				err := db.PutData(m, 0 /*lastMutationID*/)
 				assert.NoError(err)
 				fromChecksum = "00000000"
