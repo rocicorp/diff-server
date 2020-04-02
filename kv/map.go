@@ -21,7 +21,7 @@ type Map struct {
 	Sum  Checksum
 }
 
-// NewMap returns a new, empty Map. This constructor will panic if there is
+// NewMap returns a new Map. This constructor will panic if there is
 // an error setting any of the values, so don't use it with user data.
 func NewMap(noms types.ValueReadWriter, kv ...string) Map {
 	me := Map{noms, types.NewMap(noms), Checksum{0}}.Edit()
