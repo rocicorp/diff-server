@@ -111,7 +111,7 @@ func (me MapEditor) Has(key string) bool {
 	return me.nme.Has(types.String(key))
 }
 
-// Get returns the value for a given key.
+// Get returns the canonical json bytes for the given key.
 func (me MapEditor) Get(key string) ([]byte, error) {
 	nk := types.String(key)
 	if !me.nme.Has(nk) {
