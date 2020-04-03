@@ -17,6 +17,16 @@ type noNewlineWriter struct {
 	w io.Writer
 }
 
+// Helper broken out for testing.
+func hasNewline(s string) bool {
+	for _, runeValue := range s {
+		if string(runeValue) == "\n" {
+			return true
+		}
+	}
+	return false
+}
+
 // Write implements the io.Writer interface.
 func (w *noNewlineWriter) Write(p []byte) (int, error) {
 	if len(p) == 0 {
@@ -25,7 +35,7 @@ func (w *noNewlineWriter) Write(p []byte) (int, error) {
 
 	var trailingNewline bool
 	// Note: canonical json never has internal newlines.
-	if string(p[len(p)-1]) == "\n" {
+	if hasNewline(string(p[len(p)-1])) {
 		trailingNewline = true
 		p = p[:len(p)-1]
 	}

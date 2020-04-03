@@ -10,6 +10,7 @@ import (
 
 	"github.com/attic-labs/noms/go/chunks"
 	"github.com/attic-labs/noms/go/types"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -45,7 +46,9 @@ func (suite *ToJSONSuite) TestToJSON() {
 		{"88.8", types.Number(88.8), "8.88E1", ""},
 		{"empty string", types.String(""), `""`, ""},
 		{"foobar", types.String("foobar"), `"foobar"`, ""},
-		{"strings with newlines", types.String(`"\nmonkey`), `"\"\\nmonkey"`, ""},
+		{"strings with escaped newlines", types.String(`"\nmonkey`), `"\"\\nmonkey"`, ""},
+		{"strings with newlines", types.String("\nmonkey"), `"\nmonkey"`, ""},
+		{"strings with newline bytes", types.String("\x0amonkey"), `"\nmonkey"`, ""}, // U+000A is newline and its UTF-8 representation is '0a'
 		{"unnamed struct", types.NewStruct("", types.StructData{}), "", "Unsupported struct type: Struct {}"},
 		{"named struct", types.NewStruct("Person", types.StructData{}), "", "Unsupported struct type: Struct Person {}"},
 		{"bad null struct", types.NewStruct("Null", types.StructData{"foo": types.String("bar")}), "", "Unsupported struct type: Struct Null {\n  foo: String,\n}"},
@@ -74,5 +77,32 @@ func (suite *ToJSONSuite) TestToJSON() {
 			suite.NoError(err)
 			suite.Equal(t.exp, string(buf.Bytes()), t.desc)
 		}
+	}
+}
+
+func Test_hasNewline(t *testing.T) {
+	type args struct {
+		s string
+	}
+	tests := []struct {
+		input string
+		want  bool
+	}{
+		{"no newline when encoded to json", false},
+		{"no newlines when encoded to json \\n", false},
+		{`"no newlines when encoded to json"`, false},
+		{`"no newlines when encoded to json\n"`, false},
+		{"no newlines when encoded to json\n", false},
+		{"no newlines when encoded to json\x0a", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			v := types.String(tt.input)
+			var b bytes.Buffer
+			assert.NoError(t, ToJSON(v, &b))
+			if got := hasNewline(string(b.Bytes())); got != tt.want {
+				t.Errorf("hasNewline(%q) = %v, want %v", tt.input, got, tt.want)
+			}
+		})
 	}
 }
