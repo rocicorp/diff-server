@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"strings"
 
 	"roci.dev/diff-server/util/chk"
 
 	"github.com/attic-labs/noms/go/types"
+	cjson "github.com/gibson042/canonicaljson-go"
 	nomsjson "roci.dev/diff-server/util/noms/json"
 )
 
@@ -16,31 +18,34 @@ import (
 type Map struct {
 	noms types.ValueReadWriter
 	nm   types.Map
-	c    Checksum
+	sum  Checksum
 }
 
-// NewMap returns a new, empty Map.
-func NewMap(noms types.ValueReadWriter) *Map {
-	return &Map{noms, types.NewMap(noms), Checksum{0}}
+// NewMap returns a new Map.
+func NewMap(noms types.ValueReadWriter, kv ...string) Map {
+	return Map{noms, types.NewMap(noms), Checksum{0}}
 }
 
-// NewMapFromNoms returns a new Map from an existing noms map. This
-// is mainly useful in testing, so far. Creates a full copy by iterating
-// the noms map, so be careful.
-func NewMapFromNoms(noms types.ValueReadWriter, nm types.Map) *Map {
-	// We dont want to just return a Map with the embedded noms map because
-	// that misses applying any logic in Map.Set eg canonicalization.
-	m := NewMap(noms)
-	me := m.Edit()
+// FromNoms creates a map from an existing Noms Map and Checksum.
+func FromNoms(noms types.ValueReadWriter, nm types.Map, c Checksum) Map {
+	return Map{noms, nm, c}
+}
+
+// ComputeChecksum iterates a noms map and computes its checksum. The noms map is
+// assumed to be canonicalized.
+func ComputeChecksum(nm types.Map) Checksum {
+	c := Checksum{}
 	for mi := nm.Iterator(); mi.Valid(); mi.Next() {
 		k := string(mi.Key().(types.String))
 		v, err := bytesFromNomsValue(mi.Value())
 		if err != nil {
 			chk.Fail("Failed to serialize value to json.")
 		}
-		me.Set(k, v)
+		// Noms adds a newline when encoding, so strip it.
+		v = []byte(strings.TrimRight(string(v), "\n"))
+		c.Add(k, v)
 	}
-	return me.Build()
+	return c
 }
 
 // NomsMap returns the underlying noms map.
@@ -49,6 +54,7 @@ func (m Map) NomsMap() types.Map {
 }
 
 // Get returns the json bytes for the given key, which must exist.
+// Note the json bytes gotten include a trailing newline.
 func (m Map) Get(key string) ([]byte, error) {
 	value, ok := m.nm.MaybeGet(types.String(key))
 	if !ok {
@@ -58,8 +64,12 @@ func (m Map) Get(key string) ([]byte, error) {
 	return bytesFromNomsValue(value)
 }
 
+// Empty returns true if the Map is empty.
+func (m Map) Empty() bool {
+	return m.nm.Empty()
+}
+
 func bytesFromNomsValue(value types.Valuable) ([]byte, error) {
-	// Here we could check value.Kind() if we wanted.
 	var b bytes.Buffer
 	if err := nomsjson.ToJSON(value.Value(), &b); err != nil {
 		return []byte{}, err
@@ -67,15 +77,20 @@ func bytesFromNomsValue(value types.Valuable) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-// Checksum is the Cheksum over the Map of k/vs.
-func (m Map) Checksum() Checksum {
-	return m.c
+// Checksum is the checksum of the Map.
+func (m Map) Checksum() string {
+	return m.sum.String()
+}
+
+// NomsChecksum returns the checksum as a types.String.
+func (m Map) NomsChecksum() types.String {
+	return types.String(m.Checksum())
 }
 
 // Edit returns a MapEditor allowing mutation of the Map. The original
 // Map is not affected.
 func (m Map) Edit() *MapEditor {
-	return &MapEditor{m.noms, m.nm.Edit(), m.c}
+	return &MapEditor{m.noms, m.nm.Edit(), m.sum}
 }
 
 // DebugString returns a nice string value of the Map, including the full underlying noms map.
@@ -87,11 +102,12 @@ func (m Map) DebugString() string {
 type MapEditor struct {
 	noms types.ValueReadWriter
 	nme  *types.MapEditor
-	c    Checksum
+	sum  Checksum
 }
 
 // Get returns the value for a given key or an error if that key
 // doesn't exist.
+// Note the json bytes gotten include a trailing newline.
 func (me MapEditor) Get(key string) ([]byte, error) {
 	nk := types.String(key)
 	if !me.nme.Has(nk) {
@@ -102,13 +118,28 @@ func (me MapEditor) Get(key string) ([]byte, error) {
 	return bytesFromNomsValue(value)
 }
 
-// Set sets the value for a given key.
+// Set sets the value for a given key. Set canonicalizes value.
 func (me *MapEditor) Set(key string, value []byte) error {
 	if key == "" {
 		return errors.New("key must be non-empty")
 	}
 
-	nv, err := nomsjson.FromJSON(bytes.NewReader(value), me.noms)
+	// Round trip to canonicalize. Note in the following lines we are going:
+	//     json -> go -> canonical json -> noms
+	// It is tempting to try to save a step by going:
+	//     json -> noms -> canonical json
+	// and use the intermediate noms value. Unfortunately, we can't because
+	// there is no guarantee that it would be the same as the noms value parsed
+	// from the canonical json. For example, it might have unnormalized strings.
+	var v interface{}
+	if err := cjson.Unmarshal(value, &v); err != nil {
+		return fmt.Errorf("couldnt parse value '%s' as json: %w", string(value), err)
+	}
+	canonicalizedValue, err := cjson.Marshal(v)
+	if err != nil {
+		return err
+	}
+	nv, err := nomsjson.FromJSON(bytes.NewReader(canonicalizedValue), me.noms)
 	if err != nil {
 		return err
 	}
@@ -121,16 +152,8 @@ func (me *MapEditor) Set(key string, value []byte) error {
 		}
 	}
 
-	// The value passed in might not be canonicalized. We have to round trip
-	// to get the canonicalized version which is what we want to checksum and store.
-	canonicalBytes, err := bytesFromNomsValue(nv)
-	if err != nil {
-		return err
-	}
-	// Note: here we are using the noms value unmarshalled from the *un*canonicalized json.
-	// Might be safer to unmarshal here from the canonical json and use that value instead?
 	me.nme.Set(nk, nv)
-	me.c.Add(key, canonicalBytes)
+	me.sum.Add(key, canonicalizedValue)
 	return nil
 }
 
@@ -146,20 +169,22 @@ func (me *MapEditor) Remove(key string) error {
 	if err != nil {
 		return err
 	}
-	me.c.Remove(key, oldValue)
+	// Strip the newline Get includes.
+	oldValue = []byte(strings.TrimRight(string(oldValue), "\n"))
+	me.sum.Remove(key, oldValue)
 	me.nme.Remove(nk)
 
 	return nil
 }
 
 // Build converts back into a Map.
-func (me *MapEditor) Build() *Map {
-	return &Map{me.noms, me.nme.Map(), me.c}
+func (me *MapEditor) Build() Map {
+	return Map{me.noms, me.nme.Map(), me.sum}
 }
 
 // Checksum is the Cheksum over the Map of k/vs.
 func (me MapEditor) Checksum() Checksum {
-	return me.c
+	return me.sum
 }
 
 // DebugString returns a nice string value of the MapEditor, including the full underlying noms map.

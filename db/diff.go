@@ -20,7 +20,7 @@ func fullSync(db *DB, from hash.Hash) ([]kv.Operation, Commit) {
 		},
 	}
 	m := kv.NewMap(db.Noms())
-	return r, makeCommit(db.Noms(), types.Ref{}, datetime.Epoch, db.ds.Database().WriteValue(m.NomsMap()), types.String(m.Checksum().String()), 0 /*lastMutationID*/)
+	return r, makeCommit(db.Noms(), types.Ref{}, datetime.Epoch, db.ds.Database().WriteValue(m.NomsMap()), m.NomsChecksum(), 0 /*lastMutationID*/)
 }
 
 func (db *DB) Diff(from hash.Hash, fromChecksum kv.Checksum) ([]kv.Operation, error) {
@@ -48,8 +48,8 @@ func (db *DB) Diff(from hash.Hash, fromChecksum kv.Checksum) ([]kv.Operation, er
 	}
 
 	if !fc.Value.Data.Equals(db.head.Value.Data) {
-		fm := kv.NewMapFromNoms(db.Noms(), fc.Data(db.Noms()))
-		tm := kv.NewMapFromNoms(db.Noms(), db.head.Data(db.Noms()))
+		fm := fc.Data(db.Noms())
+		tm := db.head.Data(db.Noms())
 		r, err = kv.Diff(fm, tm, r)
 		if err != nil {
 			return nil, err

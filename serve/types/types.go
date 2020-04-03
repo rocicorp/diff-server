@@ -1,6 +1,8 @@
 package types
 
 import (
+	"encoding/json"
+
 	"roci.dev/diff-server/kv"
 )
 
@@ -27,8 +29,8 @@ type ClientViewInfo struct {
 type ClientViewRequest struct{}
 
 type ClientViewResponse struct {
-	ClientView     map[string]interface{} `json:"clientView"`
-	LastMutationID uint64                 `json:"lastMutationID"`
+	ClientView     map[string]json.RawMessage `json:"clientView"`
+	LastMutationID uint64                     `json:"lastMutationID"`
 }
 
 type InjectRequest struct {

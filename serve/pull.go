@@ -21,7 +21,6 @@ import (
 	"roci.dev/diff-server/db"
 	"roci.dev/diff-server/kv"
 	servetypes "roci.dev/diff-server/serve/types"
-	nomsjson "roci.dev/diff-server/util/noms/json"
 )
 
 func (s *Service) pull(rw http.ResponseWriter, req *http.Request) {
@@ -149,26 +148,23 @@ func maybeGetAndStoreNewClientView(db *db.DB, clientViewAuth string, url string,
 }
 
 func storeClientView(db *db.DB, cvResp servetypes.ClientViewResponse) error {
-	v := nomsjson.NomsValueFromDecodedJSON(db.Noms(), cvResp.ClientView)
-	nm, ok := v.(types.Map)
-	if !ok {
-		return fmt.Errorf("clientview is not a json object, it looks to noms like a %s", v.Kind().String())
+	me := kv.NewMap(db.Noms()).Edit()
+	for k, v := range cvResp.ClientView {
+		if err := me.Set(k, v); err != nil {
+			return fmt.Errorf("error parsing clientview: %w", err)
+		}
 	}
-	// TODO fritz yes this is inefficient, will fix up Map so we don't have to go
-	// back and forth. But after it works.
-	m := kv.NewMapFromNoms(db.Noms(), nm)
-	if m == nil {
-		return errors.New("couldnt create a Map from a Noms Map")
-	}
+	m := me.Build()
+
 	hv := db.Head().Value
 	hvc, err := kv.ChecksumFromString(string(hv.Checksum))
 	if err != nil {
 		return fmt.Errorf("couldnt parse checksum from commit: %w", err)
 	}
-	if cvResp.LastMutationID == uint64(hv.LastMutationID) && m.Checksum().Equal(*hvc) {
+	if cvResp.LastMutationID == uint64(hv.LastMutationID) && m.Checksum() == hvc.String() {
 		log.Print("INFO: neither lastMutationID nor checksum changed; nop")
 	} else {
-		err = db.PutData(m.NomsMap(), types.String(m.Checksum().String()), cvResp.LastMutationID)
+		err = db.PutData(m, cvResp.LastMutationID)
 	}
 	return err
 }

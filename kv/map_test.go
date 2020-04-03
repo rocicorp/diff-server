@@ -9,19 +9,25 @@ import (
 	"roci.dev/diff-server/util/noms/memstore"
 )
 
-func TestNewMap(t *testing.T) {
-	assert := assert.New(t)
+func b(s string) []byte {
+	return []byte(s)
+}
 
+func TestComputeChecksum(t *testing.T) {
+	assert := assert.New(t)
 	noms := memstore.New()
 
-	// Ensure checksum matches if constructed vs built.
-	nm := types.NewMap(noms, types.String("key"), types.String("1"))
-	m := kv.NewMapFromNoms(noms, nm)
-	expectedm := kv.NewMapFromNoms(noms, types.NewMap(noms))
-	e := expectedm.Edit()
-	assert.NoError(e.Set("key", []byte(" \"1\" "))) // note spaces intentional to ensure canonicalizes
-	expectedm = e.Build()
-	assert.True(expectedm.Checksum().Equal(m.Checksum()), "got checksum %v, wanted %v", m.DebugString(), expectedm.DebugString())
+	// Ensure it matches when built.
+	me := kv.NewMap(noms).Edit()
+	assert.NoError(me.Set("foo", b("true")))
+	assert.NoError(me.Set("bar", b("true")))
+	assert.NoError(me.Remove("foo"))
+	m := me.Build()
+	assert.Equal(m.Checksum(), kv.ComputeChecksum(m.NomsMap()).String())
+
+	// Ensure it matches a noms map separately constructed.
+	nm := types.NewMap(noms, types.String("bar"), types.Bool(true))
+	assert.Equal(m.Checksum(), kv.ComputeChecksum(nm).String())
 }
 
 func TestCanonicalizes(t *testing.T) {
@@ -46,7 +52,7 @@ func TestCanonicalizes(t *testing.T) {
 	assert.NoError(m2e.Set(k, expectedv))
 	assertGetEqual(assert, m2e, k, expectedv)
 	m2 = m2e.Build()
-	assert.True(m2.Checksum().Equal(m.Checksum()))
+	assert.Equal(m.Checksum(), m2.Checksum())
 }
 
 type getter interface {
@@ -79,7 +85,7 @@ func TestMapGetSetRemove(t *testing.T) {
 	assert.NoError(m1e.Set(k1, v1))
 	assertGetEqual(assert, m1e, k1, v1)
 	m1 = m1e.Build()
-	assert.False(em.Checksum().Equal(m1.Checksum()))
+	assert.NotEqual(em.Checksum(), m1.Checksum())
 	assertGetEqual(assert, m1, k1, v1)
 	m1e = m1.Edit()
 	m1e.Set(k1, v2)
@@ -87,7 +93,7 @@ func TestMapGetSetRemove(t *testing.T) {
 	assertGetEqual(assert, m1, k1, v1)
 	m2 := m1e.Build()
 	assertGetEqual(assert, m2, k1, v2)
-	assert.False(m2.Checksum().Equal(m1.Checksum()))
+	assert.NotEqual(m2.Checksum(), m1.Checksum())
 
 	m2e := m2.Edit()
 	m2e.Remove(k1)
@@ -95,8 +101,8 @@ func TestMapGetSetRemove(t *testing.T) {
 	assert.NoError(m2e.Remove(k1))
 	m2got := m2e.Build()
 	assertGetEqual(assert, m2got, k1, nil)
-	assert.False(m2got.Checksum().Equal(m2.Checksum()))
-	assert.True(m2got.Checksum().Equal(em.Checksum()), "got=%s, want=%s", m2got.DebugString(), em.DebugString())
+	assert.NotEqual(m2.Checksum(), m2got.Checksum())
+	assert.Equal(em.Checksum(), m2got.Checksum(), "got=%s, want=%s", m2got.DebugString(), em.DebugString())
 
 	// Test that if we do two edit operations both stick.
 	k2 := "k2"
@@ -128,4 +134,16 @@ func TestEmptyKey(t *testing.T) {
 	noms := memstore.New()
 	me := kv.NewMap(noms).Edit()
 	assert.Error(me.Set("", []byte("true")), "key must be non-empty")
+}
+
+func TestEmpty(t *testing.T) {
+	assert := assert.New(t)
+	noms := memstore.New()
+
+	m := kv.NewMap(noms)
+	assert.True(m.Empty())
+	me := kv.NewMap(noms).Edit()
+	assert.NoError(me.Set("foo", []byte("true")))
+	m = me.Build()
+	assert.False(m.Empty())
 }
