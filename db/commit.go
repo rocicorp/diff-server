@@ -43,7 +43,7 @@ func (c Commit) Ref() types.Ref {
 }
 
 func (c Commit) Data(noms types.ValueReadWriter) kv.Map {
-	return kv.WrapMap(noms, c.Value.Data.TargetValue(noms).(types.Map), kv.MustChecksumFromString(string(c.Value.Checksum)))
+	return kv.FromNoms(noms, c.Value.Data.TargetValue(noms).(types.Map), kv.MustChecksumFromString(string(c.Value.Checksum)))
 }
 
 func makeCommit(noms types.ValueReadWriter, basis types.Ref, d datetime.DateTime, newData types.Ref, checksum types.String, lastMutationID uint64) Commit {

@@ -2,6 +2,7 @@ package serve
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -64,7 +65,7 @@ func TestAPI(t *testing.T) {
 			"accountID",
 			&servetypes.ClientViewRequest{},
 			"clientauth",
-			servetypes.ClientViewResponse{ClientView: map[string]interface{}{"new": "value"}, LastMutationID: 2},
+			servetypes.ClientViewResponse{ClientView: map[string]json.RawMessage{"new": b(`"value"`)}, LastMutationID: 2},
 			200,
 			nil,
 			`{"stateID":"hoc705ifecv1c858qgbqr9jghh4d9l96","lastMutationID":2,"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/new","value":"value"}],"checksum":"f9ef007b","clientViewInfo":{"httpStatusCode":200,"errorMessage":""}}`,
@@ -76,7 +77,7 @@ func TestAPI(t *testing.T) {
 			"accountID",
 			&servetypes.ClientViewRequest{},
 			"clientauth",
-			servetypes.ClientViewResponse{ClientView: map[string]interface{}{"foo": "bar"}, LastMutationID: 1},
+			servetypes.ClientViewResponse{ClientView: map[string]json.RawMessage{"foo": b(`"bar"`)}, LastMutationID: 1},
 			200,
 			nil,
 			`{"stateID":"s3n5j759kirvvs3fqeott07a43lk41ud","lastMutationID":1,"patch":[],"checksum":"c4e7090d","clientViewInfo":{"httpStatusCode":200,"errorMessage":""}}`,
@@ -88,7 +89,7 @@ func TestAPI(t *testing.T) {
 			"accountID",
 			&servetypes.ClientViewRequest{},
 			"clientauth",
-			servetypes.ClientViewResponse{ClientView: map[string]interface{}{"foo": "bar"}, LastMutationID: 77},
+			servetypes.ClientViewResponse{ClientView: map[string]json.RawMessage{"foo": b(`"bar"`)}, LastMutationID: 77},
 			200,
 			nil,
 			`{"stateID":"pi99ftvp6nchoej3i58flsqm8enqg4vd","lastMutationID":77,"patch":[],"checksum":"c4e7090d","clientViewInfo":{"httpStatusCode":200,"errorMessage":""}}`,
@@ -100,7 +101,7 @@ func TestAPI(t *testing.T) {
 			"accountID",
 			&servetypes.ClientViewRequest{},
 			"clientauth",
-			servetypes.ClientViewResponse{ClientView: map[string]interface{}{"new": "value"}, LastMutationID: 2},
+			servetypes.ClientViewResponse{ClientView: map[string]json.RawMessage{"new": b(`"value"`)}, LastMutationID: 2},
 			200,
 			errors.New("boom"),
 			`{"stateID":"s3n5j759kirvvs3fqeott07a43lk41ud","lastMutationID":1,"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/foo","value":"bar"}],"checksum":"c4e7090d","clientViewInfo":{"httpStatusCode":200,"errorMessage":""}}`,
@@ -160,7 +161,7 @@ func TestAPI(t *testing.T) {
 			"accountID",
 			&servetypes.ClientViewRequest{},
 			"clientauth",
-			servetypes.ClientViewResponse{ClientView: map[string]interface{}{"new": "value"}, LastMutationID: 2},
+			servetypes.ClientViewResponse{ClientView: map[string]json.RawMessage{"new": b(`"value"`)}, LastMutationID: 2},
 			200,
 			nil,
 			`{"stateID":"hoc705ifecv1c858qgbqr9jghh4d9l96","lastMutationID":2,"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/new","value":"value"}],"checksum":"f9ef007b","clientViewInfo":{"httpStatusCode":200,"errorMessage":""}}`,
@@ -192,7 +193,7 @@ func TestAPI(t *testing.T) {
 		assert.NoError(err)
 		db, err := db.New(noms.GetDataset("client/clientid"))
 		assert.NoError(err)
-		m := kv.NewMap(noms, "foo", `"bar"`)
+		m := kv.NewMapForTest(noms, "foo", `"bar"`)
 		err = db.PutData(m, 1 /*lastMutationID*/)
 		assert.NoError(err)
 

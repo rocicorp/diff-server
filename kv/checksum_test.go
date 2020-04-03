@@ -91,7 +91,7 @@ func TestMustChecksumFromString(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.wantPanic {
-				assert.Panics(t, func() { MustChecksumFromString(tt.s) })
+				assert.PanicsWithValue(t, `Unexpected error: &errors.errorString{s:"Unable to parse 'boom' as a Checksum"}`, func() { MustChecksumFromString(tt.s) })
 			} else {
 				assert.NotPanics(t, func() { MustChecksumFromString(tt.s) })
 			}

@@ -148,16 +148,20 @@ func maybeGetAndStoreNewClientView(db *db.DB, clientViewAuth string, url string,
 }
 
 func storeClientView(db *db.DB, cvResp servetypes.ClientViewResponse) error {
-	m, err := kv.NewMapFromPile(db.Noms(), cvResp.ClientView)
-	if err != nil {
-		return fmt.Errorf("couldnt decode client view: %w", err)
+	me := kv.NewMap(db.Noms()).Edit()
+	for k, v := range cvResp.ClientView {
+		if err := me.Set(k, v); err != nil {
+			return fmt.Errorf("error parsing clientview: %w", err)
+		}
 	}
+	m := me.Build()
+
 	hv := db.Head().Value
 	hvc, err := kv.ChecksumFromString(string(hv.Checksum))
 	if err != nil {
 		return fmt.Errorf("couldnt parse checksum from commit: %w", err)
 	}
-	if cvResp.LastMutationID == uint64(hv.LastMutationID) && m.Sum.Equal(*hvc) {
+	if cvResp.LastMutationID == uint64(hv.LastMutationID) && m.Checksum() == hvc.String() {
 		log.Print("INFO: neither lastMutationID nor checksum changed; nop")
 	} else {
 		err = db.PutData(m, cvResp.LastMutationID)

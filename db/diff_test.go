@@ -33,7 +33,7 @@ func TestDiff(t *testing.T) {
 		{
 			"change-1",
 			func() {
-				m := kv.NewMap(db.Noms(), "foo", `"bar"`, "hot", `"dog"`)
+				m := kv.NewMapForTest(db.Noms(), "foo", `"bar"`, "hot", `"dog"`)
 				err := db.PutData(m, 0 /*lastMutationID*/)
 				assert.NoError(err)
 			},
@@ -54,7 +54,7 @@ func TestDiff(t *testing.T) {
 		{
 			"change-2",
 			func() {
-				m := kv.NewMap(db.Noms(), "foo", `"baz"`, "mon", `"key"`)
+				m := kv.NewMapForTest(db.Noms(), "foo", `"baz"`, "mon", `"key"`)
 				err := db.PutData(m, 0 /*lastMutationID*/)
 				assert.NoError(err)
 			},
@@ -87,7 +87,7 @@ func TestDiff(t *testing.T) {
 			func() {
 				db, dir = LoadTempDB(assert)
 				fmt.Println("newdir", dir)
-				me := kv.NewMap(db.Noms()).Edit()
+				me := kv.NewMapForTest(db.Noms()).Edit()
 				for _, s := range []string{"a", "b", "c"} {
 					assert.NoError(me.Set(s, []byte(fmt.Sprintf("\"%s\"", s))))
 				}
@@ -149,7 +149,7 @@ func TestDiff(t *testing.T) {
 		{
 			"invalid-checksum",
 			func() {
-				m := kv.NewMap(db.Noms(), "foo", `"bar"`)
+				m := kv.NewMapForTest(db.Noms(), "foo", `"bar"`)
 				err := db.PutData(m, 0 /*lastMutationID*/)
 				assert.NoError(err)
 				fromChecksum = "00000000"

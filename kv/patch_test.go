@@ -49,9 +49,9 @@ func TestDiff(t *testing.T) {
 	noms := memstore.New()
 	for _, t := range tc {
 		nm := nomdl.MustParse(noms, t.from).(types.Map)
-		from := WrapMap(noms, nm, ComputeChecksum(nm))
+		from := FromNoms(noms, nm, ComputeChecksum(nm))
 		nm = nomdl.MustParse(noms, t.to).(types.Map)
-		to := WrapMap(noms, nm, ComputeChecksum(nm))
+		to := FromNoms(noms, nm, ComputeChecksum(nm))
 		r := []Operation{}
 		r, err := Diff(from, to, r)
 		if t.expectedError == "" {
@@ -62,7 +62,7 @@ func TestDiff(t *testing.T) {
 			got, err := ApplyPatch(from, r)
 			es, gots := types.EncodedValue(to.NomsMap()), types.EncodedValue(got.NomsMap())
 			assert.Equal(es, gots, "%s expected %s got %s", t.label, es, gots)
-			assert.True(to.Sum.Equal(to.Sum), "%s expected %s got %s", t.label, es, gots)
+			assert.Equal(to.Checksum(), got.Checksum(), "%s expected %s got %s", t.label, es, gots)
 		} else {
 			assert.EqualError(err, t.expectedError, t.label)
 			// buf might have arbitrary data, not part of the contract
@@ -77,9 +77,9 @@ func TestTopLevelRemove(t *testing.T) {
 
 	fs, ts := `map {"a":"a","b":"b"}`, `map {"b":"bb"}`
 	nm := nomdl.MustParse(noms, fs).(types.Map)
-	from := WrapMap(noms, nm, ComputeChecksum(nm))
+	from := FromNoms(noms, nm, ComputeChecksum(nm))
 	nm = nomdl.MustParse(noms, ts).(types.Map)
-	to := WrapMap(noms, nm, ComputeChecksum(nm))
+	to := FromNoms(noms, nm, ComputeChecksum(nm))
 
 	ops := []Operation{
 		Operation{OpRemove, "/", []byte{}},
@@ -88,7 +88,7 @@ func TestTopLevelRemove(t *testing.T) {
 	r, err := ApplyPatch(from, ops)
 	assert.NoError(err)
 	assert.Equal(types.EncodedValue(r.nm), types.EncodedValue(to.nm))
-	assert.True(r.Sum.Equal(to.Sum), "expected %s, got %s", to.DebugString(), r.DebugString())
+	assert.Equal(to.Checksum(), r.Checksum(), "expected %s, got %s", to.DebugString(), r.DebugString())
 }
 
 // There was a bug where we were including trailing newlines in values.
@@ -97,7 +97,7 @@ func TestDiffDoesntIncludeNewlines(t *testing.T) {
 	noms := memstore.New()
 
 	from := NewMap(noms)
-	to := NewMap(noms, "key", "true")
+	to := NewMapForTest(noms, "key", "true")
 	ops, err := Diff(from, to, []Operation{})
 	assert.NoError(err)
 	assert.True(len(ops) == 1)

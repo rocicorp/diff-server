@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/attic-labs/noms/go/types"
-	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/stretchr/testify/assert"
 	"roci.dev/diff-server/kv"
 	"roci.dev/diff-server/util/noms/memstore"
@@ -12,20 +11,6 @@ import (
 
 func b(s string) []byte {
 	return []byte(s)
-}
-
-func TestNewMap(t *testing.T) {
-	assert := assert.New(t)
-
-	noms := memstore.New()
-
-	// Ensure checksum matches if constructed vs built.
-	constructed := kv.NewMap(noms, "key1", "1", "key2", "2")
-	me := kv.NewMap(noms).Edit()
-	assert.NoError(me.Set("key1", b("1")))
-	assert.NoError(me.Set("key2", b("2")))
-	built := me.Build()
-	assert.Equal(constructed.Checksum(), built.Checksum(), "constructed %v, built %v", constructed.DebugString(), built.DebugString())
 }
 
 func TestComputeChecksum(t *testing.T) {
@@ -43,36 +28,6 @@ func TestComputeChecksum(t *testing.T) {
 	// Ensure it matches a noms map separately constructed.
 	nm := types.NewMap(noms, types.String("bar"), types.Bool(true))
 	assert.Equal(m.Checksum(), kv.ComputeChecksum(nm).String())
-}
-
-func TestNewMapFromPile(t *testing.T) {
-	assert := assert.New(t)
-	noms := memstore.New()
-
-	me := kv.NewMap(noms).Edit()
-	me.Set("foo", []byte("true"))
-	expected := me.Build()
-
-	pile := make(map[string]interface{})
-	assert.NoError(cjson.Unmarshal([]byte(`{"foo": true}`), &pile))
-	got, err := kv.NewMapFromPile(noms, pile)
-	assert.NoError(err)
-	assert.Equal(expected.Checksum(), got.Checksum(), "expected %s, got %s", expected.DebugString(), got.DebugString())
-}
-
-func TestSetCanonicalized(t *testing.T) {
-	assert := assert.New(t)
-	noms := memstore.New()
-
-	k := "key"
-	uncanonicalized := []byte("  {  \"z\"   : 1, \n \"a\":    2  } \r")
-	canonicalized := []byte("{\"a\":2,\"z\":1}")
-
-	ume := kv.NewMap(noms).Edit()
-	cme := kv.NewMap(noms).Edit()
-	assert.NoError(ume.Set(k, uncanonicalized))
-	assert.NoError(cme.SetCanonicalized(k, canonicalized))
-	assert.Equal(ume.Build().Checksum(), cme.Build().Checksum())
 }
 
 func TestCanonicalizes(t *testing.T) {
@@ -97,7 +52,7 @@ func TestCanonicalizes(t *testing.T) {
 	assert.NoError(m2e.Set(k, expectedv))
 	assertGetEqual(assert, m2e, k, expectedv)
 	m2 = m2e.Build()
-	assert.True(m2.Sum.Equal(m.Sum))
+	assert.Equal(m.Checksum(), m2.Checksum())
 }
 
 type getter interface {
@@ -130,7 +85,7 @@ func TestMapGetSetRemove(t *testing.T) {
 	assert.NoError(m1e.Set(k1, v1))
 	assertGetEqual(assert, m1e, k1, v1)
 	m1 = m1e.Build()
-	assert.False(em.Sum.Equal(m1.Sum))
+	assert.NotEqual(em.Checksum(), m1.Checksum())
 	assertGetEqual(assert, m1, k1, v1)
 	m1e = m1.Edit()
 	m1e.Set(k1, v2)
@@ -138,7 +93,7 @@ func TestMapGetSetRemove(t *testing.T) {
 	assertGetEqual(assert, m1, k1, v1)
 	m2 := m1e.Build()
 	assertGetEqual(assert, m2, k1, v2)
-	assert.False(m2.Sum.Equal(m1.Sum))
+	assert.NotEqual(m2.Checksum(), m1.Checksum())
 
 	m2e := m2.Edit()
 	m2e.Remove(k1)
@@ -146,8 +101,8 @@ func TestMapGetSetRemove(t *testing.T) {
 	assert.NoError(m2e.Remove(k1))
 	m2got := m2e.Build()
 	assertGetEqual(assert, m2got, k1, nil)
-	assert.False(m2got.Sum.Equal(m2.Sum))
-	assert.True(m2got.Sum.Equal(em.Sum), "got=%s, want=%s", m2got.DebugString(), em.DebugString())
+	assert.NotEqual(m2.Checksum(), m2got.Checksum())
+	assert.Equal(em.Checksum(), m2got.Checksum(), "got=%s, want=%s", m2got.DebugString(), em.DebugString())
 
 	// Test that if we do two edit operations both stick.
 	k2 := "k2"

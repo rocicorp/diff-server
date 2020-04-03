@@ -22,12 +22,12 @@ func (c Checksum) String() string {
 func ChecksumFromString(s string) (*Checksum, error) {
 	v, err := strconv.ParseUint(s, 16, 32)
 	if err != nil {
-		return &Checksum{}, err
+		return &Checksum{}, fmt.Errorf("Unable to parse '%s' as a Checksum", s)
 	}
 	return &Checksum{uint32(v)}, nil
 }
 
-// MustChecksumFromString panic if it cannot parse a Checksum from s.
+// MustChecksumFromString panics if it cannot parse a Checksum from s.
 func MustChecksumFromString(s string) Checksum {
 	c, err := ChecksumFromString(s)
 	chk.NoError(err)

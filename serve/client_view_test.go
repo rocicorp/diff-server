@@ -11,6 +11,9 @@ import (
 	servetypes "roci.dev/diff-server/serve/types"
 )
 
+func b(s string) []byte {
+	return []byte(s)
+}
 func TestClientViewGetter_Get(t *testing.T) {
 	assert := assert.New(t)
 
@@ -32,7 +35,7 @@ func TestClientViewGetter_Get(t *testing.T) {
 			"authtoken",
 			http.StatusOK,
 			`{"clientView": {"key": "value"}, "lastMutationID": 2}`,
-			servetypes.ClientViewResponse{ClientView: map[string]interface{}{"key": "value"}, LastMutationID: 2},
+			servetypes.ClientViewResponse{ClientView: map[string]json.RawMessage{"key": b(`"value"`)}, LastMutationID: 2},
 			http.StatusOK,
 			"",
 		},
