@@ -70,6 +70,27 @@ func assertGetError(assert *assert.Assertions, m getter, key string) {
 	assert.Error(err, "no such key")
 }
 
+func TestHas(t *testing.T) {
+	assert := assert.New(t)
+	noms := memstore.New()
+
+	k := "key"
+	v := []byte("true")
+
+	m := kv.NewMap(noms)
+	assert.False(m.Has(k))
+	me := m.Edit()
+	assert.False(me.Has(k))
+	assert.NoError(me.Set(k, v))
+	assert.True(me.Has(k))
+	assert.False(m.Has(k))
+	assert.NoError(me.Remove(k))
+	assert.False(m.Has(k))
+	assert.NoError(me.Set(k, v))
+	m = me.Build()
+	assert.True(m.Has(k))
+}
+
 func TestMapGetSetRemove(t *testing.T) {
 	assert := assert.New(t)
 	noms := memstore.New()

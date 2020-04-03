@@ -50,6 +50,11 @@ func (m Map) NomsMap() types.Map {
 	return m.nm
 }
 
+// Has returns true if there exists a value for the given key.
+func (m Map) Has(key string) bool {
+	return m.nm.Has(types.String(key))
+}
+
 // Get returns the canonical json bytes for the given key.
 func (m Map) Get(key string) ([]byte, error) {
 	value, ok := m.nm.MaybeGet(types.String(key))
@@ -99,6 +104,11 @@ type MapEditor struct {
 	noms types.ValueReadWriter
 	nme  *types.MapEditor
 	sum  Checksum
+}
+
+// Has returns true if there exists a value for the given key.
+func (me MapEditor) Has(key string) bool {
+	return me.nme.Has(types.String(key))
 }
 
 // Get returns the value for a given key.
