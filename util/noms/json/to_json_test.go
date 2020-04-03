@@ -80,28 +80,34 @@ func (suite *ToJSONSuite) TestToJSON() {
 	}
 }
 
+// We have this test to convince ourselves that the canonical json never has
+// internal newlines, thus that our newlie-filtering is not going to strip
+// newlines from json strings.
 func Test_hasNewline(t *testing.T) {
+	assert.True(t, hasNewline("foo\n"))
+
 	type args struct {
 		s string
 	}
 	tests := []struct {
 		input string
-		want  bool
 	}{
-		{"no newline when encoded to json", false},
-		{"no newlines when encoded to json \\n", false},
-		{`"no newlines when encoded to json"`, false},
-		{`"no newlines when encoded to json\n"`, false},
-		{"no newlines when encoded to json\n", false},
-		{"no newlines when encoded to json\x0a", false},
+		{"no newline when encoded to json"},
+		{"no newlines when encoded to json \\n"},
+		{`"no newlines when encoded to json"`},
+		{`"no newlines when encoded to json\n"`},
+		{`"no newlines when encoded to json
+		even like this"`},
+		{"no newlines when encoded to json\n"},
+		{"no newlines when encoded to json\x0a"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
 			v := types.String(tt.input)
 			var b bytes.Buffer
 			assert.NoError(t, ToJSON(v, &b))
-			if got := hasNewline(string(b.Bytes())); got != tt.want {
-				t.Errorf("hasNewline(%q) = %v, want %v", tt.input, got, tt.want)
+			if got := hasNewline(string(b.Bytes())); got {
+				t.Errorf("hasNewline(%q) = %v, want false", tt.input, got)
 			}
 		})
 	}
