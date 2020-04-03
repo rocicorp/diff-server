@@ -55,6 +55,7 @@ func (suite *ToJSONSuite) TestToJSON() {
 		{"map non-string key", types.NewMap(suite.vs, types.Number(42), types.Number(42)), "", "Map key kind Number not supported"},
 		{"empty map", types.NewMap(suite.vs), "{}", ""},
 		{"non-empty map", types.NewMap(suite.vs, types.String("foo"), types.String("bar"), types.String("baz"), types.Number(42)), `{"baz":42,"foo":"bar"}`, ""},
+		{"map with newlines in strings", types.NewMap(suite.vs, types.String("foo\n"), types.String("ba\nr")), `{"foo\n":"ba\nr"}`, ""},
 		{"complex value", types.NewMap(suite.vs,
 			types.String("list"), types.NewList(suite.vs,
 				types.NewMap(suite.vs,
@@ -71,7 +72,7 @@ func (suite *ToJSONSuite) TestToJSON() {
 			suite.Equal("", string(buf.Bytes()), t.desc)
 		} else {
 			suite.NoError(err)
-			suite.Equal(t.exp+"\n", string(buf.Bytes()), t.desc)
+			suite.Equal(t.exp, string(buf.Bytes()), t.desc)
 		}
 	}
 }

@@ -35,7 +35,7 @@ func TestCanonicalizes(t *testing.T) {
 	noms := memstore.New()
 
 	k, v := "k", []byte("  {  \"z\"   : 1, \n \"a\":    2  } \r")
-	expectedv := []byte("{\"a\":2,\"z\":1}\n")
+	expectedv := []byte("{\"a\":2,\"z\":1}")
 
 	// Does it appear to canonicalize?
 	m := kv.NewMap(noms)
@@ -75,7 +75,7 @@ func TestMapGetSetRemove(t *testing.T) {
 	noms := memstore.New()
 
 	k1 := "k1"
-	v1, v2 := []byte("\"1\"\n"), []byte("\"2\"\n")
+	v1, v2 := []byte("\"1\""), []byte("\"2\"")
 
 	em := kv.NewMap(noms)
 	assertGetEqual(assert, em, k1, nil)
@@ -126,7 +126,7 @@ func TestNull(t *testing.T) {
 	assert.NoError(err)
 	act, err := m1.Get("foo")
 	assert.NoError(err)
-	assert.Equal([]byte("null\n"), act)
+	assert.Equal([]byte("null"), act)
 }
 
 func TestEmptyKey(t *testing.T) {
