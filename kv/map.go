@@ -21,7 +21,7 @@ type Map struct {
 }
 
 // NewMap returns a new Map.
-func NewMap(noms types.ValueReadWriter, kv ...string) Map {
+func NewMap(noms types.ValueReadWriter) Map {
 	return Map{noms, types.NewMap(noms), Checksum{0}}
 }
 
