@@ -10,6 +10,7 @@ import (
 
 	"github.com/attic-labs/noms/go/chunks"
 	"github.com/attic-labs/noms/go/types"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -45,7 +46,9 @@ func (suite *ToJSONSuite) TestToJSON() {
 		{"88.8", types.Number(88.8), "8.88E1", ""},
 		{"empty string", types.String(""), `""`, ""},
 		{"foobar", types.String("foobar"), `"foobar"`, ""},
-		{"strings with newlines", types.String(`"\nmonkey`), `"\"\\nmonkey"`, ""},
+		{"strings with escaped newlines", types.String(`"\nmonkey`), `"\"\\nmonkey"`, ""},
+		{"strings with newlines", types.String("\nmonkey"), `"\nmonkey"`, ""},
+		{"strings with newline bytes", types.String("\x0amonkey"), `"\nmonkey"`, ""}, // U+000A is newline and its UTF-8 representation is '0a'
 		{"unnamed struct", types.NewStruct("", types.StructData{}), "", "Unsupported struct type: Struct {}"},
 		{"named struct", types.NewStruct("Person", types.StructData{}), "", "Unsupported struct type: Struct Person {}"},
 		{"bad null struct", types.NewStruct("Null", types.StructData{"foo": types.String("bar")}), "", "Unsupported struct type: Struct Null {\n  foo: String,\n}"},
@@ -55,6 +58,7 @@ func (suite *ToJSONSuite) TestToJSON() {
 		{"map non-string key", types.NewMap(suite.vs, types.Number(42), types.Number(42)), "", "Map key kind Number not supported"},
 		{"empty map", types.NewMap(suite.vs), "{}", ""},
 		{"non-empty map", types.NewMap(suite.vs, types.String("foo"), types.String("bar"), types.String("baz"), types.Number(42)), `{"baz":42,"foo":"bar"}`, ""},
+		{"map with newlines in strings", types.NewMap(suite.vs, types.String("foo\n"), types.String("ba\nr")), `{"foo\n":"ba\nr"}`, ""},
 		{"complex value", types.NewMap(suite.vs,
 			types.String("list"), types.NewList(suite.vs,
 				types.NewMap(suite.vs,
@@ -71,7 +75,40 @@ func (suite *ToJSONSuite) TestToJSON() {
 			suite.Equal("", string(buf.Bytes()), t.desc)
 		} else {
 			suite.NoError(err)
-			suite.Equal(t.exp+"\n", string(buf.Bytes()), t.desc)
+			suite.Equal(t.exp, string(buf.Bytes()), t.desc)
 		}
+	}
+}
+
+// We have this test to convince ourselves that the canonical json never has
+// internal newlines, thus that our newlie-filtering is not going to strip
+// newlines from json strings.
+func Test_hasNewline(t *testing.T) {
+	assert.True(t, hasNewline("foo\n"))
+
+	type args struct {
+		s string
+	}
+	tests := []struct {
+		input string
+	}{
+		{"no newline when encoded to json"},
+		{"no newlines when encoded to json \\n"},
+		{`"no newlines when encoded to json"`},
+		{`"no newlines when encoded to json\n"`},
+		{`"no newlines when encoded to json
+		even like this"`},
+		{"no newlines when encoded to json\n"},
+		{"no newlines when encoded to json\x0a"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			v := types.String(tt.input)
+			var b bytes.Buffer
+			assert.NoError(t, ToJSON(v, &b))
+			if got := hasNewline(string(b.Bytes())); got {
+				t.Errorf("hasNewline(%q) = %v, want false", tt.input, got)
+			}
+		})
 	}
 }

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"strings"
 
 	"roci.dev/diff-server/util/chk"
 
@@ -41,8 +40,6 @@ func ComputeChecksum(nm types.Map) Checksum {
 		if err != nil {
 			chk.Fail("Failed to serialize value to json.")
 		}
-		// Noms adds a newline when encoding, so strip it.
-		v = []byte(strings.TrimRight(string(v), "\n"))
 		c.Add(k, v)
 	}
 	return c
@@ -53,8 +50,12 @@ func (m Map) NomsMap() types.Map {
 	return m.nm
 }
 
-// Get returns the json bytes for the given key, which must exist.
-// Note the json bytes gotten include a trailing newline.
+// Has returns true if there exists a value for the given key.
+func (m Map) Has(key string) bool {
+	return m.nm.Has(types.String(key))
+}
+
+// Get returns the canonical json bytes for the given key.
 func (m Map) Get(key string) ([]byte, error) {
 	value, ok := m.nm.MaybeGet(types.String(key))
 	if !ok {
@@ -105,9 +106,12 @@ type MapEditor struct {
 	sum  Checksum
 }
 
-// Get returns the value for a given key or an error if that key
-// doesn't exist.
-// Note the json bytes gotten include a trailing newline.
+// Has returns true if there exists a value for the given key.
+func (me MapEditor) Has(key string) bool {
+	return me.nme.Has(types.String(key))
+}
+
+// Get returns the canonical json bytes for the given key.
 func (me MapEditor) Get(key string) ([]byte, error) {
 	nk := types.String(key)
 	if !me.nme.Has(nk) {
@@ -169,8 +173,6 @@ func (me *MapEditor) Remove(key string) error {
 	if err != nil {
 		return err
 	}
-	// Strip the newline Get includes.
-	oldValue = []byte(strings.TrimRight(string(oldValue), "\n"))
 	me.sum.Remove(key, oldValue)
 	me.nme.Remove(nk)
 

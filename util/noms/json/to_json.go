@@ -12,6 +12,40 @@ import (
 	cjson "github.com/gibson042/canonicaljson-go"
 )
 
+// noNewlineWriter writes to an underlying io.Writer, omitting any trailing newline.
+type noNewlineWriter struct {
+	w io.Writer
+}
+
+// Helper broken out for testing.
+func hasNewline(s string) bool {
+	for _, runeValue := range s {
+		if string(runeValue) == "\n" {
+			return true
+		}
+	}
+	return false
+}
+
+// Write implements the io.Writer interface.
+func (w *noNewlineWriter) Write(p []byte) (int, error) {
+	if len(p) == 0 {
+		return w.w.Write(p)
+	}
+
+	var trailingNewline bool
+	// Note: canonical json never has internal newlines.
+	if hasNewline(string(p[len(p)-1])) {
+		trailingNewline = true
+		p = p[:len(p)-1]
+	}
+	n, err := w.w.Write(p)
+	if trailingNewline && n == len(p) {
+		n = n + 1
+	}
+	return n, err
+}
+
 // ToJSON encodes a Noms value as canonical JSON.
 // It would be nice to have an option like the original noms
 // ops.Indent which would enable pretty printing via the default json library.
@@ -23,7 +57,7 @@ func ToJSON(v types.Value, w io.Writer) error {
 		return err
 	}
 
-	enc := cjson.NewEncoder(w)
+	enc := cjson.NewEncoder(&noNewlineWriter{w})
 	return enc.Encode(p)
 }
 
