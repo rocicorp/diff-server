@@ -27,7 +27,8 @@ func TestAPI(t *testing.T) {
 		pullMethod  string
 		pullReq     string
 		authHeader  string
-		expCVReq    *servetypes.ClientViewRequest
+		accountCV   string
+		overrideCV  string
 		expCVAuth   string
 		CVResponse  servetypes.ClientViewResponse
 		CVCode      int
@@ -39,7 +40,8 @@ func TestAPI(t *testing.T) {
 		{"GET",
 			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`,
 			"accountID",
-			nil,
+			"",
+			"",
 			"",
 			servetypes.ClientViewResponse{},
 			0,
@@ -51,7 +53,8 @@ func TestAPI(t *testing.T) {
 		{"POST",
 			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`,
 			"accountID",
-			nil,
+			"",
+			"",
 			"",
 			servetypes.ClientViewResponse{},
 			0,
@@ -63,7 +66,34 @@ func TestAPI(t *testing.T) {
 		{"POST",
 			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid", "clientViewAuth": "clientauth"}`,
 			"accountID",
-			&servetypes.ClientViewRequest{},
+			"cv",
+			"",
+			"clientauth",
+			servetypes.ClientViewResponse{ClientView: map[string]json.RawMessage{"new": b(`"value"`)}, LastMutationID: 2},
+			200,
+			nil,
+			`{"stateID":"hoc705ifecv1c858qgbqr9jghh4d9l96","lastMutationID":2,"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/new","value":"value"}],"checksum":"f9ef007b","clientViewInfo":{"httpStatusCode":200,"errorMessage":""}}`,
+			""},
+
+		// Successful client view fetch via override.
+		{"POST",
+			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid", "clientViewAuth": "clientauth"}`,
+			"accountID",
+			"",
+			"override",
+			"clientauth",
+			servetypes.ClientViewResponse{ClientView: map[string]json.RawMessage{"new": b(`"value"`)}, LastMutationID: 2},
+			200,
+			nil,
+			`{"stateID":"hoc705ifecv1c858qgbqr9jghh4d9l96","lastMutationID":2,"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/new","value":"value"}],"checksum":"f9ef007b","clientViewInfo":{"httpStatusCode":200,"errorMessage":""}}`,
+			""},
+
+		// Successful client view fetch via override (with override).
+		{"POST",
+			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid", "clientViewAuth": "clientauth"}`,
+			"accountID",
+			"cv",
+			"override",
 			"clientauth",
 			servetypes.ClientViewResponse{ClientView: map[string]json.RawMessage{"new": b(`"value"`)}, LastMutationID: 2},
 			200,
@@ -75,7 +105,8 @@ func TestAPI(t *testing.T) {
 		{"POST",
 			`{"baseStateID": "s3n5j759kirvvs3fqeott07a43lk41ud", "checksum": "c4e7090d", "clientID": "clientid", "clientViewAuth": "clientauth"}`,
 			"accountID",
-			&servetypes.ClientViewRequest{},
+			"cv",
+			"",
 			"clientauth",
 			servetypes.ClientViewResponse{ClientView: map[string]json.RawMessage{"foo": b(`"bar"`)}, LastMutationID: 1},
 			200,
@@ -87,7 +118,8 @@ func TestAPI(t *testing.T) {
 		{"POST",
 			`{"baseStateID": "s3n5j759kirvvs3fqeott07a43lk41ud", "checksum": "c4e7090d", "clientID": "clientid", "clientViewAuth": "clientauth"}`,
 			"accountID",
-			&servetypes.ClientViewRequest{},
+			"cv",
+			"",
 			"clientauth",
 			servetypes.ClientViewResponse{ClientView: map[string]json.RawMessage{"foo": b(`"bar"`)}, LastMutationID: 77},
 			200,
@@ -99,7 +131,8 @@ func TestAPI(t *testing.T) {
 		{"POST",
 			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid", "clientViewAuth": "clientauth"}`,
 			"accountID",
-			&servetypes.ClientViewRequest{},
+			"cv",
+			"",
 			"clientauth",
 			servetypes.ClientViewResponse{ClientView: map[string]json.RawMessage{"new": b(`"value"`)}, LastMutationID: 2},
 			200,
@@ -111,7 +144,8 @@ func TestAPI(t *testing.T) {
 		{"POST",
 			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid", "clientViewAuth": "clientauth"}`,
 			"",
-			nil,
+			"",
+			"",
 			"",
 			servetypes.ClientViewResponse{},
 			0,
@@ -123,7 +157,8 @@ func TestAPI(t *testing.T) {
 		{"POST",
 			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid", "clientViewAuth": "clientauth"}`,
 			"BONK",
-			nil,
+			"",
+			"",
 			"",
 			servetypes.ClientViewResponse{},
 			0,
@@ -135,7 +170,8 @@ func TestAPI(t *testing.T) {
 		{"POST",
 			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientViewAuth": "clientauth"}`,
 			"accountID",
-			nil,
+			"",
+			"",
 			"",
 			servetypes.ClientViewResponse{},
 			0,
@@ -147,7 +183,8 @@ func TestAPI(t *testing.T) {
 		{"POST",
 			`{"baseStateID": "beep", "checksum": "00000000", "clientID": "clientid", "clientViewAuth": "clientauth"}`,
 			"accountID",
-			nil,
+			"",
+			"",
 			"",
 			servetypes.ClientViewResponse{},
 			0,
@@ -159,7 +196,8 @@ func TestAPI(t *testing.T) {
 		{"POST",
 			`{"baseStateID": "", "checksum": "00000000", "clientID": "clientid", "clientViewAuth": "clientauth"}`,
 			"accountID",
-			&servetypes.ClientViewRequest{},
+			"cv",
+			"",
 			"clientauth",
 			servetypes.ClientViewResponse{ClientView: map[string]json.RawMessage{"new": b(`"value"`)}, LastMutationID: 2},
 			200,
@@ -171,7 +209,8 @@ func TestAPI(t *testing.T) {
 		{"POST",
 			`{"baseStateID": "00000000000000000000000000000000", "checksum": "not", "clientID": "clientid", "clientViewAuth": "clientauth"}`,
 			"accountID",
-			nil,
+			"",
+			"",
 			"",
 			servetypes.ClientViewResponse{},
 			0,
@@ -181,14 +220,9 @@ func TestAPI(t *testing.T) {
 	}
 
 	for i, t := range tc {
-		fcvg := fakeClientViewGet{resp: t.CVResponse, code: t.CVCode, err: t.CVErr}
-		var cvg clientViewGetter
-		if t.expCVReq != nil {
-			cvg = &fcvg
-		}
-
+		fcvg := &fakeClientViewGet{resp: t.CVResponse, code: t.CVCode, err: t.CVErr}
 		td, _ := ioutil.TempDir("", "")
-		s := NewService(td, []Account{Account{ID: "accountID", Name: "accountID", Pubkey: nil}}, "", cvg, true)
+		s := NewService(td, []Account{Account{ID: "accountID", Name: "accountID", Pubkey: nil, ClientViewURL: t.accountCV}}, t.overrideCV, fcvg, true)
 		noms, err := s.getNoms("accountID")
 		assert.NoError(err)
 		db, err := db.New(noms.GetDataset("client/clientid"))
@@ -215,10 +249,16 @@ func TestAPI(t *testing.T) {
 		} else {
 			assert.Regexp(t.expPullErr, string(body.Bytes()), msg)
 		}
-		if t.expCVReq != nil {
-			assert.True(fcvg.called)
-			assert.Equal(*t.expCVReq, fcvg.gotReq)
-			assert.Equal(t.expCVAuth, fcvg.gotAuth)
+		expectedCVURL := ""
+		if t.overrideCV != "" {
+			expectedCVURL = t.overrideCV
+		} else if t.accountCV != "" {
+			expectedCVURL = t.accountCV
+		}
+		if expectedCVURL != "" {
+			assert.True(fcvg.called, msg)
+			assert.Equal(expectedCVURL, fcvg.gotURL, msg)
+			assert.Equal(t.expCVAuth, fcvg.gotAuth, msg)
 		}
 	}
 }
@@ -229,13 +269,13 @@ type fakeClientViewGet struct {
 	err  error
 
 	called  bool
-	gotReq  servetypes.ClientViewRequest
+	gotURL  string
 	gotAuth string
 }
 
 func (f *fakeClientViewGet) Get(url string, req servetypes.ClientViewRequest, authToken string) (servetypes.ClientViewResponse, int, error) {
 	f.called = true
-	f.gotReq = req
+	f.gotURL = url
 	f.gotAuth = authToken
 	return f.resp, f.code, f.err
 }

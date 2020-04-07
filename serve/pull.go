@@ -133,7 +133,7 @@ func maybeGetAndStoreNewClientView(db *db.DB, clientViewAuth string, url string,
 		}
 	}()
 
-	if cvg == nil {
+	if url == "" {
 		err = errors.New("not fetching new client view: no url provided via account or --clientview")
 		return clientViewInfo
 	}
