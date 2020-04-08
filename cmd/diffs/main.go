@@ -121,7 +121,7 @@ func serve(parent *kingpin.Application, sps *string, errs io.Writer) {
 	kc := parent.Command("serve", "Starts a local diff-server.")
 	port := kc.Flag("port", "The port to run on").Default("7001").Int()
 	enableInject := kc.Flag("enable-inject", "Enable /inject endpoint which writes directly to the database for testing").Default("false").Bool()
-	overrideClientViewURL := parent.Flag("clientview", "URL to always use for client view eg 'https://example.com/clientview'").Default("").String()
+	overrideClientViewURL := parent.Flag("client-view", "URL to use for all accounts' Client View").PlaceHolder("http://localhost:8000/replicache-client-view").Default("").String()
 	kc.Action(func(_ *kingpin.ParseContext) error {
 		ps := fmt.Sprintf(":%d", *port)
 		log.Printf("Listening on %s...", ps)

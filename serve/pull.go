@@ -134,7 +134,7 @@ func maybeGetAndStoreNewClientView(db *db.DB, clientViewAuth string, url string,
 	}()
 
 	if url == "" {
-		err = errors.New("not fetching new client view: no url provided via account or --clientview")
+		err = errors.New("not fetching new client view: no url provided via account or --client-view")
 		return clientViewInfo
 	}
 	cvResp, cvCode, err := cvg.Get(url, cvReq, clientViewAuth)
