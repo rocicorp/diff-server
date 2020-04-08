@@ -30,7 +30,7 @@ func nomsValueFromDecodedJSONBase(vrw types.ValueReadWriter, o interface{}) type
 	case float64:
 		return types.Number(o)
 	case nil:
-		return types.NewStruct("Null", types.StructData{})
+		return null
 	case []interface{}:
 		items := make([]types.Value, 0, len(o))
 		for _, v := range o {
