@@ -38,8 +38,5 @@ func (g ClientViewGetter) Get(url string, req servetypes.ClientViewRequest, auth
 	if err != nil {
 		return servetypes.ClientViewResponse{}, httpResp.StatusCode, fmt.Errorf("couldnt decode client view response: %w", err)
 	}
-	if resp.LastMutationID == 0 {
-		return servetypes.ClientViewResponse{}, httpResp.StatusCode, fmt.Errorf("malformed response %v: lastMutationID must be greater than zero", resp)
-	}
 	return resp, httpResp.StatusCode, nil
 }

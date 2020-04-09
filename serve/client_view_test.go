@@ -55,9 +55,9 @@ func TestClientViewGetter_Get(t *testing.T) {
 			"authtoken",
 			http.StatusOK,
 			`{"clientView": {"foo": "bar"}}`,
-			servetypes.ClientViewResponse{},
+			servetypes.ClientViewResponse{ClientView: map[string]json.RawMessage{"foo": b(`"bar"`)}, LastMutationID: 0},
 			http.StatusOK,
-			"lastMutationID",
+			"",
 		},
 	}
 	for _, tt := range tests {
