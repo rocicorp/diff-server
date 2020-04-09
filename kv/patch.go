@@ -55,7 +55,7 @@ func Diff(from, to Map, r []Operation) ([]Operation, error) {
 	go func() {
 		defer close(dChan)
 		// Diffing is delegated to the underlying noms maps.
-		to.nm.Diff(from.nm, dChan, sChan)
+		to.NomsMap().Diff(from.NomsMap(), dChan, sChan)
 	}()
 
 	wg := &sync.WaitGroup{}
@@ -119,7 +119,7 @@ func Diff(from, to Map, r []Operation) ([]Operation, error) {
 }
 
 // ApplyPath applies the given series of ops to the input Map.
-func ApplyPatch(to Map, patch []Operation) (Map, error) {
+func ApplyPatch(vrw types.ValueReadWriter, to Map, patch []Operation) (Map, error) {
 	if len(patch) == 0 {
 		return to, nil
 	}
@@ -128,10 +128,16 @@ func ApplyPatch(to Map, patch []Operation) (Map, error) {
 		if !strings.HasPrefix(op.Path, "/") {
 			return Map{}, fmt.Errorf("Invalid path %s - must start with /", op.Path)
 		}
-		p := jsonPointerUnescape(op.Path[1:])
+		p := types.String(jsonPointerUnescape(op.Path[1:]))
 		switch op.Op {
 		case OpAdd, OpReplace:
-			if err := ed.Set(p, op.Value); err != nil {
+			// Note: might be smart to canonicalize op.Value here before parsing the Noms
+			// value in case it is not canonicalized.
+			v, err := nomsjson.FromJSON(bytes.NewReader(op.Value), vrw)
+			if err != nil {
+				return Map{}, fmt.Errorf("couldnt parse value from JSON '%s': %w", op.Value, err)
+			}
+			if err := ed.Set(p, v); err != nil {
 				return Map{}, err
 			}
 		case OpRemove:

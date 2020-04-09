@@ -21,6 +21,7 @@ import (
 	"roci.dev/diff-server/db"
 	"roci.dev/diff-server/kv"
 	servetypes "roci.dev/diff-server/serve/types"
+	nomsjson "roci.dev/diff-server/util/noms/json"
 )
 
 func (s *Service) pull(rw http.ResponseWriter, req *http.Request) {
@@ -149,9 +150,17 @@ func maybeGetAndStoreNewClientView(db *db.DB, clientViewAuth string, url string,
 
 func storeClientView(db *db.DB, cvResp servetypes.ClientViewResponse) error {
 	me := kv.NewMap(db.Noms()).Edit()
-	for k, v := range cvResp.ClientView {
-		if err := me.Set(k, v); err != nil {
+	for k, JSON := range cvResp.ClientView {
+		canonicalJSON, err := nomsjson.Canonicalize(JSON)
+		if err != nil {
 			return fmt.Errorf("error parsing clientview: %w", err)
+		}
+		v, err := nomsjson.FromJSON(bytes.NewReader(canonicalJSON), db.Noms())
+		if err != nil {
+			return fmt.Errorf("error parsing clientview: %w", err)
+		}
+		if err := me.Set(types.String(k), v); err != nil {
+			return fmt.Errorf("error setting value '%s' in clientview: %w", JSON, err)
 		}
 	}
 	m := me.Build()

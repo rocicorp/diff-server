@@ -217,6 +217,19 @@ func TestAPI(t *testing.T) {
 			nil,
 			``,
 			"Invalid checksum"},
+
+		// Ensure it canonicalizes the client view JSON.
+		{"POST",
+			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid", "clientViewAuth": "clientauth"}`,
+			"accountID",
+			"cv",
+			"",
+			"clientauth",
+			servetypes.ClientViewResponse{ClientView: map[string]json.RawMessage{"new": b(`"\u000b"`)}, LastMutationID: 2}, // "\u000B" is canonical
+			200,
+			nil,
+			`{"stateID":"qv7hd0v4i49utb1gjs2hiefh1vfhjegk","lastMutationID":2,"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/new","value":"\u000B"}],"checksum":"b2dc0d6a","clientViewInfo":{"httpStatusCode":200,"errorMessage":""}}`,
+			""},
 	}
 
 	for i, t := range tc {

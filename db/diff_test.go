@@ -89,7 +89,7 @@ func TestDiff(t *testing.T) {
 				fmt.Println("newdir", dir)
 				me := kv.NewMapForTest(db.Noms()).Edit()
 				for _, s := range []string{"a", "b", "c"} {
-					assert.NoError(me.Set(s, []byte(fmt.Sprintf("\"%s\"", s))))
+					assert.NoError(me.Set(types.String(s), types.String(s)))
 				}
 				m := me.Build()
 				err := db.PutData(m, 0 /*lastMutationID*/)

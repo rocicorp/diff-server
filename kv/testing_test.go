@@ -14,10 +14,10 @@ func TestNewMap(t *testing.T) {
 	noms := memstore.New()
 
 	// Ensure checksum matches if constructed vs built.
-	constructed := kv.NewMapForTest(noms, "key1", "1", "key2", "2")
+	constructed := kv.NewMapForTest(noms, "key1", `"1"`, "key2", `"2"`)
 	me := kv.NewMap(noms).Edit()
-	assert.NoError(me.Set("key1", b("1")))
-	assert.NoError(me.Set("key2", b("2")))
+	assert.NoError(me.Set("key1", s("1")))
+	assert.NoError(me.Set("key2", s("2")))
 	built := me.Build()
 	assert.Equal(constructed.Checksum(), built.Checksum(), "constructed %v, built %v", constructed.DebugString(), built.DebugString())
 }

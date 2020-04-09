@@ -6,18 +6,17 @@ import (
 	"fmt"
 
 	"roci.dev/diff-server/util/chk"
+	nomsjson "roci.dev/diff-server/util/noms/json"
 
 	"github.com/attic-labs/noms/go/types"
-	cjson "github.com/gibson042/canonicaljson-go"
-	nomsjson "roci.dev/diff-server/util/noms/json"
 )
 
-// Map is a map from string key to json bytes. Map is
-// NOT threadsafe.
+// Map embeds types.Map, adding a few bits of logic like checksumming.
+// Map is NOT threadsafe.
 type Map struct {
 	noms types.ValueReadWriter
-	nm   types.Map
-	sum  Checksum
+	types.Map
+	sum Checksum
 }
 
 // NewMap returns a new Map.
@@ -36,7 +35,7 @@ func ComputeChecksum(nm types.Map) Checksum {
 	c := Checksum{}
 	for mi := nm.Iterator(); mi.Valid(); mi.Next() {
 		k := string(mi.Key().(types.String))
-		v, err := bytesFromNomsValue(mi.Value())
+		v, err := toJSON(mi.Value())
 		if err != nil {
 			chk.Fail("Failed to serialize value to json.")
 		}
@@ -47,30 +46,10 @@ func ComputeChecksum(nm types.Map) Checksum {
 
 // NomsMap returns the underlying noms map.
 func (m Map) NomsMap() types.Map {
-	return m.nm
+	return m.Map
 }
 
-// Has returns true if there exists a value for the given key.
-func (m Map) Has(key string) bool {
-	return m.nm.Has(types.String(key))
-}
-
-// Get returns the canonical json bytes for the given key.
-func (m Map) Get(key string) ([]byte, error) {
-	value, ok := m.nm.MaybeGet(types.String(key))
-	if !ok {
-		return nil, nil
-	}
-
-	return bytesFromNomsValue(value)
-}
-
-// Empty returns true if the Map is empty.
-func (m Map) Empty() bool {
-	return m.nm.Empty()
-}
-
-func bytesFromNomsValue(value types.Valuable) ([]byte, error) {
+func toJSON(value types.Valuable) ([]byte, error) {
 	var b bytes.Buffer
 	if err := nomsjson.ToJSON(value.Value(), &b); err != nil {
 		return []byte{}, err
@@ -91,97 +70,76 @@ func (m Map) NomsChecksum() types.String {
 // Edit returns a MapEditor allowing mutation of the Map. The original
 // Map is not affected.
 func (m Map) Edit() *MapEditor {
-	return &MapEditor{m.noms, m.nm.Edit(), m.sum}
+	return &MapEditor{m.noms, m.Map.Edit(), m.sum}
 }
 
 // DebugString returns a nice string value of the Map, including the full underlying noms map.
 func (m Map) DebugString() string {
-	return fmt.Sprintf("Checksum: %s, noms Map: %v\n", m.Checksum(), types.EncodedValue(m.nm))
+	return fmt.Sprintf("Checksum: %s, noms Map: %v\n", m.Checksum(), types.EncodedValue(m.NomsMap()))
 }
 
-// MapEditor allows mutation of a Map.
+// MapEditor embeds a types.MapEditor, enabling mutations.
 type MapEditor struct {
 	noms types.ValueReadWriter
-	nme  *types.MapEditor
-	sum  Checksum
+	*types.MapEditor
+	sum Checksum
 }
 
-// Has returns true if there exists a value for the given key.
-func (me MapEditor) Has(key string) bool {
-	return me.nme.Has(types.String(key))
-}
-
-// Get returns the canonical json bytes for the given key.
-func (me MapEditor) Get(key string) ([]byte, error) {
-	nk := types.String(key)
-	if !me.nme.Has(nk) {
-		return nil, nil
+// Get changes the signature of MapEditor's Get to match that of Map.
+func (me *MapEditor) Get(key types.Value) types.Value {
+	v := me.MapEditor.Get(key)
+	if v == nil {
+		return nil
 	}
-
-	value := me.nme.Get(nk)
-	return bytesFromNomsValue(value)
+	return v.Value()
 }
 
-// Set sets the value for a given key. Set canonicalizes value.
-func (me *MapEditor) Set(key string, value []byte) error {
+// Set sets the value for a given key. Set requires that the value has been
+// be parsed from canonical json, otherwise we might parse two different
+// values for the same canonical json.
+func (me *MapEditor) Set(key types.String, value types.Value) error {
 	if key == "" {
 		return errors.New("key must be non-empty")
 	}
-
-	// Round trip to canonicalize. Note in the following lines we are going:
-	//     json -> go -> canonical json -> noms
-	// It is tempting to try to save a step by going:
-	//     json -> noms -> canonical json
-	// and use the intermediate noms value. Unfortunately, we can't because
-	// there is no guarantee that it would be the same as the noms value parsed
-	// from the canonical json. For example, it might have unnormalized strings.
-	var v interface{}
-	if err := cjson.Unmarshal(value, &v); err != nil {
-		return fmt.Errorf("couldnt parse value '%s' as json: %w", string(value), err)
-	}
-	canonicalizedValue, err := cjson.Marshal(v)
-	if err != nil {
-		return err
-	}
-	nv, err := nomsjson.FromJSON(bytes.NewReader(canonicalizedValue), me.noms)
-	if err != nil {
-		return err
-	}
-
-	nk := types.String(key)
-	if me.nme.Has(nk) {
+	if me.MapEditor.Has(key) {
 		// Have to do this in order to properly update checksum.
 		if err := me.Remove(key); err != nil {
 			return err
 		}
 	}
 
-	me.nme.Set(nk, nv)
-	me.sum.Add(key, canonicalizedValue)
+	JSON, err := toJSON(value)
+	if err != nil {
+		return err
+	}
+	me.MapEditor.Set(key, value)
+	me.sum.Add(string(key), JSON)
 	return nil
 }
 
 // Remove removes a key from the Map.
-func (me *MapEditor) Remove(key string) error {
-	nk := types.String(key)
-	if !me.nme.Has(nk) {
-		return nil
-	}
-
+func (me *MapEditor) Remove(key types.String) error {
 	// Need the old value to update the checksum.
-	oldValue, err := me.Get(key)
-	if err != nil {
-		return err
+	// Note: Noms MapEditor.Get can return a value that has been removed
+	// so here we check Has, which works correctly. Once
+	// https://github.com/attic-labs/noms/pull/3872 is released this can
+	// just Get directly.
+	if me.MapEditor.Has(key) {
+		oldValue := me.MapEditor.Get(key)
+		oldValueJSON, err := toJSON(oldValue.Value())
+		if err != nil {
+			return err
+		}
+		me.sum.Remove(string(key), oldValueJSON)
 	}
-	me.sum.Remove(key, oldValue)
-	me.nme.Remove(nk)
 
+	me.MapEditor.Remove(key)
 	return nil
 }
 
 // Build converts back into a Map.
 func (me *MapEditor) Build() Map {
-	return Map{me.noms, me.nme.Map(), me.sum}
+	return Map{me.noms, me.MapEditor.Map(), me.sum}
 }
 
 // Checksum is the Cheksum over the Map of k/vs.
@@ -192,5 +150,5 @@ func (me MapEditor) Checksum() Checksum {
 // DebugString returns a nice string value of the MapEditor, including the full underlying noms map.
 func (me MapEditor) DebugString() string {
 	m := me.Build()
-	return fmt.Sprintf("Checksum: %s, noms Map: %v\n", m.Checksum(), types.EncodedValue(m.nm))
+	return fmt.Sprintf("Checksum: %s, noms Map: %v\n", m.Checksum(), types.EncodedValue(m.NomsMap()))
 }
