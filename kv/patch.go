@@ -55,7 +55,7 @@ func Diff(from, to Map, r []Operation) ([]Operation, error) {
 	go func() {
 		defer close(dChan)
 		// Diffing is delegated to the underlying noms maps.
-		to.nm.Diff(from.nm, dChan, sChan)
+		to.NomsMap().Diff(from.NomsMap(), dChan, sChan)
 	}()
 
 	wg := &sync.WaitGroup{}

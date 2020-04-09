@@ -11,12 +11,12 @@ import (
 	"github.com/attic-labs/noms/go/types"
 )
 
-// Map is a map from String key to Map representing JSON.
+// Map embeds types.Map, adding a few bits of logic like checksumming.
 // Map is NOT threadsafe.
 type Map struct {
 	noms types.ValueReadWriter
-	nm   types.Map
-	sum  Checksum
+	types.Map
+	sum Checksum
 }
 
 // NewMap returns a new Map.
@@ -46,23 +46,7 @@ func ComputeChecksum(nm types.Map) Checksum {
 
 // NomsMap returns the underlying noms map.
 func (m Map) NomsMap() types.Map {
-	return m.nm
-}
-
-// Has returns true if there exists a value for the given key.
-func (m Map) Has(key types.String) bool {
-	return m.nm.Has(key)
-}
-
-// Get returns the Value for the given key and a bool indicating
-// if it was gotten.
-func (m Map) Get(key types.String) (types.Value, bool) {
-	return m.nm.MaybeGet(key)
-}
-
-// Empty returns true if the Map is empty.
-func (m Map) Empty() bool {
-	return m.nm.Empty()
+	return m.Map
 }
 
 func toJSON(value types.Valuable) ([]byte, error) {
@@ -86,33 +70,28 @@ func (m Map) NomsChecksum() types.String {
 // Edit returns a MapEditor allowing mutation of the Map. The original
 // Map is not affected.
 func (m Map) Edit() *MapEditor {
-	return &MapEditor{m.noms, m.nm.Edit(), m.sum}
+	return &MapEditor{m.noms, m.Map.Edit(), m.sum}
 }
 
 // DebugString returns a nice string value of the Map, including the full underlying noms map.
 func (m Map) DebugString() string {
-	return fmt.Sprintf("Checksum: %s, noms Map: %v\n", m.Checksum(), types.EncodedValue(m.nm))
+	return fmt.Sprintf("Checksum: %s, noms Map: %v\n", m.Checksum(), types.EncodedValue(m.NomsMap()))
 }
 
-// MapEditor allows mutation of a Map.
+// MapEditor embeds a types.MapEditor, enabling mutations.
 type MapEditor struct {
 	noms types.ValueReadWriter
-	nme  *types.MapEditor
-	sum  Checksum
+	*types.MapEditor
+	sum Checksum
 }
 
-// Has returns true if there exists a value for the given key.
-func (me MapEditor) Has(key types.String) bool {
-	return me.nme.Has(key)
-}
-
-// Get returns the Value for the given key and a bool indicating if it was gotten.
-func (me MapEditor) Get(key types.String) (types.Value, bool) {
-	if !me.nme.Has(key) {
-		return nil, false
+// Get changes the signature of MapEditor's Get to match that of Map.
+func (me *MapEditor) Get(key types.Value) types.Value {
+	v := me.MapEditor.Get(key)
+	if v == nil {
+		return nil
 	}
-
-	return me.nme.Get(key).Value(), true
+	return v.Value()
 }
 
 // Set sets the value for a given key. Set requires that the value has been
@@ -122,7 +101,7 @@ func (me *MapEditor) Set(key types.String, value types.Value) error {
 	if key == "" {
 		return errors.New("key must be non-empty")
 	}
-	if me.nme.Has(key) {
+	if me.MapEditor.Has(key) {
 		// Have to do this in order to properly update checksum.
 		if err := me.Remove(key); err != nil {
 			return err
@@ -133,7 +112,7 @@ func (me *MapEditor) Set(key types.String, value types.Value) error {
 	if err != nil {
 		return err
 	}
-	me.nme.Set(key, value)
+	me.MapEditor.Set(key, value)
 	me.sum.Add(string(key), JSON)
 	return nil
 }
@@ -141,23 +120,26 @@ func (me *MapEditor) Set(key types.String, value types.Value) error {
 // Remove removes a key from the Map.
 func (me *MapEditor) Remove(key types.String) error {
 	// Need the old value to update the checksum.
-	oldValue, got := me.Get(key)
-	if !got {
-		return nil
+	// Note: Noms MapEditor.Get can return a value that has been removed
+	// so here we check Has, which works correctly. Once
+	// https://github.com/attic-labs/noms/pull/3872 is released this can
+	// just Get directly.
+	if me.MapEditor.Has(key) {
+		oldValue := me.MapEditor.Get(key)
+		oldValueJSON, err := toJSON(oldValue.Value())
+		if err != nil {
+			return err
+		}
+		me.sum.Remove(string(key), oldValueJSON)
 	}
-	oldValueJSON, err := toJSON(oldValue)
-	if err != nil {
-		return err
-	}
-	me.sum.Remove(string(key), oldValueJSON)
-	me.nme.Remove(key)
 
+	me.MapEditor.Remove(key)
 	return nil
 }
 
 // Build converts back into a Map.
 func (me *MapEditor) Build() Map {
-	return Map{me.noms, me.nme.Map(), me.sum}
+	return Map{me.noms, me.MapEditor.Map(), me.sum}
 }
 
 // Checksum is the Cheksum over the Map of k/vs.
@@ -168,5 +150,5 @@ func (me MapEditor) Checksum() Checksum {
 // DebugString returns a nice string value of the MapEditor, including the full underlying noms map.
 func (me MapEditor) DebugString() string {
 	m := me.Build()
-	return fmt.Sprintf("Checksum: %s, noms Map: %v\n", m.Checksum(), types.EncodedValue(m.nm))
+	return fmt.Sprintf("Checksum: %s, noms Map: %v\n", m.Checksum(), types.EncodedValue(m.NomsMap()))
 }

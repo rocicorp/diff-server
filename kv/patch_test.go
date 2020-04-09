@@ -87,7 +87,7 @@ func TestTopLevelRemove(t *testing.T) {
 	}
 	r, err := ApplyPatch(noms, from, ops)
 	assert.NoError(err)
-	assert.Equal(types.EncodedValue(r.nm), types.EncodedValue(to.nm))
+	assert.Equal(types.EncodedValue(r.NomsMap()), types.EncodedValue(to.NomsMap()))
 	assert.Equal(to.Checksum(), r.Checksum(), "expected %s, got %s", to.DebugString(), r.DebugString())
 }
 

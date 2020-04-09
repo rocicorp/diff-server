@@ -32,46 +32,16 @@ func TestComputeChecksum(t *testing.T) {
 }
 
 type getter interface {
-	Get(types.String) (types.Value, bool)
+	Get(types.Value) types.Value
 }
 
 func assertGetEqual(assert *assert.Assertions, m getter, key types.String, expected types.Value) {
-	v, got := m.Get(key)
+	got := m.Get(key)
 	if expected == nil {
-		assert.False(got)
-		assert.Equal(nil, v)
+		assert.Nil(got)
 	} else {
-		assert.True(got)
-		assert.True(expected.Equals(v))
+		assert.True(expected.Equals(got))
 	}
-}
-
-func assertGetNoSuchKey(assert *assert.Assertions, m getter, key types.String) {
-	_, got := m.Get(key)
-	assert.False(got)
-}
-
-// TODO eliminate?
-
-func TestHas(t *testing.T) {
-	assert := assert.New(t)
-	noms := memstore.New()
-
-	k := types.String("key")
-	v := types.Bool(true)
-
-	m := kv.NewMap(noms)
-	assert.False(m.Has(k))
-	me := m.Edit()
-	assert.False(me.Has(k))
-	assert.NoError(me.Set(k, v))
-	assert.True(me.Has(k))
-	assert.False(m.Has(k))
-	assert.NoError(me.Remove(k))
-	assert.False(m.Has(k))
-	assert.NoError(me.Set(k, v))
-	m = me.Build()
-	assert.True(m.Has(k))
 }
 
 func TestMapGetSetRemove(t *testing.T) {
@@ -100,12 +70,13 @@ func TestMapGetSetRemove(t *testing.T) {
 	assert.NotEqual(m2.Checksum(), m1.Checksum())
 
 	m2e := m2.Edit()
-	m2e.Remove(k1)
-	assertGetEqual(assert, m2e, k1, nil)
+	assert.NoError(m2e.Remove(k1))
+	// Uncomment when https://github.com/attic-labs/noms/pull/3872 is released.
+	// assertGetEqual(assert, m2e, k1, nil)
 	assert.NoError(m2e.Remove(k1))
 	m2got := m2e.Build()
 	assertGetEqual(assert, m2got, k1, nil)
-	assert.NotEqual(m2.Checksum(), m2got.Checksum())
+	assert.NotEqual(m2.Checksum(), m2got.Checksum(), "got=%s, want=%s", m2got.DebugString(), m2.DebugString())
 	assert.Equal(em.Checksum(), m2got.Checksum(), "got=%s, want=%s", m2got.DebugString(), em.DebugString())
 
 	// Test that if we do two edit operations both stick.
@@ -128,8 +99,8 @@ func TestNull(t *testing.T) {
 	err := m1e.Set(s("foo"), nomsjson.Null())
 	m1 = m1e.Build()
 	assert.NoError(err)
-	act, got := m1.Get(s("foo"))
-	assert.True(got)
+	act := m1.Get(s("foo"))
+	assert.NotNil(act)
 	assert.True(nomsjson.Null().Equals(act))
 }
 

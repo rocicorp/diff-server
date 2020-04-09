@@ -70,7 +70,7 @@ func TestInject(t *testing.T) {
 			db, err := s.GetDB("accountID", "clientID")
 			assert.NoError(err, msg)
 			m := db.Head().Data(db.Noms())
-			v, got := m.Get(types.String("foo"))
+			v, got := m.MaybeGet(types.String("foo"))
 			assert.True(got, msg)
 			assert.True(types.String("bar").Equals(v), msg)
 		}
