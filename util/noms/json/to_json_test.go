@@ -6,6 +6,7 @@ package json
 
 import (
 	"bytes"
+	"reflect"
 	"testing"
 
 	"github.com/attic-labs/noms/go/chunks"
@@ -108,6 +109,34 @@ func Test_hasNewline(t *testing.T) {
 			assert.NoError(t, ToJSON(v, &b))
 			if got := hasNewline(string(b.Bytes())); got {
 				t.Errorf("hasNewline(%q) = %v, want false", tt.input, got)
+			}
+		})
+	}
+}
+
+func TestCanonicalize(t *testing.T) {
+	tests := []struct {
+		name    string
+		JSON    []byte
+		want    []byte
+		wantErr bool
+	}{
+		{
+			"object",
+			[]byte("  {  \"z\"   : 1, \n \"a\":    2  } \r"),
+			[]byte("{\"a\":2,\"z\":1}"),
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := Canonicalize(tt.JSON)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Canonicalize() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Canonicalize() = %v, want %v", got, tt.want)
 			}
 		})
 	}

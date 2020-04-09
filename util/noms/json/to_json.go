@@ -46,6 +46,15 @@ func (w *noNewlineWriter) Write(p []byte) (int, error) {
 	return n, err
 }
 
+// Canonicalize round-trips the json to canonicalize it.
+func Canonicalize(JSON []byte) ([]byte, error) {
+	var v interface{}
+	if err := cjson.Unmarshal(JSON, &v); err != nil {
+		return nil, fmt.Errorf("couldnt parse value '%s' as json: %w", string(JSON), err)
+	}
+	return cjson.Marshal(v)
+}
+
 // ToJSON encodes a Noms value as canonical JSON.
 // It would be nice to have an option like the original noms
 // ops.Indent which would enable pretty printing via the default json library.

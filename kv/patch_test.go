@@ -59,7 +59,7 @@ func TestDiff(t *testing.T) {
 			j, err := json.Marshal(r)
 			assert.NoError(err, t.label)
 			assert.Equal("["+strings.Join(t.expectedResult, ",")+"]", string(j), t.label)
-			got, err := ApplyPatch(from, r)
+			got, err := ApplyPatch(noms, from, r)
 			es, gots := types.EncodedValue(to.NomsMap()), types.EncodedValue(got.NomsMap())
 			assert.Equal(es, gots, "%s expected %s got %s", t.label, es, gots)
 			assert.Equal(to.Checksum(), got.Checksum(), "%s expected %s got %s", t.label, es, gots)
@@ -85,7 +85,7 @@ func TestTopLevelRemove(t *testing.T) {
 		Operation{OpRemove, "/", []byte{}},
 		Operation{OpReplace, "/b", []byte("\"bb\"")},
 	}
-	r, err := ApplyPatch(from, ops)
+	r, err := ApplyPatch(noms, from, ops)
 	assert.NoError(err)
 	assert.Equal(types.EncodedValue(r.nm), types.EncodedValue(to.nm))
 	assert.Equal(to.Checksum(), r.Checksum(), "expected %s, got %s", to.DebugString(), r.DebugString())

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
 
 	"roci.dev/diff-server/util/time"
@@ -69,9 +70,9 @@ func TestInject(t *testing.T) {
 			db, err := s.GetDB("accountID", "clientID")
 			assert.NoError(err, msg)
 			m := db.Head().Data(db.Noms())
-			v, err := m.Get("foo")
-			assert.NoError(err, msg)
-			assert.Equal("\"bar\"", string(v), msg)
+			v, got := m.Get(types.String("foo"))
+			assert.True(got, msg)
+			assert.True(types.String("bar").Equals(v), msg)
 		}
 	}
 }

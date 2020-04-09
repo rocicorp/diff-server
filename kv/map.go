@@ -6,14 +6,13 @@ import (
 	"fmt"
 
 	"roci.dev/diff-server/util/chk"
+	nomsjson "roci.dev/diff-server/util/noms/json"
 
 	"github.com/attic-labs/noms/go/types"
-	cjson "github.com/gibson042/canonicaljson-go"
-	nomsjson "roci.dev/diff-server/util/noms/json"
 )
 
-// Map is a map from string key to json bytes. Map is
-// NOT threadsafe.
+// Map is a map from String key to Map representing JSON.
+// Map is NOT threadsafe.
 type Map struct {
 	noms types.ValueReadWriter
 	nm   types.Map
@@ -36,7 +35,7 @@ func ComputeChecksum(nm types.Map) Checksum {
 	c := Checksum{}
 	for mi := nm.Iterator(); mi.Valid(); mi.Next() {
 		k := string(mi.Key().(types.String))
-		v, err := bytesFromNomsValue(mi.Value())
+		v, err := toJSON(mi.Value())
 		if err != nil {
 			chk.Fail("Failed to serialize value to json.")
 		}
@@ -51,18 +50,14 @@ func (m Map) NomsMap() types.Map {
 }
 
 // Has returns true if there exists a value for the given key.
-func (m Map) Has(key string) bool {
-	return m.nm.Has(types.String(key))
+func (m Map) Has(key types.String) bool {
+	return m.nm.Has(key)
 }
 
-// Get returns the canonical json bytes for the given key.
-func (m Map) Get(key string) ([]byte, error) {
-	value, ok := m.nm.MaybeGet(types.String(key))
-	if !ok {
-		return nil, nil
-	}
-
-	return bytesFromNomsValue(value)
+// Get returns the Value for the given key and a bool indicating
+// if it was gotten.
+func (m Map) Get(key types.String) (types.Value, bool) {
+	return m.nm.MaybeGet(key)
 }
 
 // Empty returns true if the Map is empty.
@@ -70,7 +65,7 @@ func (m Map) Empty() bool {
 	return m.nm.Empty()
 }
 
-func bytesFromNomsValue(value types.Valuable) ([]byte, error) {
+func toJSON(value types.Valuable) ([]byte, error) {
 	var b bytes.Buffer
 	if err := nomsjson.ToJSON(value.Value(), &b); err != nil {
 		return []byte{}, err
@@ -107,74 +102,55 @@ type MapEditor struct {
 }
 
 // Has returns true if there exists a value for the given key.
-func (me MapEditor) Has(key string) bool {
-	return me.nme.Has(types.String(key))
+func (me MapEditor) Has(key types.String) bool {
+	return me.nme.Has(key)
 }
 
-// Get returns the canonical json bytes for the given key.
-func (me MapEditor) Get(key string) ([]byte, error) {
-	nk := types.String(key)
-	if !me.nme.Has(nk) {
-		return nil, nil
+// Get returns the Value for the given key and a bool indicating if it was gotten.
+func (me MapEditor) Get(key types.String) (types.Value, bool) {
+	if !me.nme.Has(key) {
+		return nil, false
 	}
 
-	value := me.nme.Get(nk)
-	return bytesFromNomsValue(value)
+	return me.nme.Get(key).Value(), true
 }
 
-// Set sets the value for a given key. Set canonicalizes value.
-func (me *MapEditor) Set(key string, value []byte) error {
+// Set sets the value for a given key. Set requires that the value has been
+// be parsed from canonical json, otherwise we might parse two different
+// values for the same canonical json.
+func (me *MapEditor) Set(key types.String, value types.Value) error {
 	if key == "" {
 		return errors.New("key must be non-empty")
 	}
-
-	// Round trip to canonicalize. Note in the following lines we are going:
-	//     json -> go -> canonical json -> noms
-	// It is tempting to try to save a step by going:
-	//     json -> noms -> canonical json
-	// and use the intermediate noms value. Unfortunately, we can't because
-	// there is no guarantee that it would be the same as the noms value parsed
-	// from the canonical json. For example, it might have unnormalized strings.
-	var v interface{}
-	if err := cjson.Unmarshal(value, &v); err != nil {
-		return fmt.Errorf("couldnt parse value '%s' as json: %w", string(value), err)
-	}
-	canonicalizedValue, err := cjson.Marshal(v)
-	if err != nil {
-		return err
-	}
-	nv, err := nomsjson.FromJSON(bytes.NewReader(canonicalizedValue), me.noms)
-	if err != nil {
-		return err
-	}
-
-	nk := types.String(key)
-	if me.nme.Has(nk) {
+	if me.nme.Has(key) {
 		// Have to do this in order to properly update checksum.
 		if err := me.Remove(key); err != nil {
 			return err
 		}
 	}
 
-	me.nme.Set(nk, nv)
-	me.sum.Add(key, canonicalizedValue)
+	JSON, err := toJSON(value)
+	if err != nil {
+		return err
+	}
+	me.nme.Set(key, value)
+	me.sum.Add(string(key), JSON)
 	return nil
 }
 
 // Remove removes a key from the Map.
-func (me *MapEditor) Remove(key string) error {
-	nk := types.String(key)
-	if !me.nme.Has(nk) {
+func (me *MapEditor) Remove(key types.String) error {
+	// Need the old value to update the checksum.
+	oldValue, got := me.Get(key)
+	if !got {
 		return nil
 	}
-
-	// Need the old value to update the checksum.
-	oldValue, err := me.Get(key)
+	oldValueJSON, err := toJSON(oldValue)
 	if err != nil {
 		return err
 	}
-	me.sum.Remove(key, oldValue)
-	me.nme.Remove(nk)
+	me.sum.Remove(string(key), oldValueJSON)
+	me.nme.Remove(key)
 
 	return nil
 }
