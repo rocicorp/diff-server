@@ -1,3 +1,5 @@
+![Go](https://github.com/rocicorp/diff-server/workflows/Go/badge.svg)
+
 # Replicache Diff Server
 
 This repository implements the Replicache Diff Server. See [Replicache](https://github.com/rocicorp/replicache) for more information.
