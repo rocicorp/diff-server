@@ -4,8 +4,6 @@ import (
 	"bytes"
 
 	"github.com/attic-labs/noms/go/types"
-	nj "github.com/attic-labs/noms/go/util/json"
-
 	"roci.dev/diff-server/util/chk"
 )
 
@@ -28,16 +26,16 @@ func Make(noms types.ValueReadWriter, v types.Value) Value {
 
 func (v Value) MarshalJSON() ([]byte, error) {
 	buf := &bytes.Buffer{}
-	nj.ToJSON(v.Value, buf, nj.ToOptions{
-		Lists: true,
-		Maps:  true,
-	})
+	err := ToJSON(v.Value, buf)
+	if err != nil {
+		return nil, err
+	}
 	return buf.Bytes(), nil
 }
 
 func (v *Value) UnmarshalJSON(data []byte) error {
 	chk.NotNil(v.Noms, "Need to set Noms field to unmarshal from JSON")
-	r, err := nj.FromJSON(bytes.NewReader(data), v.Noms, nj.FromOptions{})
+	r, err := FromJSON(bytes.NewReader(data), v.Noms)
 	if err != nil {
 		return err
 	}
