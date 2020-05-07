@@ -151,11 +151,7 @@ func maybeGetAndStoreNewClientView(db *db.DB, clientViewAuth string, url string,
 func storeClientView(db *db.DB, cvResp servetypes.ClientViewResponse) error {
 	me := kv.NewMap(db.Noms()).Edit()
 	for k, JSON := range cvResp.ClientView {
-		canonicalJSON, err := nomsjson.Canonicalize(JSON)
-		if err != nil {
-			return fmt.Errorf("error parsing clientview: %w", err)
-		}
-		v, err := nomsjson.FromJSON(bytes.NewReader(canonicalJSON), db.Noms())
+		v, err := nomsjson.FromJSON(JSON, db.Noms())
 		if err != nil {
 			return fmt.Errorf("error parsing clientview: %w", err)
 		}

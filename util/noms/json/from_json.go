@@ -5,6 +5,7 @@
 package json
 
 import (
+	"bytes"
 	"io"
 	"reflect"
 
@@ -76,7 +77,18 @@ func NomsValueFromDecodedJSON(vrw types.ValueReadWriter, o interface{}) types.Va
 	return nomsValueFromDecodedJSONBase(vrw, o)
 }
 
-func FromJSON(r io.Reader, vrw types.ValueReadWriter) (types.Value, error) {
+// FromJSON canonicalizes the input JSON and parses a Noms Value from it. The input
+// slice is untouched. Canonicalization involves an extra round trip through Noms.
+// This process is, uh, ripe for optimization.
+func FromJSON(JSON []byte, vrw types.ValueReadWriter) (types.Value, error) {
+	c, err := Canonicalize(JSON)
+	if err != nil {
+		return nil, err
+	}
+	return parseValue(bytes.NewReader(c), vrw)
+}
+
+func parseValue(r io.Reader, vrw types.ValueReadWriter) (types.Value, error) {
 	dec := cjson.NewDecoder(r)
 	// TODO: This is pretty inefficient. It would be better to parse the JSON directly into Noms values,
 	// rather than going through a pile of Go interfaces.

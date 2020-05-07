@@ -5,10 +5,12 @@
 package json
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/attic-labs/noms/go/chunks"
 	"github.com/attic-labs/noms/go/types"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -80,4 +82,57 @@ func (suite *LibTestSuite) TestCompositeTypes() {
 func (suite *LibTestSuite) TestPanicOnUnsupportedType() {
 	vs := suite.vs
 	suite.Panics(func() { NomsValueFromDecodedJSON(vs, map[int]string{1: "one"}) }, "Should panic on map[int]string!")
+}
+
+func TestFromJSON(t *testing.T) {
+	assert := assert.New(t)
+	noms := types.NewValueStore((&chunks.TestStorage{}).NewView())
+
+	tests := []struct {
+		name    string
+		in      string
+		want    types.Value
+		wantErr string
+	}{
+		{
+			"string",
+			`"foo"`,
+			types.String("foo"),
+			"",
+		},
+		{
+			"ensure canonicalizes",
+			`"\u000b"`,
+			types.String("\u000B"),
+			"",
+		},
+		{
+			"map",
+			`{"foo": "bar"}`,
+			types.NewMap(noms, types.String("foo"), types.String("bar")),
+			"",
+		},
+		{
+			"error: empty value",
+			``,
+			nil,
+			"couldn't parse value '' as json",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := FromJSON([]byte(tt.in), noms)
+			if tt.wantErr != "" {
+				assert.Error(err)
+				assert.Regexp(tt.wantErr, err.Error())
+			} else {
+				assert.NoError(err, tt.name)
+				gotVal := "<nil>"
+				if got != nil {
+					gotVal = fmt.Sprintf("%s", types.EncodedValue(got))
+				}
+				assert.True(tt.want.Equals(got), "%s: want %s got %s", tt.name, types.EncodedValue(tt.want), gotVal)
+			}
+		})
+	}
 }
