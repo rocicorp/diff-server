@@ -50,7 +50,7 @@ func (w *noNewlineWriter) Write(p []byte) (int, error) {
 func Canonicalize(JSON []byte) ([]byte, error) {
 	var v interface{}
 	if err := cjson.Unmarshal(JSON, &v); err != nil {
-		return nil, fmt.Errorf("couldnt parse value '%s' as json: %w", string(JSON), err)
+		return nil, fmt.Errorf("couldn't parse value '%s' as json: %w", string(JSON), err)
 	}
 	return cjson.Marshal(v)
 }

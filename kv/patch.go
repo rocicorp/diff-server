@@ -131,9 +131,7 @@ func ApplyPatch(vrw types.ValueReadWriter, to Map, patch []Operation) (Map, erro
 		p := types.String(jsonPointerUnescape(op.Path[1:]))
 		switch op.Op {
 		case OpAdd, OpReplace:
-			// Note: might be smart to canonicalize op.Value here before parsing the Noms
-			// value in case it is not canonicalized.
-			v, err := nomsjson.FromJSON(bytes.NewReader(op.Value), vrw)
+			v, err := nomsjson.FromJSON(op.Value, vrw)
 			if err != nil {
 				return Map{}, fmt.Errorf("couldnt parse value from JSON '%s': %w", op.Value, err)
 			}

@@ -35,7 +35,7 @@ func (v Value) MarshalJSON() ([]byte, error) {
 
 func (v *Value) UnmarshalJSON(data []byte) error {
 	chk.NotNil(v.Noms, "Need to set Noms field to unmarshal from JSON")
-	r, err := FromJSON(bytes.NewReader(data), v.Noms)
+	r, err := FromJSON(data, v.Noms)
 	if err != nil {
 		return err
 	}
