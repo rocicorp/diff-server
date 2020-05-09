@@ -69,7 +69,7 @@ func (s *Service) pull(rw http.ResponseWriter, req *http.Request) {
 
 	logPayload(req, body.Bytes(), db.Noms())
 
-	from, ok := hash.MaybeParse(preq.BaseStateID)
+	fromHash, ok := hash.MaybeParse(preq.BaseStateID)
 	if preq.BaseStateID != "" && !ok {
 		clientError(rw, http.StatusBadRequest, "Invalid baseStateID")
 		return
@@ -88,16 +88,17 @@ func (s *Service) pull(rw http.ResponseWriter, req *http.Request) {
 	cvReq := servetypes.ClientViewRequest{}
 	cvInfo := maybeGetAndStoreNewClientView(db, preq.ClientViewAuth, clientViewURL, s.clientViewGetter, cvReq)
 
-	patch, err := db.Diff(from, *fromChecksum)
+	head := db.Head()
+	patch, err := db.Diff(fromHash, *fromChecksum, head)
 	if err != nil {
 		serverError(rw, err)
 		return
 	}
 	hsresp := servetypes.PullResponse{
-		StateID:        db.Head().Original.Hash().String(),
-		LastMutationID: uint64(db.Head().Value.LastMutationID),
+		StateID:        head.Original.Hash().String(),
+		LastMutationID: uint64(head.Value.LastMutationID),
 		Patch:          patch,
-		Checksum:       string(db.Head().Value.Checksum),
+		Checksum:       string(head.Value.Checksum),
 		ClientViewInfo: cvInfo,
 	}
 	resp, err := json.Marshal(hsresp)
@@ -168,9 +169,9 @@ func storeClientView(db *db.DB, cvResp servetypes.ClientViewResponse) error {
 	}
 	if cvResp.LastMutationID == uint64(hv.LastMutationID) && m.Checksum() == hvc.String() {
 		log.Print("INFO: neither lastMutationID nor checksum changed; nop")
-	} else {
-		err = db.PutData(m, cvResp.LastMutationID)
+		return nil
 	}
+	_, err = db.PutData(m, cvResp.LastMutationID)
 	return err
 }
 

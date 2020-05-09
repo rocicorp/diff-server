@@ -241,7 +241,7 @@ func TestAPI(t *testing.T) {
 		db, err := db.New(noms.GetDataset("client/clientid"))
 		assert.NoError(err)
 		m := kv.NewMapForTest(noms, "foo", `"bar"`)
-		err = db.PutData(m, 1 /*lastMutationID*/)
+		_, err = db.PutData(m, 1 /*lastMutationID*/)
 		assert.NoError(err)
 
 		msg := fmt.Sprintf("test case %d: %s", i, t.pullReq)
