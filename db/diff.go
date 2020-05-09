@@ -23,17 +23,17 @@ func fullSync(db *DB, from hash.Hash) ([]kv.Operation, Commit) {
 	return r, makeCommit(db.Noms(), types.Ref{}, datetime.Epoch, db.ds.Database().WriteValue(m.NomsMap()), m.NomsChecksum(), 0 /*lastMutationID*/)
 }
 
-func (db *DB) Diff(from hash.Hash, fromChecksum kv.Checksum) ([]kv.Operation, error) {
+func (db *DB) Diff(fromHash hash.Hash, fromChecksum kv.Checksum, to Commit) ([]kv.Operation, error) {
 	r := []kv.Operation{}
-	v := db.Noms().ReadValue(from)
+	v := db.Noms().ReadValue(fromHash)
 	var fc Commit
 	var err error
 	if v == nil {
-		r, fc = fullSync(db, from)
+		r, fc = fullSync(db, fromHash)
 	} else {
 		err = marshal.Unmarshal(v, &fc)
 		if err != nil {
-			log.Printf("Error: Requested sync basis %s is not a commit: %#v", from, v)
+			log.Printf("Error: Requested sync basis %s is not a commit: %#v", fromHash, v)
 			return nil, errors.New("Invalid baseStateID")
 		}
 	}
@@ -44,12 +44,12 @@ func (db *DB) Diff(from hash.Hash, fromChecksum kv.Checksum) ([]kv.Operation, er
 		return nil, errors.New("unable to parse commit checksum from db")
 	} else if !fcChecksum.Equal(fromChecksum) {
 		log.Printf("Error: checksum mismatch; %s from client, %s in db", fromChecksum.String(), fcChecksum.String())
-		r, fc = fullSync(db, from)
+		r, fc = fullSync(db, fromHash)
 	}
 
-	if !fc.Value.Data.Equals(db.head.Value.Data) {
+	if !fc.Value.Data.Equals(to.Value.Data) {
 		fm := fc.Data(db.Noms())
-		tm := db.head.Data(db.Noms())
+		tm := to.Data(db.Noms())
 		r, err = kv.Diff(fm, tm, r)
 		if err != nil {
 			return nil, err
