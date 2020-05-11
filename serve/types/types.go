@@ -26,7 +26,9 @@ type ClientViewInfo struct {
 	ErrorMessage   string `json:"errorMessage"`
 }
 
-type ClientViewRequest struct{}
+type ClientViewRequest struct {
+	ClientID string `json:"clientID"`
+}
 
 type ClientViewResponse struct {
 	ClientView     map[string]json.RawMessage `json:"clientView"`

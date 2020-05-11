@@ -85,7 +85,9 @@ func (s *Service) pull(rw http.ResponseWriter, req *http.Request) {
 		log.Printf("WARNING: overriding all client view URLs with %s", s.overridClientViewURL)
 		clientViewURL = s.overridClientViewURL
 	}
-	cvReq := servetypes.ClientViewRequest{}
+	cvReq := servetypes.ClientViewRequest{
+		ClientID: preq.ClientID,
+	}
 	cvInfo := maybeGetAndStoreNewClientView(db, preq.ClientViewAuth, clientViewURL, s.clientViewGetter, cvReq)
 
 	head := db.Head()
