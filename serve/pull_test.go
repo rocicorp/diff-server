@@ -272,6 +272,7 @@ func TestAPI(t *testing.T) {
 			assert.True(fcvg.called, msg)
 			assert.Equal(expectedCVURL, fcvg.gotURL, msg)
 			assert.Equal(t.expCVAuth, fcvg.gotAuth, msg)
+			assert.Equal("clientid", fcvg.gotClientID)
 		}
 	}
 }
@@ -281,14 +282,16 @@ type fakeClientViewGet struct {
 	code int
 	err  error
 
-	called  bool
-	gotURL  string
-	gotAuth string
+	called      bool
+	gotURL      string
+	gotAuth     string
+	gotClientID string
 }
 
 func (f *fakeClientViewGet) Get(url string, req servetypes.ClientViewRequest, authToken string) (servetypes.ClientViewResponse, int, error) {
 	f.called = true
 	f.gotURL = url
 	f.gotAuth = authToken
+	f.gotClientID = req.ClientID
 	return f.resp, f.code, f.err
 }
