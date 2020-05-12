@@ -16,9 +16,13 @@ import (
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/attic-labs/noms/go/util/verbose"
 	"github.com/dgrijalva/jwt-go"
+
 	"roci.dev/diff-server/db"
 	servetypes "roci.dev/diff-server/serve/types"
 	rlog "roci.dev/diff-server/util/log"
+
+	// Log all HTTP requests
+	_ "roci.dev/diff-server/util/loghttp"
 )
 
 var (

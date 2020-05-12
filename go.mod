@@ -9,6 +9,8 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gibson042/canonicaljson-go v1.0.3
 	github.com/golang/protobuf v1.3.1 // indirect
+	github.com/motemen/go-loghttp v0.0.0-20170804080138-974ac5ceac27
+	github.com/motemen/go-nuts v0.0.0-20190725124253-1d2432db96b0 // indirect
 	github.com/onsi/ginkgo v1.8.0 // indirect
 	github.com/onsi/gomega v1.5.0 // indirect
 	github.com/pkg/errors v0.9.1
