@@ -17,6 +17,7 @@ import (
 	servepkg "roci.dev/diff-server/serve"
 	"roci.dev/diff-server/serve/accounts"
 	rlog "roci.dev/diff-server/util/log"
+	"roci.dev/diff-server/util/loghttp"
 	"roci.dev/diff-server/util/version"
 )
 
@@ -126,6 +127,6 @@ func serve(parent *kingpin.Application, sps *string, errs io.Writer) {
 		ps := fmt.Sprintf(":%d", *port)
 		log.Printf("Listening on %s...", ps)
 		s := servepkg.NewService(*sps, accounts.Accounts(), *overrideClientViewURL, servepkg.ClientViewGetter{}, *enableInject)
-		return http.ListenAndServe(fmt.Sprintf(":%d", *port), s)
+		return http.ListenAndServe(fmt.Sprintf(":%d", *port), loghttp.Wrap(s))
 	})
 }
