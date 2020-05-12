@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	gt "time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -28,6 +29,15 @@ func TestServe(t *testing.T) {
 
 	args := append([]string{"--db=" + dir, "serve", "--port=8674"})
 	go impl(args, strings.NewReader(""), os.Stdout, os.Stderr, func(_ int) {})
+
+	// Wait for server to start...
+	for {
+		gt.Sleep(100 * gt.Millisecond)
+		resp, err := http.Get("http://localhost:8674/")
+		if err == nil && resp.StatusCode == http.StatusOK {
+			break
+		}
+	}
 
 	const code = `function add(id, d) { var v = db.get(id) || 0; v += d; db.put(id, v); return v; }`
 	tc := []struct {
