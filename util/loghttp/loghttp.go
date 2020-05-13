@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
-	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/http/httputil"
 
 	lh "github.com/motemen/go-loghttp"
+	zl "github.com/rs/zerolog"
+	zlog "github.com/rs/zerolog/log"
 
 	// Import go-loghttp/global to override default http transport.
 	_ "github.com/motemen/go-loghttp/global"
@@ -18,36 +18,42 @@ import (
 
 func init() {
 	lh.DefaultLogRequest = func(req *http.Request) {
-		buf := &bytes.Buffer{}
-		if req.Body != nil {
-			_, err := io.Copy(buf, req.Body)
-			if err != nil {
-				log.Printf("ERROR: Could not read request body: %v", err)
-				return
-			}
+		dumped, err := httputil.DumpRequest(req, true)
+		if err != nil {
+			zlog.Err(err).Stack().Msg("Could not dump request")
+			return
 		}
-		req.Body = ioutil.NopCloser(buf)
-		log.Printf("Outgoing --> %s %s %s\n", req.Method, req.URL, string(buf.Bytes()))
+		// TODO: Properly contextualize these logs.
+		zlog.Debug().
+			Timestamp().
+			Str("method", req.Method).
+			Str("url", req.URL.String()).
+			Bytes("dump", dumped).
+			Str("dir", "-->").
+			Msg("Outgoing request")
 	}
 
 	lh.DefaultLogResponse = func(resp *http.Response) {
-		buf := &bytes.Buffer{}
-		if resp.Body != nil {
-			_, err := io.Copy(buf, resp.Body)
-			if err != nil {
-				log.Printf("ERROR: Could not read response body: %v", err)
-				return
-			}
+		dumped, err := httputil.DumpResponse(resp, true)
+		if err != nil {
+			zlog.Err(err).Stack().Msg("Could not dump response")
+			return
 		}
-		resp.Body = ioutil.NopCloser(buf)
-		log.Printf("Outgoing <-- %d %s %s\n", resp.StatusCode, resp.Request.URL, string(buf.Bytes()))
+		zlog.Debug().
+			Timestamp().
+			Str("method", resp.Request.Method).
+			Str("url", resp.Request.URL.String()).
+			Int("status", resp.StatusCode).
+			Bytes("dump", dumped).
+			Str("dir", "<--").
+			Msg("Outgoing request")
 	}
 }
 
 // Wrap wraps the given handler with a Handler that logs HTTP requests
 // and responses.
-func Wrap(handler http.Handler) Handler {
-	return Handler{wrapped: handler}
+func Wrap(handler http.Handler, l zl.Logger) Handler {
+	return Handler{wrapped: handler, l: l}
 }
 
 // Handler is a wrapper for http.Handlers that logs the HTTP request and
@@ -57,25 +63,40 @@ func Wrap(handler http.Handler) Handler {
 // so we settle for logging the response status code and response body for now.
 type Handler struct {
 	wrapped http.Handler
+	l       zl.Logger
 }
 
 // ServeHTTP logs the request, calls the underlying handler, and logs the response.
-func (l Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	dump, err := httputil.DumpRequest(r, true)
+func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	dumped, err := httputil.DumpRequest(r, true)
 	if err != nil {
+		h.l.Err(err).Stack().Msg("Could not dump request")
 		http.Error(w, fmt.Sprint(err), http.StatusInternalServerError)
 		return
 	}
-	log.Printf("--> Incoming %s\n", dump)
+
+	ll := h.l.With().
+		Str("method", r.Method).
+		Str("req", r.URL.String()).
+		Logger()
+
+	ll.Debug().
+		Str("dir", "-->").
+		Bytes("dump", dumped).
+		Msg("Incoming request")
 
 	rl := &responseLogger{ResponseWriter: w, status: 200}
-	l.wrapped.ServeHTTP(rl, r)
+	h.wrapped.ServeHTTP(rl, r)
 	body, err := maybeUnzip(rl.responseBody.Bytes())
 	if err != nil {
-		log.Printf("ERROR: %s", err.Error())
+		ll.Err(err).Stack().Msg("Could not unzip")
 		return
 	}
-	log.Printf("<-- Incoming %d %s\n", rl.status, string(body))
+	ll.Debug().
+		Str("dir", "<--").
+		Int("status", rl.status).
+		Bytes("body", body).
+		Msg("Incoming request")
 }
 
 func maybeUnzip(b []byte) ([]byte, error) {

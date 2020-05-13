@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -12,11 +11,12 @@ import (
 	"syscall"
 
 	"github.com/attic-labs/noms/go/spec"
+	zl "github.com/rs/zerolog"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	servepkg "roci.dev/diff-server/serve"
 	"roci.dev/diff-server/serve/accounts"
-	rlog "roci.dev/diff-server/util/log"
+	"roci.dev/diff-server/util/log"
 	"roci.dev/diff-server/util/loghttp"
 	"roci.dev/diff-server/util/version"
 )
@@ -35,6 +35,8 @@ func main() {
 }
 
 func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
+	l := log.Default()
+
 	app := kingpin.New("diffs", "")
 	app.ErrorWriter(errs)
 	app.UsageWriter(errs)
@@ -71,13 +73,6 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 			return nil
 		}
 
-		// Init logging
-		logOptions := rlog.Options{}
-		if pc.SelectedCommand.Model().Name == "serve" {
-			logOptions.Prefix = true
-		}
-		rlog.Init(errs, logOptions)
-
 		if *tf != nil {
 			err := trace.Start(*tf)
 			if err != nil {
@@ -102,7 +97,7 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 		return nil
 	})
 
-	serve(app, sps, errs)
+	serve(app, sps, errs, l)
 
 	if len(args) == 0 {
 		app.Usage(args)
@@ -118,15 +113,14 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 
 type gsp func() (spec.Spec, error)
 
-func serve(parent *kingpin.Application, sps *string, errs io.Writer) {
+func serve(parent *kingpin.Application, sps *string, errs io.Writer, l zl.Logger) {
 	kc := parent.Command("serve", "Starts a local diff-server.")
 	port := kc.Flag("port", "The port to run on").Default("7001").Int()
 	enableInject := kc.Flag("enable-inject", "Enable /inject endpoint which writes directly to the database for testing").Default("false").Bool()
 	overrideClientViewURL := parent.Flag("client-view", "URL to use for all accounts' Client View").PlaceHolder("http://localhost:8000/replicache-client-view").Default("").String()
 	kc.Action(func(_ *kingpin.ParseContext) error {
-		ps := fmt.Sprintf(":%d", *port)
-		log.Printf("Listening on %s...", ps)
+		l.Info().Msgf("Listening on %d...", *port)
 		s := servepkg.NewService(*sps, accounts.Accounts(), *overrideClientViewURL, servepkg.ClientViewGetter{}, *enableInject)
-		return http.ListenAndServe(fmt.Sprintf(":%d", *port), loghttp.Wrap(s))
+		return http.ListenAndServe(fmt.Sprintf(":%d", *port), loghttp.Wrap(s, l))
 	})
 }

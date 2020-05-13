@@ -9,14 +9,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
 
-	"github.com/attic-labs/noms/go/datas"
 	"github.com/attic-labs/noms/go/hash"
 	"github.com/attic-labs/noms/go/types"
+	zl "github.com/rs/zerolog"
 
 	"roci.dev/diff-server/db"
 	"roci.dev/diff-server/kv"
@@ -24,76 +23,74 @@ import (
 	nomsjson "roci.dev/diff-server/util/noms/json"
 )
 
-func (s *Service) pull(rw http.ResponseWriter, req *http.Request) {
+func (s *Service) pull(rw http.ResponseWriter, req *http.Request, l zl.Logger) {
 	if req.Method != "POST" {
-		unsupportedMethodError(rw, req.Method)
+		unsupportedMethodError(rw, req.Method, l)
 		return
 	}
 
 	body := bytes.Buffer{}
 	_, err := io.Copy(&body, req.Body)
 	if err != nil {
-		serverError(rw, fmt.Errorf("could not read body: %w", err))
+		serverError(rw, fmt.Errorf("could not read body: %w", err), l)
 		return
 	}
 
 	var preq servetypes.PullRequest
 	err = json.Unmarshal(body.Bytes(), &preq)
 	if err != nil {
-		serverError(rw, fmt.Errorf("could not unmarshal body to json: %w", err))
+		serverError(rw, fmt.Errorf("could not unmarshal body to json: %w", err), l)
 		return
 	}
 
 	// TODO auth
 	accountName := req.Header.Get("Authorization")
 	if accountName == "" {
-		clientError(rw, http.StatusBadRequest, "Missing Authorization header")
+		clientError(rw, http.StatusBadRequest, "Missing Authorization header", l)
 		return
 	}
 	acct, ok := lookupAccount(accountName, s.accounts)
 	if !ok {
-		clientError(rw, http.StatusBadRequest, fmt.Sprintf("Unknown account: %s", accountName))
+		clientError(rw, http.StatusBadRequest, fmt.Sprintf("Unknown account: %s", accountName), l)
 		return
 	}
 
 	if preq.ClientID == "" {
-		clientError(rw, http.StatusBadRequest, "Missing clientID")
+		clientError(rw, http.StatusBadRequest, "Missing clientID", l)
 		return
 	}
 
 	db, err := s.GetDB(accountName, preq.ClientID)
 	if err != nil {
-		serverError(rw, err)
+		serverError(rw, err, l)
 		return
 	}
 
-	logPayload(req, body.Bytes(), db.Noms())
-
 	fromHash, ok := hash.MaybeParse(preq.BaseStateID)
 	if preq.BaseStateID != "" && !ok {
-		clientError(rw, http.StatusBadRequest, "Invalid baseStateID")
+		clientError(rw, http.StatusBadRequest, "Invalid baseStateID", l)
 		return
 	}
 	fromChecksum, err := kv.ChecksumFromString(preq.Checksum)
 	if err != nil {
-		clientError(rw, http.StatusBadRequest, "Invalid checksum")
+		clientError(rw, http.StatusBadRequest, "Invalid checksum", l)
 		return
 	}
 
 	clientViewURL := acct.ClientViewURL
 	if s.overridClientViewURL != "" {
-		log.Printf("WARNING: overriding all client view URLs with %s", s.overridClientViewURL)
+		l.Debug().Msgf("WARNING: overriding all client view URLs with %s", s.overridClientViewURL)
 		clientViewURL = s.overridClientViewURL
 	}
 	cvReq := servetypes.ClientViewRequest{
 		ClientID: preq.ClientID,
 	}
-	cvInfo := maybeGetAndStoreNewClientView(db, preq.ClientViewAuth, clientViewURL, s.clientViewGetter, cvReq)
+	cvInfo := maybeGetAndStoreNewClientView(db, preq.ClientViewAuth, clientViewURL, s.clientViewGetter, cvReq, l)
 
 	head := db.Head()
-	patch, err := db.Diff(fromHash, *fromChecksum, head)
+	patch, err := db.Diff(fromHash, *fromChecksum, head, l)
 	if err != nil {
-		serverError(rw, err)
+		serverError(rw, err, l)
 		return
 	}
 	hsresp := servetypes.PullResponse{
@@ -105,7 +102,7 @@ func (s *Service) pull(rw http.ResponseWriter, req *http.Request) {
 	}
 	resp, err := json.Marshal(hsresp)
 	if err != nil {
-		serverError(rw, err)
+		serverError(rw, err, l)
 		return
 	}
 	rw.Header().Set("Content-type", "application/json")
@@ -119,7 +116,7 @@ func (s *Service) pull(rw http.ResponseWriter, req *http.Request) {
 
 	_, err = io.Copy(w, bytes.NewReader(resp))
 	if err != nil {
-		serverError(rw, err)
+		serverError(rw, err, l)
 	}
 	w.Write([]byte{'\n'})
 	if c, ok := w.(io.Closer); ok {
@@ -127,12 +124,12 @@ func (s *Service) pull(rw http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func maybeGetAndStoreNewClientView(db *db.DB, clientViewAuth string, url string, cvg clientViewGetter, cvReq servetypes.ClientViewRequest) servetypes.ClientViewInfo {
+func maybeGetAndStoreNewClientView(db *db.DB, clientViewAuth string, url string, cvg clientViewGetter, cvReq servetypes.ClientViewRequest, l zl.Logger) servetypes.ClientViewInfo {
 	clientViewInfo := servetypes.ClientViewInfo{}
 	var err error
 	defer func() {
 		if err != nil {
-			log.Printf("WARNING: got error fetching clientview: %s", err)
+			l.Info().Msgf("WARNING: got error fetching clientview: %s", err)
 			clientViewInfo.ErrorMessage = err.Error()
 		}
 	}()
@@ -147,11 +144,11 @@ func maybeGetAndStoreNewClientView(db *db.DB, clientViewAuth string, url string,
 		return clientViewInfo
 	}
 
-	err = storeClientView(db, cvResp)
+	err = storeClientView(db, cvResp, l)
 	return clientViewInfo
 }
 
-func storeClientView(db *db.DB, cvResp servetypes.ClientViewResponse) error {
+func storeClientView(db *db.DB, cvResp servetypes.ClientViewResponse, l zl.Logger) error {
 	me := kv.NewMap(db.Noms()).Edit()
 	for k, JSON := range cvResp.ClientView {
 		v, err := nomsjson.FromJSON(JSON, db.Noms())
@@ -170,15 +167,9 @@ func storeClientView(db *db.DB, cvResp servetypes.ClientViewResponse) error {
 		return fmt.Errorf("couldnt parse checksum from commit: %w", err)
 	}
 	if cvResp.LastMutationID == uint64(hv.LastMutationID) && m.Checksum() == hvc.String() {
-		log.Print("INFO: neither lastMutationID nor checksum changed; nop")
+		l.Debug().Msg("Neither lastMutationID nor checksum changed; nop")
 		return nil
 	}
 	_, err = db.PutData(m, cvResp.LastMutationID)
 	return err
-}
-
-func logPayload(req *http.Request, body []byte, noms datas.Database) {
-	r := noms.WriteValue(types.NewBlob(noms, bytes.NewReader(body)))
-	noms.Flush()
-	log.Printf("x-request-id: %s, payload: %s", req.Header.Get("X-Request-Id"), r.TargetHash())
 }
