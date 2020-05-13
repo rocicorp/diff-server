@@ -16,6 +16,7 @@ import (
 	"roci.dev/diff-server/db"
 	"roci.dev/diff-server/kv"
 	servetypes "roci.dev/diff-server/serve/types"
+	"roci.dev/diff-server/util/log"
 	"roci.dev/diff-server/util/time"
 )
 
@@ -251,7 +252,7 @@ func TestAPI(t *testing.T) {
 			req.Header.Set("Authorization", t.authHeader)
 		}
 		resp := httptest.NewRecorder()
-		s.pull(resp, req)
+		s.pull(resp, req, log.Default())
 
 		body := bytes.Buffer{}
 		_, err = io.Copy(&body, resp.Result().Body)

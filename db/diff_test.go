@@ -9,6 +9,7 @@ import (
 	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
 	"roci.dev/diff-server/kv"
+	"roci.dev/diff-server/util/log"
 )
 
 func TestDiff(t *testing.T) {
@@ -203,7 +204,7 @@ func TestDiff(t *testing.T) {
 		t.f()
 		c, err := kv.ChecksumFromString(fromChecksum)
 		assert.NoError(err)
-		r, err := db.Diff(fromID, *c, db.Head())
+		r, err := db.Diff(fromID, *c, db.Head(), log.Default())
 		if t.expectedError == "" {
 			assert.NoError(err, t.label)
 			expected, err := json.Marshal(t.expectedDiff)

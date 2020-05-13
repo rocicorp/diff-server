@@ -13,6 +13,7 @@ import (
 	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
 
+	"roci.dev/diff-server/util/log"
 	"roci.dev/diff-server/util/time"
 )
 
@@ -58,7 +59,7 @@ func TestInject(t *testing.T) {
 		req := httptest.NewRequest(t.method, "/inject", strings.NewReader(t.req))
 		req.Header.Set("Content-type", "application/json")
 		resp := httptest.NewRecorder()
-		s.inject(resp, req)
+		s.inject(resp, req, log.Default())
 
 		body := bytes.Buffer{}
 		_, err := io.Copy(&body, resp.Result().Body)

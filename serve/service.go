@@ -4,24 +4,23 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
-	"os"
 	"regexp"
-	"runtime/debug"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/attic-labs/noms/go/datas"
 	"github.com/attic-labs/noms/go/spec"
-	"github.com/attic-labs/noms/go/util/verbose"
 	"github.com/dgrijalva/jwt-go"
 
 	"roci.dev/diff-server/db"
 	servetypes "roci.dev/diff-server/serve/types"
-	rlog "roci.dev/diff-server/util/log"
+
+	zl "github.com/rs/zerolog"
 
 	// Log all HTTP requests
+	"roci.dev/diff-server/util/log"
 	_ "roci.dev/diff-server/util/loghttp"
 )
 
@@ -39,6 +38,8 @@ type Service struct {
 	overridClientViewURL string // Overrides account client view URL, eg for testing.
 	enableInject         bool
 	mu                   sync.Mutex
+
+	reqID uint64
 
 	// cvg may be nil, in which case the server skips the client view request in pull, which is
 	// useful if you are populating the db directly or in tests.
@@ -72,29 +73,26 @@ func NewService(storageRoot string, accounts []Account, overrideClientViewURL st
 }
 
 func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	rlog.Init(os.Stderr, rlog.Options{Prefix: true})
-
-	verbose.SetVerbose(true)
-	log.Println("Handling request: ", r.URL.String())
+	l := log.Default().With().Str("req", r.URL.String()).Uint64("rid", atomic.AddUint64(&s.reqID, 1)).Logger()
+	l.Info().Msg("received request")
 
 	defer func() {
 		err := recover()
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			log.Printf("handler panicked: %+v\n", err)
-			debug.PrintStack()
+			l.Error().Msgf("Handler panicked: %#v", err)
 		}
 	}()
 
 	switch r.URL.Path {
 	case "/":
-		s.hello(w, r)
+		s.hello(w, r, l)
 	case "/pull":
-		s.pull(w, r)
+		s.pull(w, r, l)
 	case "/inject":
-		s.inject(w, r)
+		s.inject(w, r, l)
 	default:
-		w.WriteHeader(http.StatusNotFound)
+		clientError(w, http.StatusNotFound, "not found", l)
 	}
 }
 
@@ -176,17 +174,17 @@ func lookupAccount(accountID string, accounts []Account) (acc Account, ok bool) 
 	return Account{}, false
 }
 
-func unsupportedMethodError(w http.ResponseWriter, m string) {
-	clientError(w, http.StatusMethodNotAllowed, fmt.Sprintf("Unsupported method: %s", m))
+func unsupportedMethodError(w http.ResponseWriter, m string, l zl.Logger) {
+	clientError(w, http.StatusMethodNotAllowed, fmt.Sprintf("Unsupported method: %s", m), l)
 }
 
-func clientError(w http.ResponseWriter, code int, body string) {
+func clientError(w http.ResponseWriter, code int, body string, l zl.Logger) {
 	w.WriteHeader(code)
-	log.Printf("Client error: HTTP %d: %s", code, body)
+	l.Error().Int("status", code).Msg(body)
 	io.Copy(w, strings.NewReader(body))
 }
 
-func serverError(w http.ResponseWriter, err error) {
+func serverError(w http.ResponseWriter, err error, l zl.Logger) {
 	w.WriteHeader(http.StatusInternalServerError)
-	log.Println(err.Error())
+	l.Error().Int("status", http.StatusInternalServerError).Err(err).Send()
 }
