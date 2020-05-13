@@ -48,12 +48,23 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 	sps := app.Flag("db", "The prefix to use for databases managed. Both local and remote databases are supported. For local databases, specify a directory path to store the database in. For remote databases, specify the http(s) URL to the database (usually https://serve.replicate.to/<mydb>).").PlaceHolder("/path/to/db").Required().String()
 	tf := app.Flag("trace", "Name of a file to write a trace to").OpenFile(os.O_RDWR|os.O_CREATE, 0644)
 	cpu := app.Flag("cpu", "Name of file to write CPU profile to").OpenFile(os.O_RDWR|os.O_CREATE, 0644)
+	lv := app.Flag("log-level", "Verbosity of logging to print").Default("info").Enum("error", "info", "debug")
 
 	app.PreAction(func(pc *kingpin.ParseContext) error {
 		if *v {
 			fmt.Println(version.Version())
 			exit(0)
 		}
+
+		switch *lv {
+		case "debug":
+			zl.SetGlobalLevel(zl.DebugLevel)
+		case "info":
+			zl.SetGlobalLevel(zl.InfoLevel)
+		case "error":
+			zl.SetGlobalLevel(zl.ErrorLevel)
+		}
+
 		return nil
 	})
 

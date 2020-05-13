@@ -71,6 +71,7 @@ func NewService(storageRoot string, accounts []Account, overrideClientViewURL st
 
 func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	l := log.Default().With().Str("req", r.URL.String()).Logger()
+	l.Info().Msg("received request")
 
 	defer func() {
 		err := recover()
