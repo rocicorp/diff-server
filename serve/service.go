@@ -89,7 +89,7 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "/inject":
 		s.inject(w, r, l)
 	default:
-		w.WriteHeader(http.StatusNotFound)
+		clientError(w, http.StatusNotFound, "not found", l)
 	}
 }
 
