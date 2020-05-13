@@ -29,8 +29,7 @@ func init() {
 			Str("method", req.Method).
 			Str("url", req.URL.String()).
 			Bytes("dump", dumped).
-			Str("dir", "-->").
-			Msg("Outgoing request")
+			Msg("Outgoing request -->")
 	}
 
 	lh.DefaultLogResponse = func(resp *http.Response) {
@@ -45,8 +44,7 @@ func init() {
 			Str("url", resp.Request.URL.String()).
 			Int("status", resp.StatusCode).
 			Bytes("dump", dumped).
-			Str("dir", "<--").
-			Msg("Outgoing request")
+			Msg("Outgoing request <--")
 	}
 }
 
@@ -81,9 +79,8 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Logger()
 
 	ll.Debug().
-		Str("dir", "-->").
 		Bytes("dump", dumped).
-		Msg("Incoming request")
+		Msg("Incoming request -->")
 
 	rl := &responseLogger{ResponseWriter: w, status: 200}
 	h.wrapped.ServeHTTP(rl, r)
@@ -93,10 +90,9 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ll.Debug().
-		Str("dir", "<--").
 		Int("status", rl.status).
 		Bytes("body", body).
-		Msg("Incoming request")
+		Msg("Incoming request <--")
 }
 
 func maybeUnzip(b []byte) ([]byte, error) {

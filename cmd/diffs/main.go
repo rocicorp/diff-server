@@ -12,6 +12,7 @@ import (
 
 	"github.com/attic-labs/noms/go/spec"
 	zl "github.com/rs/zerolog"
+	zlog "github.com/rs/zerolog/log"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	servepkg "roci.dev/diff-server/serve"
@@ -35,6 +36,7 @@ func main() {
 }
 
 func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
+	zlog.Logger = zlog.Output(zl.ConsoleWriter{Out: os.Stderr})
 	l := log.Default()
 
 	app := kingpin.New("diffs", "")
