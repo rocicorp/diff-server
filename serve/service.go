@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/attic-labs/noms/go/datas"
 	"github.com/attic-labs/noms/go/spec"
@@ -37,6 +38,8 @@ type Service struct {
 	overridClientViewURL string // Overrides account client view URL, eg for testing.
 	enableInject         bool
 	mu                   sync.Mutex
+
+	reqID uint64
 
 	// cvg may be nil, in which case the server skips the client view request in pull, which is
 	// useful if you are populating the db directly or in tests.
@@ -70,7 +73,7 @@ func NewService(storageRoot string, accounts []Account, overrideClientViewURL st
 }
 
 func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	l := log.Default().With().Str("req", r.URL.String()).Logger()
+	l := log.Default().With().Str("req", r.URL.String()).Uint64("rid", atomic.AddUint64(&s.reqID, 1)).Logger()
 	l.Info().Msg("received request")
 
 	defer func() {
