@@ -79,7 +79,6 @@ func (s *Service) pull(rw http.ResponseWriter, req *http.Request, l zl.Logger) {
 
 	clientViewURL := acct.ClientViewURL
 	if s.overridClientViewURL != "" {
-		l.Debug().Msgf("overriding all client view URLs with %s", s.overridClientViewURL)
 		clientViewURL = s.overridClientViewURL
 	}
 	cvReq := servetypes.ClientViewRequest{

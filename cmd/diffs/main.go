@@ -123,6 +123,9 @@ func serve(parent *kingpin.Application, sps *string, errs io.Writer, l zl.Logger
 	overrideClientViewURL := parent.Flag("client-view", "URL to use for all accounts' Client View").PlaceHolder("http://localhost:8000/replicache-client-view").Default("").String()
 	kc.Action(func(_ *kingpin.ParseContext) error {
 		l.Info().Msgf("Listening on %d...", *port)
+		if *overrideClientViewURL != "" {
+			l.Info().Msgf("Overriding all client view URLs with %s", *overrideClientViewURL)
+		}
 		s := servepkg.NewService(*sps, accounts.Accounts(), *overrideClientViewURL, servepkg.ClientViewGetter{}, *enableInject)
 		return http.ListenAndServe(fmt.Sprintf(":%d", *port), loghttp.Wrap(s, l))
 	})
