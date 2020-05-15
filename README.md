@@ -2,7 +2,7 @@
 
 # Replicache Diff Server
 
-This repository implements the Replicache Diff Server. See [Replicache](https://github.com/rocicorp/replicache) for more information.
+This repository implements the Replicache Diff Server. See [Replicache](https://github.com/rocicorp/replicache) for more information. See the [contributing guide](https://github.com/rocicorp/replicache/blob/master/contributing.md) there for contributing information.
 
 ## Build
 
