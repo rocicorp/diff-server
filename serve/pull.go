@@ -79,7 +79,7 @@ func (s *Service) pull(rw http.ResponseWriter, req *http.Request, l zl.Logger) {
 
 	clientViewURL := acct.ClientViewURL
 	if s.overridClientViewURL != "" {
-		l.Debug().Msgf("WARNING: overriding all client view URLs with %s", s.overridClientViewURL)
+		l.Debug().Msgf("overriding all client view URLs with %s", s.overridClientViewURL)
 		clientViewURL = s.overridClientViewURL
 	}
 	cvReq := servetypes.ClientViewRequest{
@@ -129,7 +129,7 @@ func maybeGetAndStoreNewClientView(db *db.DB, clientViewAuth string, url string,
 	var err error
 	defer func() {
 		if err != nil {
-			l.Info().Msgf("WARNING: got error fetching clientview: %s", err)
+			l.Info().Msgf("got error fetching clientview: %s", err)
 			clientViewInfo.ErrorMessage = err.Error()
 		}
 	}()

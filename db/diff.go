@@ -13,7 +13,7 @@ import (
 )
 
 func fullSync(db *DB, from hash.Hash, l zl.Logger) ([]kv.Operation, Commit) {
-	l.Info().Msgf("Requested sync %s basis could not be found - sending a full sync", from.String())
+	l.Debug().Msgf("Requested sync %s basis could not be found - sending a full sync", from.String())
 	r := []kv.Operation{
 		kv.Operation{
 			Op:   kv.OpRemove,
