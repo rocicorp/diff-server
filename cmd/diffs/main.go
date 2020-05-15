@@ -55,17 +55,7 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 			fmt.Println(version.Version())
 			exit(0)
 		}
-
-		switch *lv {
-		case "debug":
-			zl.SetGlobalLevel(zl.DebugLevel)
-		case "info":
-			zl.SetGlobalLevel(zl.InfoLevel)
-		case "error":
-			zl.SetGlobalLevel(zl.ErrorLevel)
-		}
-
-		return nil
+		return log.SetGlobalLevelFromString(*lv)
 	})
 
 	stopCPUProfile := func() {
