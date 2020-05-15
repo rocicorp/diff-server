@@ -180,11 +180,11 @@ func unsupportedMethodError(w http.ResponseWriter, m string, l zl.Logger) {
 
 func clientError(w http.ResponseWriter, code int, body string, l zl.Logger) {
 	w.WriteHeader(code)
-	l.Error().Int("status", code).Msg(body)
+	l.Info().Int("status", code).Msg(body)
 	io.Copy(w, strings.NewReader(body))
 }
 
 func serverError(w http.ResponseWriter, err error, l zl.Logger) {
 	w.WriteHeader(http.StatusInternalServerError)
-	l.Error().Int("status", http.StatusInternalServerError).Err(err).Send()
+	l.Info().Int("status", http.StatusInternalServerError).Err(err).Send()
 }
