@@ -13,7 +13,7 @@ var (
 		serve.Account{
 			ID:            "1",
 			Name:          "Replicache Sample TODO",
-			ClientViewURL: "https://replicache-sample-todo.now.sh/serve/client-view",
+			ClientViewURL: "https://replicache-sample-todo.now.sh/serve/replicache-client-view",
 		},
 	}
 )
