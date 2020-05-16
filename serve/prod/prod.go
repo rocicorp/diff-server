@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	zl "github.com/rs/zerolog"
+	zlog "github.com/rs/zerolog/log"
 
 	"roci.dev/diff-server/serve"
 	"roci.dev/diff-server/serve/accounts"
@@ -27,6 +28,7 @@ var (
 
 func init() {
 	zl.SetGlobalLevel(zl.DebugLevel)
+	zlog.Logger = zlog.Output(zl.ConsoleWriter{Out: os.Stderr, NoColor: true})
 	spec.GetAWSSession = func() *session.Session {
 		return session.Must(session.NewSession(
 			aws.NewConfig().WithRegion(aws_region).WithCredentials(
