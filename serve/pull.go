@@ -93,7 +93,7 @@ func (s *Service) pull(rw http.ResponseWriter, req *http.Request, l zl.Logger) {
 		return
 	}
 	hsresp := servetypes.PullResponse{
-		StateID:        head.Original.Hash().String(),
+		StateID:        head.NomsStruct.Hash().String(),
 		LastMutationID: uint64(head.Value.LastMutationID),
 		Patch:          patch,
 		Checksum:       string(head.Value.Checksum),
@@ -163,7 +163,7 @@ func storeClientView(db *db.DB, cvResp servetypes.ClientViewResponse, l zl.Logge
 	if err != nil {
 		return fmt.Errorf("error writing new commit: %w", err)
 	}
-	if c.Original.IsZeroValue() {
+	if c.NomsStruct.IsZeroValue() {
 		l.Debug().Msgf("Did not write a new commit (lastMutationID %d and checksum %s are identical to head); nop", cvResp.LastMutationID, m.Checksum())
 	} else {
 		basis, err := c.Basis(db.Noms())

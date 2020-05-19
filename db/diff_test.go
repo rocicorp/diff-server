@@ -36,7 +36,7 @@ func TestDiff(t *testing.T) {
 			func() {
 				m := kv.NewMapForTest(db.Noms(), "foo", `"bar"`, "hot", `"dog"`)
 				c, err := db.MaybePutData(m, 0 /*lastMutationID*/)
-				assert.False(c.Original.IsZeroValue())
+				assert.False(c.NomsStruct.IsZeroValue())
 				assert.NoError(err)
 			},
 			[]kv.Operation{
@@ -58,7 +58,7 @@ func TestDiff(t *testing.T) {
 			func() {
 				m := kv.NewMapForTest(db.Noms(), "foo", `"baz"`, "mon", `"key"`)
 				c, err := db.MaybePutData(m, 0 /*lastMutationID*/)
-				assert.False(c.Original.IsZeroValue())
+				assert.False(c.NomsStruct.IsZeroValue())
 				assert.NoError(err)
 			},
 			[]kv.Operation{
@@ -96,7 +96,7 @@ func TestDiff(t *testing.T) {
 				}
 				m := me.Build()
 				c, err := db.MaybePutData(m, 0 /*lastMutationID*/)
-				assert.False(c.Original.IsZeroValue())
+				assert.False(c.NomsStruct.IsZeroValue())
 				assert.NoError(err)
 			},
 			[]kv.Operation{
@@ -155,7 +155,7 @@ func TestDiff(t *testing.T) {
 			func() {
 				m := kv.NewMapForTest(db.Noms(), "foo", `"bar"`)
 				c, err := db.MaybePutData(m, 0 /*lastMutationID*/)
-				assert.False(c.Original.IsZeroValue())
+				assert.False(c.NomsStruct.IsZeroValue())
 				assert.NoError(err)
 				fromChecksum = "00000000"
 			},
@@ -202,7 +202,7 @@ func TestDiff(t *testing.T) {
 	}
 
 	for _, t := range tc {
-		fromID = db.Head().Original.Hash()
+		fromID = db.Head().NomsStruct.Hash()
 		var err error
 		fromChecksum = string(db.Head().Value.Checksum)
 		t.f()

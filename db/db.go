@@ -44,7 +44,7 @@ func (db *DB) initLocked() error {
 			db.Noms().WriteValue(m.NomsMap()),
 			m.NomsChecksum(),
 			0 /*lastMutationID*/)
-		db.Noms().WriteValue(genesis.Original)
+		db.Noms().WriteValue(genesis.NomsStruct)
 		return db.setHeadLocked(genesis)
 	}
 
@@ -88,7 +88,7 @@ func (db *DB) setHeadLocked(newHead Commit) error {
 }
 
 func (db *DB) Hash() hash.Hash {
-	return db.Head().Original.Hash()
+	return db.Head().NomsStruct.Hash()
 }
 
 func (db *DB) Reload() error {
@@ -125,13 +125,13 @@ func (db *DB) MaybePutData(m kv.Map, lastMutationID uint64) (Commit, error) {
 	if lastMutationID == uint64(hv.LastMutationID) && m.Checksum() == hvc.String() {
 		return Commit{}, nil
 	}
-	basis := types.NewRef(db.head.Original)
+	basis := types.NewRef(db.head.NomsStruct)
 	commit := makeCommit(db.Noms(), basis, time.DateTime(), db.Noms().WriteValue(m.NomsMap()), m.NomsChecksum(), lastMutationID)
-	db.Noms().WriteValue(commit.Original)
+	db.Noms().WriteValue(commit.NomsStruct)
 	if err := db.setHeadLocked(commit); err != nil {
 		return Commit{}, err
 	}
-	commit.Original.IsZeroValue()
+	commit.NomsStruct.IsZeroValue()
 	return commit, nil
 }
 

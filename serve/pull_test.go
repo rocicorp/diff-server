@@ -244,7 +244,7 @@ func TestAPI(t *testing.T) {
 		m := kv.NewMapForTest(noms, "foo", `"bar"`)
 		c, err := db.MaybePutData(m, 1 /*lastMutationID*/)
 		assert.NoError(err)
-		assert.False(c.Original.IsZeroValue())
+		assert.False(c.NomsStruct.IsZeroValue())
 
 		msg := fmt.Sprintf("test case %d: %s", i, t.pullReq)
 		req := httptest.NewRequest(t.pullMethod, "/sync", strings.NewReader(t.pullReq))
