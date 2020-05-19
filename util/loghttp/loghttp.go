@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
+	"strings"
 
 	lh "github.com/motemen/go-loghttp"
 	zl "github.com/rs/zerolog"
@@ -18,7 +19,12 @@ import (
 
 func init() {
 	lh.DefaultLogRequest = func(req *http.Request) {
-		dumped, err := httputil.DumpRequest(req, true)
+		// TODO respect log level setting
+		dumpBody := true
+		if strings.Index(req.Host, "dynamodb") != -1 {
+			dumpBody = false
+		}
+		dumped, err := httputil.DumpRequest(req, dumpBody)
 		if err != nil {
 			zlog.Err(err).Stack().Msg("Could not dump request")
 			return
@@ -33,7 +39,11 @@ func init() {
 	}
 
 	lh.DefaultLogResponse = func(resp *http.Response) {
-		dumped, err := httputil.DumpResponse(resp, true)
+		dumpBody := true
+		if strings.Index(resp.Request.Host, "dynamodb") != -1 {
+			dumpBody = false
+		}
+		dumped, err := httputil.DumpResponse(resp, dumpBody)
 		if err != nil {
 			zlog.Err(err).Stack().Msg("Could not dump response")
 			return
