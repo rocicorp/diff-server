@@ -3,7 +3,7 @@ package json
 import (
 	"encoding/json"
 
-	"github.com/attic-labs/noms/go/spec"
+	"github.com/attic-labs/noms/go/spec/lite"
 )
 
 type Spec struct {

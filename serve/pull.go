@@ -24,6 +24,14 @@ import (
 )
 
 func (s *Service) pull(rw http.ResponseWriter, req *http.Request, l zl.Logger) {
+	// TODO(nate): Factor this out so it's easy to add to all relevant places.
+	// This is necessary for calls from within browsers, which enforce CORS.
+	rw.Header().Set("Access-Control-Allow-Origin", "*")
+	if req.Method == "OPTIONS" {
+		rw.Header().Set("Access-Control-Allow-Headers", "Authorization")
+		return
+	}
+
 	if req.Method != "POST" {
 		unsupportedMethodError(rw, req.Method, l)
 		return
