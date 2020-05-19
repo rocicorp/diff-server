@@ -10,8 +10,23 @@ import (
 	"github.com/attic-labs/noms/go/util/datetime"
 	"github.com/stretchr/testify/assert"
 
+	"roci.dev/diff-server/kv"
 	"roci.dev/diff-server/util/noms/diff"
 )
+
+func TestBasis(t *testing.T) {
+	assert := assert.New(t)
+	db, _ := LoadTempDB(assert)
+	genesis := db.Head()
+	c, err := db.MaybePutData(kv.NewMap(db.Noms()), 2)
+	assert.NoError(err)
+	if err == nil {
+		assert.False(c.Original.IsZeroValue())
+	}
+	basis, err := c.Basis(db.Noms())
+	assert.NoError(err)
+	assert.True(genesis.Original.Equals(basis.Original))
+}
 
 func TestMarshal(t *testing.T) {
 	assert := assert.New(t)

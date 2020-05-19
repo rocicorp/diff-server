@@ -46,6 +46,11 @@ func (c Commit) Data(noms types.ValueReadWriter) kv.Map {
 	return kv.FromNoms(noms, c.Value.Data.TargetValue(noms).(types.Map), kv.MustChecksumFromString(string(c.Value.Checksum)))
 }
 
+// Basis returns the basis (parent) of the Commit.
+func (c Commit) Basis(noms types.ValueReadWriter) (Commit, error) {
+	return Read(noms, c.Parents[0].TargetHash())
+}
+
 func makeCommit(noms types.ValueReadWriter, basis types.Ref, d datetime.DateTime, newData types.Ref, checksum types.String, lastMutationID uint64) Commit {
 	c := Commit{}
 	if !basis.IsZeroValue() {

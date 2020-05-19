@@ -159,16 +159,18 @@ func storeClientView(db *db.DB, cvResp servetypes.ClientViewResponse, l zl.Logge
 		}
 	}
 	m := me.Build()
-
-	hv := db.Head().Value
-	hvc, err := kv.ChecksumFromString(string(hv.Checksum))
+	c, err := db.MaybePutData(m, cvResp.LastMutationID)
 	if err != nil {
-		return fmt.Errorf("couldnt parse checksum from commit: %w", err)
+		return fmt.Errorf("error writing new commit: %w", err)
 	}
-	if cvResp.LastMutationID == uint64(hv.LastMutationID) && m.Checksum() == hvc.String() {
-		l.Debug().Msg("Neither lastMutationID nor checksum changed; nop")
-		return nil
+	if c.Original.IsZeroValue() {
+		l.Debug().Msgf("Did not write a new commit (lastMutationID %d and checksum %s are identical to head); nop", cvResp.LastMutationID, m.Checksum())
+	} else {
+		basis, err := c.Basis(db.Noms())
+		if err != nil {
+			return err
+		}
+		l.Debug().Msgf("Wrote new commit %s with lastMutationID %d and checksum %s (previous commit %s had lastMutationID %d and checksum %s)", c.Ref().TargetHash(), cvResp.LastMutationID, m.Checksum(), basis.Ref().TargetHash(), uint64(basis.Value.LastMutationID), basis.Value.Checksum)
 	}
-	_, err = db.PutData(m, cvResp.LastMutationID)
-	return err
+	return nil
 }

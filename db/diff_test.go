@@ -35,7 +35,8 @@ func TestDiff(t *testing.T) {
 			"change-1",
 			func() {
 				m := kv.NewMapForTest(db.Noms(), "foo", `"bar"`, "hot", `"dog"`)
-				_, err := db.PutData(m, 0 /*lastMutationID*/)
+				c, err := db.MaybePutData(m, 0 /*lastMutationID*/)
+				assert.False(c.Original.IsZeroValue())
 				assert.NoError(err)
 			},
 			[]kv.Operation{
@@ -56,7 +57,8 @@ func TestDiff(t *testing.T) {
 			"change-2",
 			func() {
 				m := kv.NewMapForTest(db.Noms(), "foo", `"baz"`, "mon", `"key"`)
-				_, err := db.PutData(m, 0 /*lastMutationID*/)
+				c, err := db.MaybePutData(m, 0 /*lastMutationID*/)
+				assert.False(c.Original.IsZeroValue())
 				assert.NoError(err)
 			},
 			[]kv.Operation{
@@ -93,7 +95,8 @@ func TestDiff(t *testing.T) {
 					assert.NoError(me.Set(types.String(s), types.String(s)))
 				}
 				m := me.Build()
-				_, err := db.PutData(m, 0 /*lastMutationID*/)
+				c, err := db.MaybePutData(m, 0 /*lastMutationID*/)
+				assert.False(c.Original.IsZeroValue())
 				assert.NoError(err)
 			},
 			[]kv.Operation{
@@ -151,7 +154,8 @@ func TestDiff(t *testing.T) {
 			"invalid-checksum",
 			func() {
 				m := kv.NewMapForTest(db.Noms(), "foo", `"bar"`)
-				_, err := db.PutData(m, 0 /*lastMutationID*/)
+				c, err := db.MaybePutData(m, 0 /*lastMutationID*/)
+				assert.False(c.Original.IsZeroValue())
 				assert.NoError(err)
 				fromChecksum = "00000000"
 			},
