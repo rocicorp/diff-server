@@ -10,8 +10,23 @@ import (
 	"github.com/attic-labs/noms/go/util/datetime"
 	"github.com/stretchr/testify/assert"
 
+	"roci.dev/diff-server/kv"
 	"roci.dev/diff-server/util/noms/diff"
 )
+
+func TestBasis(t *testing.T) {
+	assert := assert.New(t)
+	db, _ := LoadTempDB(assert)
+	genesis := db.Head()
+	c, err := db.MaybePutData(kv.NewMap(db.Noms()), 2)
+	assert.NoError(err)
+	if err == nil {
+		assert.False(c.NomsStruct.IsZeroValue())
+	}
+	basis, err := c.Basis(db.Noms())
+	assert.NoError(err)
+	assert.True(genesis.NomsStruct.Equals(basis.NomsStruct))
+}
 
 func TestMarshal(t *testing.T) {
 	assert := assert.New(t)
@@ -26,8 +41,8 @@ func TestMarshal(t *testing.T) {
 	checksum2 := types.String("2")
 	lastMutationID2 := uint64(2)
 	c1 := makeCommit(noms, types.Ref{}, d, noms.WriteValue(types.NewMap(noms)), checksum1, lastMutationID1)
-	c2 := makeCommit(noms, noms.WriteValue(c1.Original), d, dr, checksum2, lastMutationID2)
-	noms.WriteValue(c2.Original)
+	c2 := makeCommit(noms, noms.WriteValue(c1.NomsStruct), d, dr, checksum2, lastMutationID2)
+	noms.WriteValue(c2.NomsStruct)
 
 	tc := []struct {
 		in  Commit

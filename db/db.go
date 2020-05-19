@@ -3,6 +3,7 @@
 package db
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 
@@ -43,7 +44,7 @@ func (db *DB) initLocked() error {
 			db.Noms().WriteValue(m.NomsMap()),
 			m.NomsChecksum(),
 			0 /*lastMutationID*/)
-		db.Noms().WriteValue(genesis.Original)
+		db.Noms().WriteValue(genesis.NomsStruct)
 		return db.setHeadLocked(genesis)
 	}
 
@@ -87,7 +88,7 @@ func (db *DB) setHeadLocked(newHead Commit) error {
 }
 
 func (db *DB) Hash() hash.Hash {
-	return db.Head().Original.Hash()
+	return db.Head().NomsStruct.Hash()
 }
 
 func (db *DB) Reload() error {
@@ -96,16 +97,41 @@ func (db *DB) Reload() error {
 	return db.initLocked()
 }
 
-// PutData creates a new commit with the given map based on the current head.
-// It sets head to this new commit and returns it.
-func (db *DB) PutData(m kv.Map, lastMutationID uint64) (Commit, error) {
+// Read reads the Commit with the given hash from the db.
+func Read(noms types.ValueReadWriter, hash hash.Hash) (Commit, error) {
+	if hash.IsEmpty() {
+		return Commit{}, errors.New("commit (empty hash) not found")
+	}
+	v := noms.ReadValue(hash)
+	if v == nil {
+		return Commit{}, fmt.Errorf("commit %s not found", hash)
+	}
+	var c Commit
+	err := marshal.Unmarshal(v, &c)
+	return c, err
+}
+
+// MaybePutData creates a new commit with the given map and lastMutationID if
+// they are different from what is currently at head. It returns the new Commit
+// if written or a zero value Commit if not (commit.NomsStruct.IsZeroValue() will be true).
+func (db *DB) MaybePutData(m kv.Map, lastMutationID uint64) (Commit, error) {
 	defer db.lock()()
-	basis := types.NewRef(db.head.Original)
+
+	hv := db.head.Value
+	hvc, err := kv.ChecksumFromString(string(hv.Checksum))
+	if err != nil {
+		return Commit{}, fmt.Errorf("couldnt parse checksum from commit: %w", err)
+	}
+	if lastMutationID == uint64(hv.LastMutationID) && m.Checksum() == hvc.String() {
+		return Commit{}, nil
+	}
+	basis := types.NewRef(db.head.NomsStruct)
 	commit := makeCommit(db.Noms(), basis, time.DateTime(), db.Noms().WriteValue(m.NomsMap()), m.NomsChecksum(), lastMutationID)
-	db.Noms().WriteValue(commit.Original)
+	db.Noms().WriteValue(commit.NomsStruct)
 	if err := db.setHeadLocked(commit); err != nil {
 		return Commit{}, err
 	}
+	commit.NomsStruct.IsZeroValue()
 	return commit, nil
 }
 
