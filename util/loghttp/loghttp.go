@@ -22,13 +22,7 @@ func init() {
 		// TODO respect log level setting
 		var dump []byte
 		var err error
-		zlog.Debug().
-			Timestamp().
-			Str("fritz", req.Method).
-			Str("host", req.Host).
-			Str("index", fmt.Sprintf("%d", strings.Index(req.Host, "dynamodb"))).
-			Msg("TESTING")
-		if strings.Index(req.Host, "dynamodb") != -1 {
+		if strings.Index(req.URL.String(), "dynamodb") != -1 {
 			dump = []byte("<dynamo request>")
 		} else {
 			dump, err = httputil.DumpRequest(req, true)
@@ -49,7 +43,7 @@ func init() {
 	lh.DefaultLogResponse = func(resp *http.Response) {
 		var dump []byte
 		var err error
-		if strings.Index(resp.Request.Host, "dynamodb") != -1 {
+		if strings.Index(resp.Request.URL.String(), "dynamodb") != -1 {
 			dump = []byte("<dynamo response>")
 		} else {
 			dump, err = httputil.DumpResponse(resp, true)
