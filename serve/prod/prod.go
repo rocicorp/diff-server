@@ -14,6 +14,8 @@ import (
 
 	"roci.dev/diff-server/serve"
 	"roci.dev/diff-server/serve/accounts"
+	"roci.dev/diff-server/util/log"
+	"roci.dev/diff-server/util/loghttp"
 )
 
 const (
@@ -41,5 +43,6 @@ func init() {
 
 // Handler implements the Zeit Now entrypoint for our server.
 func Handler(w http.ResponseWriter, r *http.Request) {
-	svc.ServeHTTP(w, r)
+	wrapped := loghttp.Wrap(svc, log.Default())
+	wrapped.ServeHTTP(w, r)
 }
