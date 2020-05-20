@@ -20,40 +20,44 @@ import (
 func init() {
 	lh.DefaultLogRequest = func(req *http.Request) {
 		// TODO respect log level setting
-		dumpBody := true
-		if strings.Index(req.Host, "dynamodb") != -1 {
-			dumpBody = false
-		}
-		dumped, err := httputil.DumpRequest(req, dumpBody)
-		if err != nil {
-			zlog.Err(err).Stack().Msg("Could not dump request")
-			return
+		var dump []byte
+		var err error
+		if strings.Index(req.URL.String(), "dynamodb") != -1 {
+			dump = []byte("<dynamo request>")
+		} else {
+			dump, err = httputil.DumpRequest(req, true)
+			if err != nil {
+				zlog.Err(err).Stack().Msg("Could not dump request")
+				return
+			}
 		}
 		// TODO: Properly contextualize these logs.
 		zlog.Debug().
 			Timestamp().
 			Str("method", req.Method).
 			Str("url", req.URL.String()).
-			Bytes("dump", dumped).
+			Bytes("dump", dump).
 			Msg("Outgoing request -->")
 	}
 
 	lh.DefaultLogResponse = func(resp *http.Response) {
-		dumpBody := true
-		if strings.Index(resp.Request.Host, "dynamodb") != -1 {
-			dumpBody = false
-		}
-		dumped, err := httputil.DumpResponse(resp, dumpBody)
-		if err != nil {
-			zlog.Err(err).Stack().Msg("Could not dump response")
-			return
+		var dump []byte
+		var err error
+		if strings.Index(resp.Request.URL.String(), "dynamodb") != -1 {
+			dump = []byte("<dynamo response>")
+		} else {
+			dump, err = httputil.DumpResponse(resp, true)
+			if err != nil {
+				zlog.Err(err).Stack().Msg("Could not dump response")
+				return
+			}
 		}
 		zlog.Debug().
 			Timestamp().
 			Str("method", resp.Request.Method).
 			Str("url", resp.Request.URL.String()).
 			Int("status", resp.StatusCode).
-			Bytes("dump", dumped).
+			Bytes("dump", dump).
 			Msg("Outgoing request <--")
 	}
 }
