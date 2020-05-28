@@ -30,7 +30,7 @@ var (
 
 func init() {
 	zl.SetGlobalLevel(zl.DebugLevel)
-	zlog.Logger = zlog.Output(zl.ConsoleWriter{Out: os.Stderr, NoColor: true})
+	zlog.Logger = zlog.Output(zl.ConsoleWriter{Out: os.Stderr, TimeFormat: "02 Jan 06 15:04:05.000 -0700", NoColor: true})
 	spec.GetAWSSession = func() *session.Session {
 		return session.Must(session.NewSession(
 			aws.NewConfig().WithRegion(aws_region).WithCredentials(
