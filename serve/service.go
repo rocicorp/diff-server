@@ -73,7 +73,12 @@ func NewService(storageRoot string, accounts []Account, overrideClientViewURL st
 }
 
 func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	l := log.Default().With().Str("req", r.URL.String()).Uint64("rid", atomic.AddUint64(&s.reqID, 1)).Logger()
+	c := log.Default().With().Str("req", r.URL.String()).Uint64("rid", atomic.AddUint64(&s.reqID, 1))
+	syncID := r.Header.Get("X-Replicache-SyncID")
+	if syncID != "" {
+		c = c.Str("syncID", syncID)
+	}
+	l := c.Logger()
 	l.Info().Msg("received request")
 
 	defer func() {
