@@ -14,7 +14,7 @@ type ClientViewGetter struct{}
 
 // Get fetches a client view. It returns an error if the response from the data layer doesn't have
 // a lastMutationID.
-func (g ClientViewGetter) Get(url string, req servetypes.ClientViewRequest, authToken string) (servetypes.ClientViewResponse, int, error) {
+func (g ClientViewGetter) Get(url string, req servetypes.ClientViewRequest, authToken string, syncID string) (servetypes.ClientViewResponse, int, error) {
 	reqBody, err := json.Marshal(req)
 	if err != nil {
 		return servetypes.ClientViewResponse{}, 0, fmt.Errorf("could not marshal ClientViewRequest: %w", err)
@@ -24,6 +24,7 @@ func (g ClientViewGetter) Get(url string, req servetypes.ClientViewRequest, auth
 		return servetypes.ClientViewResponse{}, 0, fmt.Errorf("could not create client view http request: %w", err)
 	}
 	httpReq.Header.Add("Authorization", authToken)
+	httpReq.Header.Add("X-Replicache-SyncID", syncID)
 	httpResp, err := http.DefaultClient.Do(httpReq)
 	if err != nil {
 		return servetypes.ClientViewResponse{}, 0, fmt.Errorf("error sending client view http request: %w", err)

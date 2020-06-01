@@ -84,7 +84,8 @@ func (s *Service) pull(rw http.ResponseWriter, req *http.Request, l zl.Logger) {
 	cvReq := servetypes.ClientViewRequest{
 		ClientID: preq.ClientID,
 	}
-	cvInfo := maybeGetAndStoreNewClientView(db, preq.ClientViewAuth, clientViewURL, s.clientViewGetter, cvReq, l)
+	syncID := req.Header.Get("X-Replicache-SyncID")
+	cvInfo := maybeGetAndStoreNewClientView(db, preq.ClientViewAuth, clientViewURL, s.clientViewGetter, cvReq, syncID, l)
 
 	head := db.Head()
 	patch, err := db.Diff(fromHash, *fromChecksum, head, l)
@@ -123,7 +124,7 @@ func (s *Service) pull(rw http.ResponseWriter, req *http.Request, l zl.Logger) {
 	}
 }
 
-func maybeGetAndStoreNewClientView(db *db.DB, clientViewAuth string, url string, cvg clientViewGetter, cvReq servetypes.ClientViewRequest, l zl.Logger) servetypes.ClientViewInfo {
+func maybeGetAndStoreNewClientView(db *db.DB, clientViewAuth string, url string, cvg clientViewGetter, cvReq servetypes.ClientViewRequest, syncID string, l zl.Logger) servetypes.ClientViewInfo {
 	clientViewInfo := servetypes.ClientViewInfo{}
 	var err error
 	defer func() {
@@ -137,7 +138,7 @@ func maybeGetAndStoreNewClientView(db *db.DB, clientViewAuth string, url string,
 		err = errors.New("not fetching new client view: no url provided via account or --client-view")
 		return clientViewInfo
 	}
-	cvResp, cvCode, err := cvg.Get(url, cvReq, clientViewAuth)
+	cvResp, cvCode, err := cvg.Get(url, cvReq, clientViewAuth, syncID)
 	clientViewInfo.HTTPStatusCode = cvCode
 	if err != nil {
 		return clientViewInfo

@@ -30,6 +30,7 @@ func init() {
 				zlog.Err(err).Stack().Msg("Could not dump request")
 				return
 			}
+			dump = filter(dump)
 		}
 		// TODO: Properly contextualize these logs.
 		zlog.Debug().
@@ -51,6 +52,7 @@ func init() {
 				zlog.Err(err).Stack().Msg("Could not dump response")
 				return
 			}
+			dump = filter(dump)
 		}
 		zlog.Debug().
 			Timestamp().
@@ -60,6 +62,16 @@ func init() {
 			Bytes("dump", dump).
 			Msg("Outgoing request <--")
 	}
+}
+
+// Filters are called on the HTTP dump before it is logged.
+var Filters []FilterFunc
+
+func filter(httpReq []byte) []byte {
+	for _, f := range Filters {
+		httpReq = f(httpReq)
+	}
+	return httpReq
 }
 
 // Wrap wraps the given handler with a Handler that logs HTTP requests
@@ -80,12 +92,13 @@ type Handler struct {
 
 // ServeHTTP logs the request, calls the underlying handler, and logs the response.
 func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	dumped, err := httputil.DumpRequest(r, true)
+	dump, err := httputil.DumpRequest(r, true)
 	if err != nil {
 		h.l.Err(err).Stack().Msg("Could not dump request")
 		http.Error(w, fmt.Sprint(err), http.StatusInternalServerError)
 		return
 	}
+	dump = filter(dump)
 
 	ll := h.l.With().
 		Str("method", r.Method).
@@ -93,7 +106,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Logger()
 
 	ll.Debug().
-		Bytes("dump", dumped).
+		Bytes("dump", dump).
 		Msg("Incoming request -->")
 
 	rl := &responseLogger{ResponseWriter: w, status: 200}
@@ -103,6 +116,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ll.Err(err).Stack().Msg("Could not unzip")
 		return
 	}
+	body = filter(body)
 	ll.Debug().
 		Int("status", rl.status).
 		Bytes("body", body).
