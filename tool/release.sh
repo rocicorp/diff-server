@@ -6,19 +6,23 @@ set -x
 
 rm -rf build
 mkdir build
-cd build
+mkdir build/osx
+mkdir build/linux
 
-# repl
-echo "Building repl..."
-
-REPL_VERSION=`git describe --tags`
 cd $ROOT
-GOOS=darwin GOARCH=amd64 go build -ldflags "-X roci.dev/replicant/util/version.v=$REPL_VERSION" -o build/repl-darwin-amd64 ./cmd/repl
-GOOS=linux GOARCH=amd64 go build -ldflags "-X roci.dev/replicant/util/version.v=$REPL_VERSION" -o build/repl-linux-amd64 ./cmd/repl
+
+# diffs
+echo "Building diffs..."
+
+DIFFS_VERSION=`git describe --tags`
+GOOS=darwin GOARCH=amd64 go build -ldflags "-X roci.dev/replicant/util/version.v=$DIFFS_VERSION" -o build/osx/diffs ./cmd/diffs
+GOOS=linux GOARCH=amd64 go build -ldflags "-X roci.dev/replicant/util/version.v=$DIFFS_VERSION" -o build/linux/diffs ./cmd/diffs
 
 # noms tool
 echo "Building noms..."
 NOMS_VERSION=`go mod graph | grep '^github.com/attic-labs/noms@' | cut -d' ' -f1 | head -n1`
 go get $NOMS_VERSION
-GOOS=darwin GOARCH=amd64 go build -o build/noms-darwin-amd64 github.com/attic-labs/noms/cmd/noms
-GOOS=linux GOARCH=amd64 go build -o build/noms-linux-amd64 github.com/attic-labs/noms/cmd/noms
+GOOS=darwin GOARCH=amd64 go build -o build/osx/noms github.com/attic-labs/noms/cmd/noms
+GOOS=linux GOARCH=amd64 go build -o build/linux/noms github.com/attic-labs/noms/cmd/noms
+
+mv build build-${DIFFS_VERSION}
