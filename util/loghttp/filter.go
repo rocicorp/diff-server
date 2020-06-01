@@ -7,8 +7,7 @@ import (
 )
 
 // FilterFunc filters an HTTP request or response dump, eg to remove or redact
-// header lines. A FilterFunc must return a valid HTTP dump (otherwise
-// they cannot be chained).
+// header lines.
 type FilterFunc func([]byte) []byte
 
 // HeaderWhitelist is a FilterFunc that removes all headers not on
@@ -35,7 +34,6 @@ func NewHeaderWhitelist(whitelist []string) HeaderWhitelist {
 
 // Filter filters the given HTTP request/response dump.
 func (hw HeaderWhitelist) Filter(httpReq []byte) []byte {
-	// Split the header lines on CRLF.
 	endHeadersIndex := bytes.Index(httpReq, []byte("\r\n\r\n"))
 	if endHeadersIndex == -1 {
 		return httpReq
@@ -69,24 +67,24 @@ func (hw HeaderWhitelist) Filter(httpReq []byte) []byte {
 	return filtered[:l]
 }
 
-// BodyTrimmer is a FilterFunc that limits the size of the HTTP
+// BodyElider is a FilterFunc that limits the size of the HTTP
 // request/response body to max bytes. Bytes are clipped from the
 // middle of the body, replaced with "...".
-type BodyTrimmer struct {
+type BodyElider struct {
 	max int
 }
 
-// NewBodyTrimmer returns a new BodyTrimmer. The minimum value for
-// max is 6 to avoid annoying checks on negative indexes when trimming.
-func NewBodyTrimmer(max int) BodyTrimmer {
+// NewBodyElider returns a new BodyElider. The minimum value for
+// max is 6 to avoid annoying checks on negative indexes when eliding.
+func NewBodyElider(max int) BodyElider {
 	if max < 6 {
 		max = 6
 	}
-	return BodyTrimmer{max}
+	return BodyElider{max}
 }
 
 // Filter filters an HTTP request or response body to max size.
-func (bt BodyTrimmer) Filter(httpReq []byte) []byte {
+func (be BodyElider) Filter(httpReq []byte) []byte {
 	endHeadersIndex := bytes.Index(httpReq, []byte("\r\n\r\n"))
 	beginBodyIndex := 0
 	// The dump code doesn't currently dump HTTP response headers.
@@ -99,15 +97,15 @@ func (bt BodyTrimmer) Filter(httpReq []byte) []byte {
 	if beginBodyIndex > len(httpReq) {
 		return httpReq
 	}
-	
+
 	body := httpReq[beginBodyIndex:]
-	if len(body) <= bt.max {
+	if len(body) <= be.max {
 		return httpReq
 	}
-	size := beginBodyIndex + bt.max
+	size := beginBodyIndex + be.max
 	filtered := make([]byte, size)
 	l := copy(filtered, httpReq[:beginBodyIndex])
-	l += copy(filtered[l:], body[:bt.max/2])
+	l += copy(filtered[l:], body[:be.max/2])
 	l += copy(filtered[l:], []byte("..."))
 	l += copy(filtered[l:], body[len(body)-(size-l):])
 	return filtered[:l]

@@ -31,7 +31,7 @@ var (
 
 func init() {
 	// Zeit now has a 4kb log limit per request, so set up some aggressive HTTP log filters.
-	loghttp.Filters = append(loghttp.Filters, loghttp.NewBodyTrimmer(500).Filter)
+	loghttp.Filters = append(loghttp.Filters, loghttp.NewBodyElider(500).Filter)
 	loghttp.Filters = append(loghttp.Filters, loghttp.NewHeaderWhitelist(headerLogWhitelist).Filter)
 
 	zl.SetGlobalLevel(zl.DebugLevel)

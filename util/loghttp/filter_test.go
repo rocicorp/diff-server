@@ -83,7 +83,7 @@ func TestHeaderWhitelist_Filter(t *testing.T) {
 	}
 }
 
-func TestBodyTrimmer_Filter(t *testing.T) {
+func TestBodyElider_Filter(t *testing.T) {
 	tests := []struct {
 		name    string
 		max     int
@@ -141,10 +141,10 @@ func TestBodyTrimmer_Filter(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			bt := NewBodyTrimmer(tt.max)
-			got := string(bt.Filter([]byte(tt.httpReq)))
+			be := NewBodyElider(tt.max)
+			got := string(be.Filter([]byte(tt.httpReq)))
 			if got != tt.want {
-				t.Errorf("BodyTrimmer.Filter() = %q, want %q", got, tt.want)
+				t.Errorf("BodyElider.Filter() = %q, want %q", got, tt.want)
 			}
 		})
 	}
