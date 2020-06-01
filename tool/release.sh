@@ -27,4 +27,4 @@ go get $NOMS_VERSION
 GOOS=darwin GOARCH=amd64 go build -o ${BUILDDIR}/osx/noms github.com/attic-labs/noms/cmd/noms
 GOOS=linux GOARCH=amd64 go build -o ${BUILDDIR}/linux/noms github.com/attic-labs/noms/cmd/noms
 
-zip -r ${BUILDDIR}.zip $BUILDDIR
+zip -r diffs-${DIFFS_VERSION}.zip $BUILDDIR
