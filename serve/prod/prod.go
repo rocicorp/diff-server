@@ -25,10 +25,15 @@ const (
 )
 
 var (
-	svc = serve.NewService("aws:replicant/aa-replicant2", accounts.Accounts(), "", serve.ClientViewGetter{}, false)
+	svc                = serve.NewService("aws:replicant/aa-replicant2", accounts.Accounts(), "", serve.ClientViewGetter{}, false)
+	headerLogWhitelist = []string{"Authorization", "Content-Type", "Host", "X-Replicache-SyncID"}
 )
 
 func init() {
+	// Zeit now has a 4kb log limit per request, so set up some aggressive HTTP log filters.
+	loghttp.Filters = append(loghttp.Filters, loghttp.NewBodyTrimmer(500).Filter)
+	loghttp.Filters = append(loghttp.Filters, loghttp.NewHeaderWhitelist(headerLogWhitelist).Filter)
+
 	zl.SetGlobalLevel(zl.DebugLevel)
 	zlog.Logger = zlog.Output(zl.ConsoleWriter{Out: os.Stderr, TimeFormat: "02 Jan 06 15:04:05.000 -0700", NoColor: true})
 	spec.GetAWSSession = func() *session.Session {
