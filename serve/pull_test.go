@@ -252,6 +252,7 @@ func TestAPI(t *testing.T) {
 		if t.authHeader != "" {
 			req.Header.Set("Authorization", t.authHeader)
 		}
+		req.Header.Set("X-Replicache-SyncID", "syncID")
 		resp := httptest.NewRecorder()
 		s.pull(resp, req, log.Default())
 
@@ -275,6 +276,7 @@ func TestAPI(t *testing.T) {
 			assert.Equal(expectedCVURL, fcvg.gotURL, msg)
 			assert.Equal(t.expCVAuth, fcvg.gotAuth, msg)
 			assert.Equal("clientid", fcvg.gotClientID)
+			assert.Equal("syncID", fcvg.gotSyncID)
 		}
 	}
 }
@@ -288,12 +290,14 @@ type fakeClientViewGet struct {
 	gotURL      string
 	gotAuth     string
 	gotClientID string
+	gotSyncID   string
 }
 
-func (f *fakeClientViewGet) Get(url string, req servetypes.ClientViewRequest, authToken string) (servetypes.ClientViewResponse, int, error) {
+func (f *fakeClientViewGet) Get(url string, req servetypes.ClientViewRequest, authToken string, syncID string) (servetypes.ClientViewResponse, int, error) {
 	f.called = true
 	f.gotURL = url
 	f.gotAuth = authToken
 	f.gotClientID = req.ClientID
+	f.gotSyncID = syncID
 	return f.resp, f.code, f.err
 }

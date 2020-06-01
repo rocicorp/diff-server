@@ -68,12 +68,13 @@ func TestClientViewGetter_Get(t *testing.T) {
 				err := json.NewDecoder(r.Body).Decode(&reqBody)
 				assert.NoError(err, tt.name)
 				assert.Equal(tt.clientViewAuth, r.Header.Get("Authorization"), tt.name)
+				assert.Equal("syncID", r.Header.Get("X-Replicache-SyncID"), tt.name)
 				w.WriteHeader(tt.respCode)
 				w.Write([]byte(tt.respBody))
 			}))
 
 			g := ClientViewGetter{}
-			got, gotCode, err := g.Get(server.URL, tt.req, tt.clientViewAuth)
+			got, gotCode, err := g.Get(server.URL, tt.req, tt.clientViewAuth, "syncID")
 			assert.Equal(tt.wantCode, gotCode)
 			if tt.wantErr == "" {
 				assert.NoError(err)

@@ -47,7 +47,7 @@ type Service struct {
 }
 
 type clientViewGetter interface {
-	Get(url string, req servetypes.ClientViewRequest, authToken string) (servetypes.ClientViewResponse, int, error)
+	Get(url string, req servetypes.ClientViewRequest, authToken string, syncID string) (servetypes.ClientViewResponse, int, error)
 }
 
 // Account is information about a customer of Replicant. This is a stand-in for what will eventually be
@@ -73,7 +73,12 @@ func NewService(storageRoot string, accounts []Account, overrideClientViewURL st
 }
 
 func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	l := log.Default().With().Str("req", r.URL.String()).Uint64("rid", atomic.AddUint64(&s.reqID, 1)).Logger()
+	c := log.Default().With().Str("req", r.URL.String()).Uint64("rid", atomic.AddUint64(&s.reqID, 1))
+	syncID := r.Header.Get("X-Replicache-SyncID")
+	if syncID != "" {
+		c = c.Str("syncID", syncID)
+	}
+	l := c.Logger()
 	l.Info().Msg("received request")
 
 	defer func() {

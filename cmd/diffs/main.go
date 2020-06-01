@@ -36,7 +36,7 @@ func main() {
 }
 
 func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
-	zlog.Logger = zlog.Output(zl.ConsoleWriter{Out: os.Stderr})
+	zlog.Logger = zlog.Output(zl.ConsoleWriter{Out: os.Stderr, TimeFormat: "02 Jan 06 15:04:05.000 -0700"})
 	l := log.Default()
 
 	app := kingpin.New("diffs", "")
