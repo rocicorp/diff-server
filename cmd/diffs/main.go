@@ -9,6 +9,7 @@ import (
 	"runtime/pprof"
 	"runtime/trace"
 	"syscall"
+	"time"
 
 	"github.com/attic-labs/noms/go/spec"
 	zl "github.com/rs/zerolog"
@@ -18,7 +19,6 @@ import (
 	servepkg "roci.dev/diff-server/serve"
 	"roci.dev/diff-server/serve/accounts"
 	"roci.dev/diff-server/util/log"
-	"roci.dev/diff-server/util/loghttp"
 	"roci.dev/diff-server/util/version"
 )
 
@@ -126,7 +126,15 @@ func serve(parent *kingpin.Application, sps *string, errs io.Writer, l zl.Logger
 		if *overrideClientViewURL != "" {
 			l.Info().Msgf("Overriding all client view URLs with %s", *overrideClientViewURL)
 		}
-		s := servepkg.NewService(*sps, accounts.Accounts(), *overrideClientViewURL, servepkg.ClientViewGetter{}, *enableInject)
-		return http.ListenAndServe(fmt.Sprintf(":%d", *port), loghttp.Wrap(s, l))
+		svc := servepkg.NewService(*sps, accounts.Accounts(), *overrideClientViewURL, servepkg.ClientViewGetter{}, *enableInject)
+		mux := http.NewServeMux()
+		servepkg.RegisterHandlers(svc, mux)
+		server := &http.Server{
+			Addr:         fmt.Sprintf(":%d", *port),
+			Handler:      mux,
+			ReadTimeout:  10 * time.Second,
+			WriteTimeout: 10 * time.Second,
+		}
+		return server.ListenAndServe()
 	})
 }
