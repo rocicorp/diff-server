@@ -1,7 +1,6 @@
 package serve
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,7 +11,6 @@ import (
 
 	"github.com/attic-labs/noms/go/datas"
 	"github.com/attic-labs/noms/go/spec"
-	"github.com/dgrijalva/jwt-go"
 
 	"roci.dev/diff-server/db"
 	servetypes "roci.dev/diff-server/serve/types"
@@ -130,44 +128,6 @@ func (s *Service) getNoms(accountID string) (datas.Database, error) {
 		n.Rebase()
 	}
 	return n, nil
-}
-
-// Claims are the JWT claims Replicant uses for authentication.
-type Claims struct {
-	jwt.StandardClaims
-	DB string `json:"db,omitempty"`
-}
-
-func checkAccess(accountID, dbName, token string, accounts []Account) (*Account, error, error) {
-	acc, ok := lookupAccount(accountID, accounts)
-	if !ok {
-		return nil, fmt.Errorf("No such account: '%s'", accountID), nil
-	}
-
-	// If account has no public key, it's publicly available.
-	if acc.Pubkey == nil {
-		return &acc, nil, nil
-	}
-
-	if token == "" {
-		return nil, nil, errors.New("Authorization header is required")
-	}
-
-	var claims Claims
-	_, err := jwt.ParseWithClaims(token, &claims, func(token *jwt.Token) (interface{}, error) {
-		pk, err := jwt.ParseECPublicKeyFromPEM(acc.Pubkey)
-		if err != nil {
-			return nil, fmt.Errorf("Invalid JWT: %s", err.Error())
-		}
-		return pk, nil
-	})
-	if err != nil {
-		return nil, nil, fmt.Errorf("Invalid JWT: %s", err.Error())
-	}
-	if claims.DB != dbName {
-		return nil, nil, errors.New("Token does not grant access to specified database")
-	}
-	return &acc, nil, nil
 }
 
 func lookupAccount(accountID string, accounts []Account) (acc Account, ok bool) {
