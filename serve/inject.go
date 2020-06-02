@@ -7,13 +7,14 @@ import (
 	"net/http"
 
 	"github.com/pkg/errors"
-	zl "github.com/rs/zerolog"
 	servetypes "roci.dev/diff-server/serve/types"
 )
 
 // inject inserts a client view into the cache. This is primarily useful for testing without
 // having to have a data layer running.
-func (s *Service) inject(w http.ResponseWriter, r *http.Request, l zl.Logger) {
+func (s *Service) inject(w http.ResponseWriter, r *http.Request) {
+	l := logger(r)
+
 	if !s.enableInject {
 		w.WriteHeader(http.StatusNotFound)
 		return

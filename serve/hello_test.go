@@ -11,7 +11,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"roci.dev/diff-server/util/log"
 	"roci.dev/diff-server/util/time"
 )
 
@@ -38,7 +37,7 @@ func TestHello(t *testing.T) {
 		msg := fmt.Sprintf("test case %d", i)
 		req := httptest.NewRequest(t.method, "/hello", nil)
 		resp := httptest.NewRecorder()
-		s.hello(resp, req, log.Default())
+		s.hello(resp, req)
 
 		body := bytes.Buffer{}
 		_, err := io.Copy(&body, resp.Result().Body)

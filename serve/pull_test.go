@@ -16,7 +16,6 @@ import (
 	"roci.dev/diff-server/db"
 	"roci.dev/diff-server/kv"
 	servetypes "roci.dev/diff-server/serve/types"
-	"roci.dev/diff-server/util/log"
 	"roci.dev/diff-server/util/time"
 )
 
@@ -254,7 +253,7 @@ func TestAPI(t *testing.T) {
 		}
 		req.Header.Set("X-Replicache-SyncID", "syncID")
 		resp := httptest.NewRecorder()
-		s.pull(resp, req, log.Default())
+		s.pull(resp, req)
 
 		body := bytes.Buffer{}
 		_, err = io.Copy(&body, resp.Result().Body)
