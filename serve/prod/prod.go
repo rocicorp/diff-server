@@ -14,7 +14,6 @@ import (
 
 	"roci.dev/diff-server/serve"
 	"roci.dev/diff-server/serve/accounts"
-	"roci.dev/diff-server/util/log"
 	"roci.dev/diff-server/util/loghttp"
 )
 
@@ -25,7 +24,7 @@ const (
 )
 
 var (
-	svc                = serve.NewService("aws:replicant/aa-replicant2", accounts.Accounts(), "", serve.ClientViewGetter{}, false)
+	handler            http.Handler
 	headerLogWhitelist = []string{"Authorization", "Content-Type", "Host", "X-Replicache-SyncID"}
 )
 
@@ -44,10 +43,14 @@ func init() {
 					os.Getenv(aws_access_key_id),
 					os.Getenv(aws_secret_access_key), ""))))
 	}
+	
+	svc := serve.NewService("aws:replicant/aa-replicant2", accounts.Accounts(), "", serve.ClientViewGetter{}, false)
+	mux := http.NewServeMux()
+	serve.RegisterHandlers(svc, mux)
+	handler = mux
 }
 
 // Handler implements the Zeit Now entrypoint for our server.
 func Handler(w http.ResponseWriter, r *http.Request) {
-	wrapped := loghttp.Wrap(svc, log.Default())
-	wrapped.ServeHTTP(w, r)
+	handler.ServeHTTP(w, r)
 }

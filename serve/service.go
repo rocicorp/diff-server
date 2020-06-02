@@ -1,17 +1,16 @@
 package serve
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"net/http"
 	"regexp"
 	"strings"
 	"sync"
-	"sync/atomic"
 
 	"github.com/attic-labs/noms/go/datas"
 	"github.com/attic-labs/noms/go/spec"
+	"github.com/justinas/alice"
 
 	"roci.dev/diff-server/db"
 	servetypes "roci.dev/diff-server/serve/types"
@@ -19,7 +18,7 @@ import (
 	zl "github.com/rs/zerolog"
 
 	// Log all HTTP requests
-	"roci.dev/diff-server/util/log"
+
 	_ "roci.dev/diff-server/util/loghttp"
 )
 
@@ -37,8 +36,6 @@ type Service struct {
 	overridClientViewURL string // Overrides account client view URL, eg for testing.
 	enableInject         bool
 	mu                   sync.Mutex
-
-	reqID uint64
 
 	// cvg may be nil, in which case the server skips the client view request in pull, which is
 	// useful if you are populating the db directly or in tests.
@@ -71,49 +68,13 @@ func NewService(storageRoot string, accounts []Account, overrideClientViewURL st
 	}
 }
 
-func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	c := log.Default().With().Str("req", r.URL.String()).Uint64("rid", atomic.AddUint64(&s.reqID, 1))
-	syncID := r.Header.Get("X-Replicache-SyncID")
-	if syncID != "" {
-		c = c.Str("syncID", syncID)
-	}
-	l := c.Logger()
-	ctx := context.WithValue(r.Context(), loggerKey{}, l)
-	r = r.WithContext(ctx)
-
-	defer func() {
-		err := recover()
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			l.Error().Msgf("Handler panicked: %#v", err)
-		}
-	}()
-
-	switch r.URL.Path {
-	case "/":
-		s.hello(w, r)
-	case "/pull":
-		s.pull(w, r)
-	case "/inject":
-		s.inject(w, r)
-	default:
-		clientError(w, http.StatusNotFound, "not found", l)
-	}
-}
-
-type loggerKey struct{}
-
-func logger(r *http.Request) zl.Logger {
-	i := r.Context().Value(loggerKey{})
-	if i != nil {
-		l, ok := i.(zl.Logger)
-		if ok {
-			return l
-		}
-	}
-	l := log.Default()
-	l.Info().Msg("zlogger missing from request context (this is expected in unit tests)")
-	return l
+// RegisterHandlers register's Service's handlers on the given mux.
+func RegisterHandlers(s *Service, mux *http.ServeMux) {
+	mux.HandleFunc("/", s.hello)
+	inject := alice.New(panicCatcher).ThenFunc(s.inject)
+	mux.Handle("/inject", inject)
+	pull := alice.New(contextLogger, panicCatcher, logHTTP).ThenFunc(s.pull)
+	mux.Handle("/pull", pull)
 }
 
 func (s *Service) GetDB(accountID, clientID string) (*db.DB, error) {
