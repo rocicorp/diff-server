@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"net/http"
 
-	zl "github.com/rs/zerolog"
 	"roci.dev/diff-server/util/version"
 )
 
 // hello prints a hello message to let users know the server is running.
-func (s *Service) hello(w http.ResponseWriter, r *http.Request, l zl.Logger) {
+func (s *Service) hello(w http.ResponseWriter, r *http.Request) {
+	l := logger(r)
 	if r.Method != "GET" {
 		unsupportedMethodError(w, r.Method, l)
 		return

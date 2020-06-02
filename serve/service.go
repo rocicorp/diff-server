@@ -1,6 +1,7 @@
 package serve
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -77,7 +78,8 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		c = c.Str("syncID", syncID)
 	}
 	l := c.Logger()
-	l.Info().Msg("received request")
+	ctx := context.WithValue(r.Context(), loggerKey{}, l)
+	r = r.WithContext(ctx)
 
 	defer func() {
 		err := recover()
@@ -89,14 +91,29 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	switch r.URL.Path {
 	case "/":
-		s.hello(w, r, l)
+		s.hello(w, r)
 	case "/pull":
-		s.pull(w, r, l)
+		s.pull(w, r)
 	case "/inject":
-		s.inject(w, r, l)
+		s.inject(w, r)
 	default:
 		clientError(w, http.StatusNotFound, "not found", l)
 	}
+}
+
+type loggerKey struct{}
+
+func logger(r *http.Request) zl.Logger {
+	i := r.Context().Value(loggerKey{})
+	if i != nil {
+		l, ok := i.(zl.Logger)
+		if ok {
+			return l
+		}
+	}
+	l := log.Default()
+	l.Info().Msg("zlogger missing from request context (this is expected in unit tests)")
+	return l
 }
 
 func (s *Service) GetDB(accountID, clientID string) (*db.DB, error) {
