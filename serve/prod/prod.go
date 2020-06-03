@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/gorilla/mux"
 	zl "github.com/rs/zerolog"
 	zlog "github.com/rs/zerolog/log"
 
@@ -43,9 +44,9 @@ func init() {
 					os.Getenv(aws_access_key_id),
 					os.Getenv(aws_secret_access_key), ""))))
 	}
-	
+
 	svc := serve.NewService("aws:replicant/aa-replicant2", accounts.Accounts(), "", serve.ClientViewGetter{}, false)
-	mux := http.NewServeMux()
+	mux := mux.NewRouter()
 	serve.RegisterHandlers(svc, mux)
 	handler = mux
 }

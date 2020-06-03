@@ -15,6 +15,7 @@ import (
 	zl "github.com/rs/zerolog"
 	zlog "github.com/rs/zerolog/log"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
+	"github.com/gorilla/mux"
 
 	servepkg "roci.dev/diff-server/serve"
 	"roci.dev/diff-server/serve/accounts"
@@ -127,7 +128,7 @@ func serve(parent *kingpin.Application, sps *string, errs io.Writer, l zl.Logger
 			l.Info().Msgf("Overriding all client view URLs with %s", *overrideClientViewURL)
 		}
 		svc := servepkg.NewService(*sps, accounts.Accounts(), *overrideClientViewURL, servepkg.ClientViewGetter{}, *enableInject)
-		mux := http.NewServeMux()
+		mux := mux.NewRouter()
 		servepkg.RegisterHandlers(svc, mux)
 		server := &http.Server{
 			Addr:         fmt.Sprintf(":%d", *port),
