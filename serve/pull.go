@@ -23,14 +23,15 @@ import (
 	nomsjson "roci.dev/diff-server/util/noms/json"
 )
 
-func (s *Service) pull(rw http.ResponseWriter, req *http.Request, l zl.Logger) {
-	if req.Method != "POST" {
-		unsupportedMethodError(rw, req.Method, l)
+func (s *Service) pull(rw http.ResponseWriter, r *http.Request) {
+	l := logger(r)
+	if r.Method != "POST" {
+		unsupportedMethodError(rw, r.Method, l)
 		return
 	}
 
 	body := bytes.Buffer{}
-	_, err := io.Copy(&body, req.Body)
+	_, err := io.Copy(&body, r.Body)
 	if err != nil {
 		serverError(rw, fmt.Errorf("could not read body: %w", err), l)
 		return
@@ -44,7 +45,7 @@ func (s *Service) pull(rw http.ResponseWriter, req *http.Request, l zl.Logger) {
 	}
 
 	// TODO auth
-	accountName := req.Header.Get("Authorization")
+	accountName := r.Header.Get("Authorization")
 	if accountName == "" {
 		clientError(rw, http.StatusBadRequest, "Missing Authorization header", l)
 		return
@@ -84,7 +85,7 @@ func (s *Service) pull(rw http.ResponseWriter, req *http.Request, l zl.Logger) {
 	cvReq := servetypes.ClientViewRequest{
 		ClientID: preq.ClientID,
 	}
-	syncID := req.Header.Get("X-Replicache-SyncID")
+	syncID := r.Header.Get("X-Replicache-SyncID")
 	cvInfo := maybeGetAndStoreNewClientView(db, preq.ClientViewAuth, clientViewURL, s.clientViewGetter, cvReq, syncID, l)
 
 	head := db.Head()
@@ -109,7 +110,7 @@ func (s *Service) pull(rw http.ResponseWriter, req *http.Request, l zl.Logger) {
 	rw.Header().Set("Entity-length", strconv.Itoa(len(resp)))
 
 	w := io.Writer(rw)
-	if strings.Contains(req.Header.Get("Accept-Encoding"), "gzip") {
+	if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 		rw.Header().Set("Content-encoding", "gzip")
 		w = gzip.NewWriter(w)
 	}
