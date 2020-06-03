@@ -10,6 +10,7 @@ import (
 
 	"github.com/attic-labs/noms/go/datas"
 	"github.com/attic-labs/noms/go/spec"
+	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
 
 	"roci.dev/diff-server/db"
@@ -68,13 +69,14 @@ func NewService(storageRoot string, accounts []Account, overrideClientViewURL st
 	}
 }
 
-// RegisterHandlers register's Service's handlers on the given mux.
-func RegisterHandlers(s *Service, mux *http.ServeMux) {
-	mux.HandleFunc("/", s.hello)
+// RegisterHandlers register's Service's handlers on the given router.
+func RegisterHandlers(s *Service, router *mux.Router) {
+	router.SkipClean(true)
+	router.HandleFunc("/", s.hello)
 	inject := alice.New(panicCatcher).ThenFunc(s.inject)
-	mux.Handle("/inject", inject)
+	router.Handle("/inject", inject)
 	pull := alice.New(contextLogger, panicCatcher, logHTTP).ThenFunc(s.pull)
-	mux.Handle("/pull", pull)
+	router.Handle("/pull", pull)
 }
 
 func (s *Service) GetDB(accountID, clientID string) (*db.DB, error) {

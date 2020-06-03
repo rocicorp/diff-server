@@ -6,9 +6,9 @@ require (
 	github.com/attic-labs/noms v0.0.0-20191214023511-2a57d6783c14
 	github.com/aws/aws-sdk-go v1.19.28
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gibson042/canonicaljson-go v1.0.3
 	github.com/golang/protobuf v1.3.1 // indirect
+	github.com/gorilla/mux v1.7.4
 	github.com/justinas/alice v1.2.0
 	github.com/motemen/go-loghttp v0.0.0-20170804080138-974ac5ceac27
 	github.com/motemen/go-nuts v0.0.0-20190725124253-1d2432db96b0 // indirect
