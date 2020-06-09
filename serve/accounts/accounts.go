@@ -15,6 +15,11 @@ var (
 			Name:          "Replicache Sample TODO",
 			ClientViewURL: "https://replicache-sample-todo.now.sh/serve/replicache-client-view",
 		},
+		serve.Account{
+			ID:            "2",
+			Name:          "Cron",
+			ClientViewURL: "https://api.cron.app/replicache-client-view",
+		},
 	}
 )
 
