@@ -18,5 +18,10 @@ echo "Building Repm Module..."
   git clone https://github.com/rocicorp/replicache-client
   cd replicache-client
   git reset --hard $REPM_VERSION
-  go build ./cmd/test_server
+  GOARCH=amd64 GOOS=darwin go build -o ../repc-amd64-osx ./cmd/test_server
+  GOARCH=amd64 GOOS=linux go build -o ../repc-amd64-linux ./cmd/test_server
+
+  cd ..
+  rm -rf replicache-client
+  tar cvzf replicache-sdk-js.tar.gz repc-amd64-osx repc-amd64-linux
 )
