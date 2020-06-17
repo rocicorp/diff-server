@@ -23,6 +23,7 @@ func (g ClientViewGetter) Get(url string, req servetypes.ClientViewRequest, auth
 	if err != nil {
 		return servetypes.ClientViewResponse{}, 0, fmt.Errorf("could not create client view http request: %w", err)
 	}
+	httpReq.Header.Add("Content-type", "application/json")
 	httpReq.Header.Add("Authorization", authToken)
 	httpReq.Header.Add("X-Replicache-SyncID", syncID)
 	httpResp, err := http.DefaultClient.Do(httpReq)

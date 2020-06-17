@@ -67,6 +67,7 @@ func TestClientViewGetter_Get(t *testing.T) {
 				var reqBody servetypes.ClientViewRequest
 				err := json.NewDecoder(r.Body).Decode(&reqBody)
 				assert.NoError(err, tt.name)
+				assert.Equal("application/json", r.Header.Get("Content-type"), tt.name)
 				assert.Equal(tt.clientViewAuth, r.Header.Get("Authorization"), tt.name)
 				assert.Equal("syncID", r.Header.Get("X-Replicache-SyncID"), tt.name)
 				w.WriteHeader(tt.respCode)
