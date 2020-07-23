@@ -17,7 +17,7 @@ go test ./...
 ## Run (Development Mode)
 
 ```
-./diffs serve --db=/tmp/diffs-data
+./diffs serve --db=/tmp/diffs-data --enable-inject
 
 curl -d '{"accountID":"sandbox", "clientID":"c1", "baseStateID":"00000000000000000000000000000000", "checksum":"00000000"}' http://localhost:7001/pull
 
