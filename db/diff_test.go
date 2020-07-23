@@ -196,8 +196,18 @@ func TestDiff(t *testing.T) {
 				r := db.Noms().WriteValue(types.String("not a commit"))
 				fromID = r.TargetHash()
 			},
-			nil,
-			"Invalid baseStateID",
+			[]kv.Operation{
+				{
+					Op:   kv.OpRemove,
+					Path: "/",
+				},
+				{
+					Op:    kv.OpAdd,
+					Path:  "/foo",
+					Value: []byte("\"bar\""),
+				},
+			},
+			"",
 		},
 	}
 

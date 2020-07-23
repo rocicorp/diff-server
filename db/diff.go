@@ -1,7 +1,7 @@
 package db
 
 import (
-	"errors"
+	"fmt"
 
 	"github.com/attic-labs/noms/go/hash"
 	"github.com/attic-labs/noms/go/marshal"
@@ -24,28 +24,38 @@ func fullSync(db *DB, from hash.Hash, l zl.Logger) ([]kv.Operation, Commit) {
 	return r, makeCommit(db.Noms(), types.Ref{}, datetime.Epoch, db.ds.Database().WriteValue(m.NomsMap()), m.NomsChecksum(), 0 /*lastMutationID*/)
 }
 
+func maybeDecodeCommit(v types.Value, h hash.Hash, expectedChecksum kv.Checksum, l zl.Logger) (Commit, error) {
+	var c Commit
+	err := marshal.Unmarshal(v, &c)
+	if err != nil {
+		return Commit{}, fmt.Errorf("could not decode basis %s: %w", h, err)
+	}
+	checksum, err := kv.ChecksumFromString(string(c.Value.Checksum))
+	if err != nil {
+		return Commit{}, fmt.Errorf("couldn't parse checksum from basis %s: %s", h, string(c.Value.Checksum))
+	}
+	if !checksum.Equal(expectedChecksum) {
+		return Commit{}, fmt.Errorf("checksum mismatch: %s from client, %s in db", expectedChecksum, checksum)
+	}
+	return c, nil
+}
+
 func (db *DB) Diff(fromHash hash.Hash, fromChecksum kv.Checksum, to Commit, l zl.Logger) ([]kv.Operation, error) {
 	r := []kv.Operation{}
-	v := db.Noms().ReadValue(fromHash)
 	var fc Commit
 	var err error
+	v := db.Noms().ReadValue(fromHash)
 	if v == nil {
+		// Unknown basis is not an error: maybe it's really old or we're starting up cold.
+		l.Info().Msgf("Sending full sync: unknown basis %s", fromHash)
 		r, fc = fullSync(db, fromHash, l)
 	} else {
-		err = marshal.Unmarshal(v, &fc)
+		fc, err = maybeDecodeCommit(v, fromHash, fromChecksum, l)
 		if err != nil {
-			l.Error().Msgf("Requested sync basis %s is not a commit: %#v", fromHash, v)
-			return nil, errors.New("Invalid baseStateID")
+			// Inability to decode a Commit or getting the wrong checksum is an error.
+			l.Error().Msgf("Sending full sync: cannot diff from basis %s: %s", fromHash, err)
+			r, fc = fullSync(db, fromHash, l)
 		}
-	}
-
-	fcChecksum, err := kv.ChecksumFromString(string(fc.Value.Checksum))
-	if err != nil {
-		l.Error().Msgf("Couldn't parse checksum from commit: %s", string(fc.Value.Checksum))
-		return nil, errors.New("unable to parse commit checksum from db")
-	} else if !fcChecksum.Equal(fromChecksum) {
-		l.Error().Msgf("Checksum mismatch; %s from client, %s in db", fromChecksum.String(), fcChecksum.String())
-		r, fc = fullSync(db, fromHash, l)
 	}
 
 	if !fc.Value.Data.Equals(to.Value.Data) {

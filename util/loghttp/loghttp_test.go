@@ -27,6 +27,10 @@ func Test_maybeUnzip(t *testing.T) {
 			[]byte{},
 		},
 		{
+			[]byte("\n"),
+			[]byte("\n"),
+		},
+		{
 			[]byte("not gzipped"),
 			[]byte("not gzipped"),
 		},
