@@ -109,12 +109,14 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Bytes("dump", dump).
 		Msg("Incoming request -->")
 
-	rl := &responseLogger{ResponseWriter: w, status: 200}
+	rl := &responseLogger{ResponseWriter: w, status: 200, l: ll}
 	h.wrapped.ServeHTTP(rl, r)
-	body, err := maybeUnzip(rl.responseBody.Bytes())
-	if err != nil {
-		ll.Err(err).Stack().Msg("Could not unzip")
-		return
+	body := rl.responseBody.Bytes()
+	maybeUnzippedBody, err := maybeUnzip(body)
+	if err == nil {
+		body = maybeUnzippedBody
+	} else {
+		ll.Err(err).Stack().Msgf("Error maybe-unzipping response of size %d with status %d; body: '%s'", len(body), rl.status, string(body))
 	}
 	body = filter(body)
 	ll.Debug().
@@ -138,6 +140,7 @@ type responseLogger struct {
 	http.ResponseWriter
 	responseBody bytes.Buffer
 	status       int
+	l            zl.Logger
 }
 
 func (r *responseLogger) WriteHeader(status int) {
@@ -146,9 +149,13 @@ func (r *responseLogger) WriteHeader(status int) {
 }
 
 func (r *responseLogger) Write(b []byte) (int, error) {
+	_, err := r.responseBody.Write(b)
+	if err != nil {
+		r.l.Err(err).Msgf("Could not capture response body of length %d with status %d for logging; body: '%s'", len(b), r.status, string(b))
+	}
 	n, err := r.ResponseWriter.Write(b)
 	if err != nil {
-		return n, err
+		r.l.Err(err).Msgf("Error writing response body of length %d with status %d; body: '%s'", len(b), r.status, string(b))
 	}
-	return r.responseBody.Write(b)
+	return n, err
 }

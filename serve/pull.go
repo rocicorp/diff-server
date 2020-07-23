@@ -106,22 +106,22 @@ func (s *Service) pull(rw http.ResponseWriter, r *http.Request) {
 		serverError(rw, err, l)
 		return
 	}
+	// Add a newline to make output to console etc nicer.
+	resp = append(resp, byte('\n'))
 	rw.Header().Set("Content-type", "application/json")
 	rw.Header().Set("Entity-length", strconv.Itoa(len(resp)))
 
 	w := io.Writer(rw)
 	if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 		rw.Header().Set("Content-encoding", "gzip")
-		w = gzip.NewWriter(w)
+		gzw := gzip.NewWriter(rw)
+		defer gzw.Close()
+		w = gzw
 	}
-
 	_, err = io.Copy(w, bytes.NewReader(resp))
 	if err != nil {
 		serverError(rw, err, l)
-	}
-	w.Write([]byte{'\n'})
-	if c, ok := w.(io.Closer); ok {
-		c.Close()
+		return
 	}
 }
 
