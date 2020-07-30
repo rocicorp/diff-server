@@ -32,3 +32,21 @@ now deploy --prod
 ```
 
 ... or just check in a new commit, it will autodeploy.
+
+## Release
+
+1. Tag a new release eg v1.0.3:
+```
+git checkout master
+git tag v1.0.3
+git push origin
+```
+2. Build release binaries:
+```
+./tools/release.sh
+```
+3. Find the new tag on [https://github.com/rocicorp/diff-server/releases](https://github.com/rocicorp/diff-server/releases) and edit it.
+4. Upload `diffs` and `noms` artifacts generated in previous step (found in `build/`).
+5. Save the release.
+
+Done. Customers can now run `tools/build.sh` to get the new version [as described here](https://github.com/rocicorp/replicache-sdk-js#get-binaries).
