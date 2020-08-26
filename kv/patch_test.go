@@ -22,27 +22,27 @@ func TestDiff(t *testing.T) {
 		expectedError  string
 	}{
 		{"insert",
-			`map {}`, `map{"foo":"bar"}`, []string{`{"op":"add","path":"/foo","value":"bar"}`}, ""},
+			`map {}`, `map{"foo":"bar"}`, []string{`{"op":"add","path":"/foo","value":"\"bar\""}`}, ""},
 		{"remove",
 			`map{"foo":"bar"}`, `map {}`, []string{`{"op":"remove","path":"/foo"}`}, ""},
 		{"replace",
-			`map{"foo":"bar"}`, `map {"foo":"baz"}`, []string{`{"op":"replace","path":"/foo","value":"baz"}`}, ""},
+			`map{"foo":"bar"}`, `map {"foo":"baz"}`, []string{`{"op":"replace","path":"/foo","value":"\"baz\""}`}, ""},
 		{"escape-1",
-			`map {}`, `map{"/":"foo"}`, []string{`{"op":"add","path":"/~1","value":"foo"}`}, ""},
+			`map {}`, `map{"/":"foo"}`, []string{`{"op":"add","path":"/~1","value":"\"foo\""}`}, ""},
 		{"escape-2",
-			`map {}`, `map{"~":"foo"}`, []string{`{"op":"add","path":"/~0","value":"foo"}`}, ""},
+			`map {}`, `map{"~":"foo"}`, []string{`{"op":"add","path":"/~0","value":"\"foo\""}`}, ""},
 		{"deep",
 			`map {"foo":map{"bar":"baz"}}`, `map {"foo":map{"bar":"quux"}}`,
-			[]string{`{"op":"replace","path":"/foo","value":{"bar":"quux"}}`}, ""},
+			[]string{`{"op":"replace","path":"/foo","value":"{\"bar\":\"quux\"}"}`}, ""},
 		{"all-types",
 			`map{}`, `map {"foo":map{"b":true,"i":42,"f":88.8,"s":"monkey","a":[],"a2":[true,42,8.88E1],"o":map{}}}`,
-			[]string{`{"op":"add","path":"/foo","value":{"a":[],"a2":[true,42,8.88E1],"b":true,"f":8.88E1,"i":42,"o":{},"s":"monkey"}}`}, ""},
+			[]string{`{"op":"add","path":"/foo","value":"{\"a\":[],\"a2\":[true,42,8.88E1],\"b\":true,\"f\":8.88E1,\"i\":42,\"o\":{},\"s\":\"monkey\"}"}`}, ""},
 		{"multiple",
 			`map {"a":"a","b":"b"}`, `map {"b":"bb","c":"c"}`,
 			[]string{
 				`{"op":"remove","path":"/a"}`,
-				`{"op":"replace","path":"/b","value":"bb"}`,
-				`{"op":"add","path":"/c","value":"c"}`,
+				`{"op":"replace","path":"/b","value":"\"bb\""}`,
+				`{"op":"add","path":"/c","value":"\"c\""}`,
 			}, ""},
 	}
 
@@ -82,8 +82,8 @@ func TestTopLevelRemove(t *testing.T) {
 	to := FromNoms(noms, nm, ComputeChecksum(nm))
 
 	ops := []Operation{
-		Operation{OpRemove, "/", []byte{}},
-		Operation{OpReplace, "/b", []byte("\"bb\"")},
+		Operation{OpRemove, "/", ""},
+		Operation{OpReplace, "/b", "\"bb\""},
 	}
 	r, err := ApplyPatch(noms, from, ops)
 	assert.NoError(err)

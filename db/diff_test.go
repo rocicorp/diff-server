@@ -43,12 +43,12 @@ func TestDiff(t *testing.T) {
 				{
 					Op:    kv.OpAdd,
 					Path:  "/foo",
-					Value: []byte("\"bar\""),
+					Value: "\"bar\"",
 				},
 				{
 					Op:    kv.OpAdd,
 					Path:  "/hot",
-					Value: []byte("\"dog\""),
+					Value: "\"dog\"",
 				},
 			},
 			"",
@@ -65,7 +65,7 @@ func TestDiff(t *testing.T) {
 				{
 					Op:    kv.OpReplace,
 					Path:  "/foo",
-					Value: []byte("\"baz\""),
+					Value: "\"baz\"",
 				},
 				{
 					Op:   kv.OpRemove,
@@ -74,7 +74,7 @@ func TestDiff(t *testing.T) {
 				{
 					Op:    kv.OpAdd,
 					Path:  "/mon",
-					Value: []byte("\"key\""),
+					Value: "\"key\"",
 				},
 			},
 			"",
@@ -107,17 +107,17 @@ func TestDiff(t *testing.T) {
 				kv.Operation{
 					Op:    kv.OpAdd,
 					Path:  "/a",
-					Value: json.RawMessage([]byte(`"a"`)),
+					Value: `"a"`,
 				},
 				kv.Operation{
 					Op:    kv.OpAdd,
 					Path:  "/b",
-					Value: json.RawMessage([]byte(`"b"`)),
+					Value: `"b"`,
 				},
 				kv.Operation{
 					Op:    kv.OpAdd,
 					Path:  "/c",
-					Value: json.RawMessage([]byte(`"c"`)),
+					Value: `"c"`,
 				},
 			},
 			"",
@@ -135,17 +135,17 @@ func TestDiff(t *testing.T) {
 				kv.Operation{
 					Op:    kv.OpAdd,
 					Path:  "/a",
-					Value: json.RawMessage([]byte(`"a"`)),
+					Value: `"a"`,
 				},
 				kv.Operation{
 					Op:    kv.OpAdd,
 					Path:  "/b",
-					Value: json.RawMessage([]byte(`"b"`)),
+					Value: `"b"`,
 				},
 				kv.Operation{
 					Op:    kv.OpAdd,
 					Path:  "/c",
-					Value: json.RawMessage([]byte(`"c"`)),
+					Value: `"c"`,
 				},
 			},
 			"",
@@ -167,7 +167,7 @@ func TestDiff(t *testing.T) {
 				{
 					Op:    kv.OpAdd,
 					Path:  "/foo",
-					Value: []byte("\"bar\""),
+					Value: "\"bar\"",
 				},
 			},
 			"",
@@ -185,7 +185,7 @@ func TestDiff(t *testing.T) {
 				{
 					Op:    kv.OpAdd,
 					Path:  "/foo",
-					Value: []byte("\"bar\""),
+					Value: "\"bar\"",
 				},
 			},
 			"",
@@ -204,7 +204,7 @@ func TestDiff(t *testing.T) {
 				{
 					Op:    kv.OpAdd,
 					Path:  "/foo",
-					Value: []byte("\"bar\""),
+					Value: "\"bar\"",
 				},
 			},
 			"",

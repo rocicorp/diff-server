@@ -9,7 +9,6 @@ package kv
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"runtime"
 	"sort"
@@ -32,9 +31,10 @@ const (
 
 // Operation is a single JSONPatch change.
 type Operation struct {
-	Op    string          `json:"op"`
-	Path  string          `json:"path"`
-	Value json.RawMessage `json:"value,omitempty"`
+	Op   string `json:"op"`
+	Path string `json:"path"`
+	// Value quote-escaped json for now. See https://github.com/rocicorp/repc/issues/93.
+	Value string `json:"value,omitempty"`
 }
 
 func jsonPointerEscape(s string) string {
@@ -89,7 +89,7 @@ func Diff(from, to Map, r []Operation) ([]Operation, error) {
 					} else {
 						op.Op = OpReplace
 					}
-					op.Value = json.RawMessage(b.Bytes())
+					op.Value = string(b.Bytes())
 				default:
 					chk.Fail("Unexpected ChangeType: %#v", d)
 				}
@@ -131,7 +131,7 @@ func ApplyPatch(vrw types.ValueReadWriter, to Map, patch []Operation) (Map, erro
 		p := types.String(jsonPointerUnescape(op.Path[1:]))
 		switch op.Op {
 		case OpAdd, OpReplace:
-			v, err := nomsjson.FromJSON(op.Value, vrw)
+			v, err := nomsjson.FromJSON([]byte(op.Value), vrw)
 			if err != nil {
 				return Map{}, fmt.Errorf("couldnt parse value from JSON '%s': %w", op.Value, err)
 			}
