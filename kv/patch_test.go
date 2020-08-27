@@ -11,7 +11,7 @@ import (
 	"roci.dev/diff-server/util/noms/memstore"
 )
 
-func TestDiff(t *testing.T) {
+func TestDiffV0(t *testing.T) {
 	assert := assert.New(t)
 
 	tc := []struct {
@@ -53,13 +53,13 @@ func TestDiff(t *testing.T) {
 		nm = nomdl.MustParse(noms, t.to).(types.Map)
 		to := FromNoms(noms, nm, ComputeChecksum(nm))
 		r := []Operation{}
-		r, err := Diff(from, to, r)
+		r, err := Diff(0, from, to, r)
 		if t.expectedError == "" {
 			assert.NoError(err, t.label)
 			j, err := json.Marshal(r)
 			assert.NoError(err, t.label)
 			assert.Equal("["+strings.Join(t.expectedResult, ",")+"]", string(j), t.label)
-			got, err := ApplyPatch(noms, from, r)
+			got, err := ApplyPatch(0, noms, from, r)
 			es, gots := types.EncodedValue(to.NomsMap()), types.EncodedValue(got.NomsMap())
 			assert.Equal(es, gots, "%s expected %s got %s", t.label, es, gots)
 			assert.Equal(to.Checksum(), got.Checksum(), "%s expected %s got %s", t.label, es, gots)
@@ -70,7 +70,66 @@ func TestDiff(t *testing.T) {
 	}
 }
 
-func TestTopLevelRemove(t *testing.T) {
+func TestDiffV1(t *testing.T) {
+	assert := assert.New(t)
+
+	tc := []struct {
+		label          string
+		from           string
+		to             string
+		expectedResult []string
+		expectedError  string
+	}{
+		{"insert",
+			`map {}`, `map{"foo":"bar"}`, []string{`{"op":"add","path":"/foo","valueString":"\"bar\""}`}, ""},
+		{"remove",
+			`map{"foo":"bar"}`, `map {}`, []string{`{"op":"remove","path":"/foo"}`}, ""},
+		{"replace",
+			`map{"foo":"bar"}`, `map {"foo":"baz"}`, []string{`{"op":"replace","path":"/foo","valueString":"\"baz\""}`}, ""},
+		{"escape-1",
+			`map {}`, `map{"/":"foo"}`, []string{`{"op":"add","path":"/~1","valueString":"\"foo\""}`}, ""},
+		{"escape-2",
+			`map {}`, `map{"~":"foo"}`, []string{`{"op":"add","path":"/~0","valueString":"\"foo\""}`}, ""},
+		{"deep",
+			`map {"foo":map{"bar":"baz"}}`, `map {"foo":map{"bar":"quux"}}`,
+			[]string{`{"op":"replace","path":"/foo","valueString":"{\"bar\":\"quux\"}"}`}, ""},
+		{"all-types",
+			`map{}`, `map {"foo":map{"b":true,"i":42,"f":88.8,"s":"monkey","a":[],"a2":[true,42,8.88E1],"o":map{}}}`,
+			[]string{`{"op":"add","path":"/foo","valueString":"{\"a\":[],\"a2\":[true,42,8.88E1],\"b\":true,\"f\":8.88E1,\"i\":42,\"o\":{},\"s\":\"monkey\"}"}`}, ""},
+		{"multiple",
+			`map {"a":"a","b":"b"}`, `map {"b":"bb","c":"c"}`,
+			[]string{
+				`{"op":"remove","path":"/a"}`,
+				`{"op":"replace","path":"/b","valueString":"\"bb\""}`,
+				`{"op":"add","path":"/c","valueString":"\"c\""}`,
+			}, ""},
+	}
+
+	noms := memstore.New()
+	for _, t := range tc {
+		nm := nomdl.MustParse(noms, t.from).(types.Map)
+		from := FromNoms(noms, nm, ComputeChecksum(nm))
+		nm = nomdl.MustParse(noms, t.to).(types.Map)
+		to := FromNoms(noms, nm, ComputeChecksum(nm))
+		r := []Operation{}
+		r, err := Diff(1, from, to, r)
+		if t.expectedError == "" {
+			assert.NoError(err, t.label)
+			j, err := json.Marshal(r)
+			assert.NoError(err, t.label)
+			assert.Equal("["+strings.Join(t.expectedResult, ",")+"]", string(j), t.label)
+			got, err := ApplyPatch(1, noms, from, r)
+			es, gots := types.EncodedValue(to.NomsMap()), types.EncodedValue(got.NomsMap())
+			assert.Equal(es, gots, "%s expected %s got %s", t.label, es, gots)
+			assert.Equal(to.Checksum(), got.Checksum(), "%s expected %s got %s", t.label, es, gots)
+		} else {
+			assert.EqualError(err, t.expectedError, t.label)
+			// buf might have arbitrary data, not part of the contract
+		}
+	}
+}
+
+func TestTopLevelRemoveV0(t *testing.T) {
 	// Diff doesn't currently generate a top level remove, so test here.
 	assert := assert.New(t)
 	noms := memstore.New()
@@ -82,10 +141,31 @@ func TestTopLevelRemove(t *testing.T) {
 	to := FromNoms(noms, nm, ComputeChecksum(nm))
 
 	ops := []Operation{
-		Operation{OpRemove, "/", []byte{}},
-		Operation{OpReplace, "/b", []byte("\"bb\"")},
+		Operation{OpRemove, "/", []byte{}, ""},
+		Operation{OpReplace, "/b", []byte("\"bb\""), ""},
 	}
-	r, err := ApplyPatch(noms, from, ops)
+	r, err := ApplyPatch(0, noms, from, ops)
+	assert.NoError(err)
+	assert.Equal(types.EncodedValue(r.NomsMap()), types.EncodedValue(to.NomsMap()))
+	assert.Equal(to.Checksum(), r.Checksum(), "expected %s, got %s", to.DebugString(), r.DebugString())
+}
+
+func TestTopLevelRemoveV1(t *testing.T) {
+	// Diff doesn't currently generate a top level remove, so test here.
+	assert := assert.New(t)
+	noms := memstore.New()
+
+	fs, ts := `map {"a":"a","b":"b"}`, `map {"b":"bb"}`
+	nm := nomdl.MustParse(noms, fs).(types.Map)
+	from := FromNoms(noms, nm, ComputeChecksum(nm))
+	nm = nomdl.MustParse(noms, ts).(types.Map)
+	to := FromNoms(noms, nm, ComputeChecksum(nm))
+
+	ops := []Operation{
+		Operation{OpRemove, "/", nil, ""},
+		Operation{OpReplace, "/b", nil, "\"bb\""},
+	}
+	r, err := ApplyPatch(1, noms, from, ops)
 	assert.NoError(err)
 	assert.Equal(types.EncodedValue(r.NomsMap()), types.EncodedValue(to.NomsMap()))
 	assert.Equal(to.Checksum(), r.Checksum(), "expected %s, got %s", to.DebugString(), r.DebugString())
@@ -98,7 +178,7 @@ func TestDiffDoesntIncludeNewlines(t *testing.T) {
 
 	from := NewMap(noms)
 	to := NewMapForTest(noms, "key", "true")
-	ops, err := Diff(from, to, []Operation{})
+	ops, err := Diff(1, from, to, []Operation{})
 	assert.NoError(err)
 	assert.True(len(ops) == 1)
 	assert.NotContains(string(ops[0].Value), "\n")

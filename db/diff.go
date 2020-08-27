@@ -40,7 +40,7 @@ func maybeDecodeCommit(v types.Value, h hash.Hash, expectedChecksum kv.Checksum,
 	return c, nil
 }
 
-func (db *DB) Diff(fromHash hash.Hash, fromChecksum kv.Checksum, to Commit, l zl.Logger) ([]kv.Operation, error) {
+func (db *DB) Diff(version uint32, fromHash hash.Hash, fromChecksum kv.Checksum, to Commit, l zl.Logger) ([]kv.Operation, error) {
 	r := []kv.Operation{}
 	var fc Commit
 	var err error
@@ -61,7 +61,7 @@ func (db *DB) Diff(fromHash hash.Hash, fromChecksum kv.Checksum, to Commit, l zl
 	if !fc.Value.Data.Equals(to.Value.Data) {
 		fm := fc.Data(db.Noms())
 		tm := to.Data(db.Noms())
-		r, err = kv.Diff(fm, tm, r)
+		r, err = kv.Diff(version, fm, tm, r)
 		if err != nil {
 			return nil, err
 		}
