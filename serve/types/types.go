@@ -7,6 +7,9 @@ import (
 )
 
 type PullRequest struct {
+	// Version 0 -> uses raw json kv.Operation.Value
+	// Version 1 -> uses stringified json kv.Operation.ValueString
+	Version        uint32 `json:"version"`
 	ClientViewAuth string `json:"clientViewAuth"`
 	ClientID       string `json:"clientID"`
 	BaseStateID    string `json:"baseStateID"`

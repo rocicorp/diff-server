@@ -89,7 +89,7 @@ func (s *Service) pull(rw http.ResponseWriter, r *http.Request) {
 	cvInfo := maybeGetAndStoreNewClientView(db, preq.ClientViewAuth, clientViewURL, s.clientViewGetter, cvReq, syncID, l)
 
 	head := db.Head()
-	patch, err := db.Diff(fromHash, *fromChecksum, head, l)
+	patch, err := db.Diff(preq.Version, fromHash, *fromChecksum, head, l)
 	if err != nil {
 		serverError(rw, err, l)
 		return

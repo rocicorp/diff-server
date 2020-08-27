@@ -32,9 +32,10 @@ const (
 
 // Operation is a single JSONPatch change.
 type Operation struct {
-	Op    string          `json:"op"`
-	Path  string          `json:"path"`
-	Value json.RawMessage `json:"value,omitempty"`
+	Op          string          `json:"op"`
+	Path        string          `json:"path"`
+	Value       json.RawMessage `json:"value,omitempty"`
+	ValueString string          `json:"valueString,omitempty"`
 }
 
 func jsonPointerEscape(s string) string {
@@ -47,7 +48,7 @@ func jsonPointerUnescape(s string) string {
 
 // Diff calculates the difference between two maps as a JSON patch. Presently only
 // creates ops at the top level, at the level of keys, so not super efficient.
-func Diff(from, to Map, r []Operation) ([]Operation, error) {
+func Diff(version uint32, from, to Map, r []Operation) ([]Operation, error) {
 	dChan := make(chan types.ValueChanged)
 	sChan := make(chan struct{})
 	out := make(chan Operation)
@@ -89,7 +90,11 @@ func Diff(from, to Map, r []Operation) ([]Operation, error) {
 					} else {
 						op.Op = OpReplace
 					}
-					op.Value = json.RawMessage(b.Bytes())
+					if version == 0 {
+						op.Value = json.RawMessage(b.Bytes())
+					} else {
+						op.ValueString = string(b.Bytes())
+					}
 				default:
 					chk.Fail("Unexpected ChangeType: %#v", d)
 				}
@@ -119,7 +124,7 @@ func Diff(from, to Map, r []Operation) ([]Operation, error) {
 }
 
 // ApplyPath applies the given series of ops to the input Map.
-func ApplyPatch(vrw types.ValueReadWriter, to Map, patch []Operation) (Map, error) {
+func ApplyPatch(version uint32, vrw types.ValueReadWriter, to Map, patch []Operation) (Map, error) {
 	if len(patch) == 0 {
 		return to, nil
 	}
@@ -131,7 +136,13 @@ func ApplyPatch(vrw types.ValueReadWriter, to Map, patch []Operation) (Map, erro
 		p := types.String(jsonPointerUnescape(op.Path[1:]))
 		switch op.Op {
 		case OpAdd, OpReplace:
-			v, err := nomsjson.FromJSON(op.Value, vrw)
+			var v types.Value
+			var err error
+			if version == 0 {
+				v, err = nomsjson.FromJSON(op.Value, vrw)
+			} else {
+				v, err = nomsjson.FromJSON([]byte(op.ValueString), vrw)
+			}
 			if err != nil {
 				return Map{}, fmt.Errorf("couldnt parse value from JSON '%s': %w", op.Value, err)
 			}
