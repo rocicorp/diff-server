@@ -111,6 +111,10 @@ func (s *Service) pull(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Set("Content-type", "application/json")
 	rw.Header().Set("Entity-length", strconv.Itoa(len(resp)))
 
+	rw.Header().Set("Access-Control-Allow-Origin", "*")
+	rw.Header().Set("Access-Control-Allow-Methods", "*")
+	rw.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-type, Referer, User-agent, X-Replicache-SyncID")
+
 	w := io.Writer(rw)
 	if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 		rw.Header().Set("Content-encoding", "gzip")

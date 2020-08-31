@@ -261,6 +261,10 @@ func TestAPIV1(t *testing.T) {
 		if t.expPullErr == "" {
 			assert.Equal("application/json", resp.Result().Header.Get("Content-type"))
 			assert.Equal(t.expPullResp+"\n", string(body.Bytes()), msg)
+			// Ensure there are cors headers.
+			assert.True(len(resp.Result().Header.Get("Access-Control-Allow-Origin")) > 0)
+			assert.True(len(resp.Result().Header.Get("Access-Control-Allow-Methods")) > 0)
+			assert.True(len(resp.Result().Header.Get("Access-Control-Allow-Headers")) > 0)		
 		} else {
 			assert.Regexp(t.expPullErr, string(body.Bytes()), msg)
 		}
