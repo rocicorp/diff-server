@@ -25,7 +25,13 @@ import (
 
 func (s *Service) pull(rw http.ResponseWriter, r *http.Request) {
 	l := logger(r)
-	if r.Method != "POST" {
+	if r.Method == "OPTIONS" {
+		rw.Header().Set("Access-Control-Allow-Origin", "*")
+		rw.Header().Set("Access-Control-Allow-Methods", "*")
+		rw.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-type, Referer, User-agent, X-Replicache-SyncID")
+		rw.WriteHeader(200)
+		return
+	} else if r.Method != "POST" {
 		unsupportedMethodError(rw, r.Method, l)
 		return
 	}
@@ -110,10 +116,6 @@ func (s *Service) pull(rw http.ResponseWriter, r *http.Request) {
 	resp = append(resp, byte('\n'))
 	rw.Header().Set("Content-type", "application/json")
 	rw.Header().Set("Entity-length", strconv.Itoa(len(resp)))
-
-	rw.Header().Set("Access-Control-Allow-Origin", "*")
-	rw.Header().Set("Access-Control-Allow-Methods", "*")
-	rw.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-type, Referer, User-agent, X-Replicache-SyncID")
 
 	w := io.Writer(rw)
 	if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {

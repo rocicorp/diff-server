@@ -48,7 +48,18 @@ func TestAPIV1(t *testing.T) {
 			nil,
 			``,
 			"Unsupported method: GET"},
-
+		// Supports OPTIONS for cors headers
+		{"OPTIONS",
+			``,
+			"accountID",
+			"",
+			"",
+			"",
+			servetypes.ClientViewResponse{},
+			0,
+			nil,
+			``,
+			""},
 		// No client view to fetch from.
 		{"POST",
 			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid", "version": 1}`,
@@ -74,7 +85,6 @@ func TestAPIV1(t *testing.T) {
 			nil,
 			`{"stateID":"hoc705ifecv1c858qgbqr9jghh4d9l96","lastMutationID":2,"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/new","valueString":"\"value\""}],"checksum":"f9ef007b","clientViewInfo":{"httpStatusCode":200,"errorMessage":""}}`,
 			""},
-
 		// Successful client view fetch via override.
 		{"POST",
 			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid", "clientViewAuth": "clientauth", "version": 1}`,
@@ -259,12 +269,15 @@ func TestAPIV1(t *testing.T) {
 		_, err = io.Copy(&body, resp.Result().Body)
 		assert.NoError(err, msg)
 		if t.expPullErr == "" {
+			if t.pullMethod == "OPTIONS" {
+				assert.Equal(200, resp.Result().StatusCode)
+				assert.True(len(resp.Result().Header.Get("Access-Control-Allow-Origin")) > 0)
+				assert.True(len(resp.Result().Header.Get("Access-Control-Allow-Methods")) > 0)
+				assert.True(len(resp.Result().Header.Get("Access-Control-Allow-Headers")) > 0)
+				continue
+			}
 			assert.Equal("application/json", resp.Result().Header.Get("Content-type"))
 			assert.Equal(t.expPullResp+"\n", string(body.Bytes()), msg)
-			// Ensure there are cors headers.
-			assert.True(len(resp.Result().Header.Get("Access-Control-Allow-Origin")) > 0)
-			assert.True(len(resp.Result().Header.Get("Access-Control-Allow-Methods")) > 0)
-			assert.True(len(resp.Result().Header.Get("Access-Control-Allow-Headers")) > 0)		
 		} else {
 			assert.Regexp(t.expPullErr, string(body.Bytes()), msg)
 		}
