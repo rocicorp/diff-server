@@ -25,16 +25,15 @@ import (
 
 func (s *Service) pull(rw http.ResponseWriter, r *http.Request) {
 	l := logger(r)
-	if r.Method == "OPTIONS" || r.Method == "POST" {
-		rw.Header().Set("Access-Control-Allow-Origin", "*")
-		rw.Header().Set("Access-Control-Allow-Methods", "*")
-		rw.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-type, Referer, User-agent, X-Replicache-SyncID")
-		if r.Method == "OPTIONS" {
-			rw.WriteHeader(200)
-			return
-		}
-	} else {
+	if r.Method != "OPTIONS" && r.Method != "POST" {
 		unsupportedMethodError(rw, r.Method, l)
+		return
+	}
+	rw.Header().Set("Access-Control-Allow-Origin", "*")
+	rw.Header().Set("Access-Control-Allow-Methods", "*")
+	rw.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-type, Referer, User-agent, X-Replicache-SyncID")
+	if r.Method == "OPTIONS" {
+		rw.WriteHeader(200)
 		return
 	}
 
