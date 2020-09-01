@@ -269,11 +269,11 @@ func TestAPIV1(t *testing.T) {
 		_, err = io.Copy(&body, resp.Result().Body)
 		assert.NoError(err, msg)
 		if t.expPullErr == "" {
+			assert.True(len(resp.Result().Header.Get("Access-Control-Allow-Origin")) > 0)
+			assert.True(len(resp.Result().Header.Get("Access-Control-Allow-Methods")) > 0)
+			assert.True(len(resp.Result().Header.Get("Access-Control-Allow-Headers")) > 0)
 			if t.pullMethod == "OPTIONS" {
 				assert.Equal(200, resp.Result().StatusCode)
-				assert.True(len(resp.Result().Header.Get("Access-Control-Allow-Origin")) > 0)
-				assert.True(len(resp.Result().Header.Get("Access-Control-Allow-Methods")) > 0)
-				assert.True(len(resp.Result().Header.Get("Access-Control-Allow-Headers")) > 0)
 				continue
 			}
 			assert.Equal("application/json", resp.Result().Header.Get("Content-type"))
