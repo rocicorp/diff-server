@@ -15,8 +15,8 @@ cd $ROOT
 # diffs
 echo "Building diffs..."
 
-GOOS=darwin GOARCH=amd64 go build -ldflags "-X roci.dev/replicant/util/version.v=$DIFFS_VERSION" -o build/diffs-osx ./cmd/diffs
-GOOS=linux GOARCH=amd64 go build -ldflags "-X roci.dev/replicant/util/version.v=$DIFFS_VERSION" -o build/diffs-linux ./cmd/diffs
+GOOS=darwin GOARCH=amd64 go build -ldflags "-X roci.dev/diff-server/util/version.v=$DIFFS_VERSION" -o build/diffs-osx ./cmd/diffs
+GOOS=linux GOARCH=amd64 go build -ldflags "-X roci.dev/diff-server/util/version.v=$DIFFS_VERSION" -o build/diffs-linux ./cmd/diffs
 
 # noms tool
 echo "Building noms..."
