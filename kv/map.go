@@ -2,7 +2,6 @@ package kv
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 
 	"roci.dev/diff-server/util/chk"
@@ -98,9 +97,6 @@ func (me *MapEditor) Get(key types.Value) types.Value {
 // be parsed from canonical json, otherwise we might parse two different
 // values for the same canonical json.
 func (me *MapEditor) Set(key types.String, value types.Value) error {
-	if key == "" {
-		return errors.New("key must be non-empty")
-	}
 	if me.MapEditor.Has(key) {
 		// Have to do this in order to properly update checksum.
 		if err := me.Remove(key); err != nil {

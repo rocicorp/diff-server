@@ -171,6 +171,29 @@ func TestTopLevelRemoveV1(t *testing.T) {
 	assert.Equal(to.Checksum(), r.Checksum(), "expected %s, got %s", to.DebugString(), r.DebugString())
 }
 
+func TestTopLevelRemoveV2(t *testing.T) {
+	// Diff doesn't currently generate a top level remove, so test here.
+	assert := assert.New(t)
+	noms := memstore.New()
+
+	fs, ts := `map {"a":"a","b":"b"}`, `map {"":"d","b":"bb"}`
+	nm := nomdl.MustParse(noms, fs).(types.Map)
+	from := FromNoms(noms, nm, ComputeChecksum(nm))
+	nm = nomdl.MustParse(noms, ts).(types.Map)
+	to := FromNoms(noms, nm, ComputeChecksum(nm))
+
+	ops := []Operation{
+		Operation{OpReplace, "", nil, "{}"},
+		Operation{OpReplace, "/b", nil, "\"bb\""},
+		Operation{OpAdd, "/", nil, "\"c\""},
+		Operation{OpReplace, "/", nil, "\"d\""},
+	}
+	r, err := ApplyPatch(2, noms, from, ops)
+	assert.NoError(err)
+	assert.Equal(types.EncodedValue(r.NomsMap()), types.EncodedValue(to.NomsMap()))
+	assert.Equal(to.Checksum(), r.Checksum(), "expected %s, got %s", to.DebugString(), r.DebugString())
+}
+
 // There was a bug where we were including trailing newlines in values.
 func TestDiffDoesntIncludeNewlines(t *testing.T) {
 	assert := assert.New(t)
