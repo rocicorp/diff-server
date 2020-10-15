@@ -12,16 +12,26 @@ import (
 	"roci.dev/diff-server/kv"
 )
 
-func fullSync(db *DB, from hash.Hash, l zl.Logger) ([]kv.Operation, Commit) {
+func fullSync(version uint32, db *DB, from hash.Hash, l zl.Logger) ([]kv.Operation, Commit) {
 	l.Debug().Msgf("Requested sync %s basis could not be found - sending a full sync", from.String())
-	r := []kv.Operation{
-		kv.Operation{
+
+	var op kv.Operation
+	if version < 2 {
+		op = kv.Operation{
 			Op:   kv.OpRemove,
 			Path: "/",
-		},
+		}
+	} else {
+		op =
+			kv.Operation{
+				Op:          kv.OpReplace,
+				Path:        "",
+				ValueString: "{}",
+			}
+
 	}
 	m := kv.NewMap(db.Noms())
-	return r, makeCommit(db.Noms(), types.Ref{}, datetime.Epoch, db.ds.Database().WriteValue(m.NomsMap()), m.NomsChecksum(), 0 /*lastMutationID*/)
+	return []kv.Operation{op}, makeCommit(db.Noms(), types.Ref{}, datetime.Epoch, db.ds.Database().WriteValue(m.NomsMap()), m.NomsChecksum(), 0 /*lastMutationID*/)
 }
 
 func maybeDecodeCommit(v types.Value, h hash.Hash, expectedChecksum kv.Checksum, l zl.Logger) (Commit, error) {
@@ -48,13 +58,13 @@ func (db *DB) Diff(version uint32, fromHash hash.Hash, fromChecksum kv.Checksum,
 	if v == nil {
 		// Unknown basis is not an error: maybe it's really old or we're starting up cold.
 		l.Info().Msgf("Sending full sync: unknown basis %s", fromHash)
-		r, fc = fullSync(db, fromHash, l)
+		r, fc = fullSync(version, db, fromHash, l)
 	} else {
 		fc, err = maybeDecodeCommit(v, fromHash, fromChecksum, l)
 		if err != nil {
 			// Inability to decode a Commit or getting the wrong checksum is an error.
 			l.Error().Msgf("Sending full sync: cannot diff from basis %s: %s", fromHash, err)
-			r, fc = fullSync(db, fromHash, l)
+			r, fc = fullSync(version, db, fromHash, l)
 		}
 	}
 

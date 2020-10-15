@@ -3,6 +3,7 @@ package kv_test
 import (
 	"testing"
 
+	"github.com/attic-labs/noms/go/nomdl"
 	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
 	"roci.dev/diff-server/kv"
@@ -108,7 +109,11 @@ func TestEmptyKey(t *testing.T) {
 	assert := assert.New(t)
 	noms := memstore.New()
 	me := kv.NewMap(noms).Edit()
-	assert.Error(me.Set(s(""), types.Bool(true)), "key must be non-empty")
+	assert.NoError(me.Set(s(""), types.Bool(true)))
+	m := me.Build()
+	expected := nomdl.MustParse(noms, "map {\"\": true}").(types.Map)
+	assert.Equal(types.EncodedValue(m.NomsMap()),
+		types.EncodedValue(expected))
 }
 
 func TestEmpty(t *testing.T) {

@@ -123,13 +123,21 @@ func Diff(version uint32, from, to Map, r []Operation) ([]Operation, error) {
 	return r, nil
 }
 
-// ApplyPath applies the given series of ops to the input Map.
+// ApplyPatch applies the given series of ops to the input Map.
 func ApplyPatch(version uint32, vrw types.ValueReadWriter, to Map, patch []Operation) (Map, error) {
 	if len(patch) == 0 {
 		return to, nil
 	}
 	ed := to.Edit()
 	for _, op := range patch {
+		if version >= 2 &&
+			op.Path == "" && op.Op == OpReplace && op.ValueString == "{}" {
+			// Clear map
+			emptyMap := NewMap(ed.noms)
+			ed = emptyMap.Edit()
+			continue
+		}
+
 		if !strings.HasPrefix(op.Path, "/") {
 			return Map{}, fmt.Errorf("Invalid path %s - must start with /", op.Path)
 		}
