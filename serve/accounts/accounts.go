@@ -20,6 +20,11 @@ var (
 			Name:          "Cron",
 			ClientViewURL: "https://api.cron.app/replicache-client-view",
 		},
+		serve.Account{
+			ID:            "3",
+			Name:          "Songbook Studio",
+			ClientViewURL: "https://us-central1-songbookstudio.cloudfunctions.net/repliclient",
+		},
 	}
 )
 
