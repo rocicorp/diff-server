@@ -23,7 +23,7 @@ var (
 		serve.Account{
 			ID:            "3",
 			Name:          "Songbook Studio",
-			ClientViewURL: "https://us-central1-songbookstudio.cloudfunctions.net/repliclient",
+			ClientViewURL: "https://us-central1-songbookstudio.cloudfunctions.net/repliclient/4rzcWwvc83dlTz3CoX9WY8NHUxV2",
 		},
 	}
 )
