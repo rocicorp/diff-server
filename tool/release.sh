@@ -4,7 +4,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 ROOT=$DIR/../
 set -x
 
-DIFFS_VERSION=`git describe --tags`
+HEAD_HASH=`git rev-parse HEAD | cut -c1-6`
 
 BUILDDIR=build
 rm -rf build
@@ -15,8 +15,8 @@ cd $ROOT
 # diffs
 echo "Building diffs..."
 
-GOOS=darwin GOARCH=amd64 go build -ldflags "-X roci.dev/diff-server/util/version.v=$DIFFS_VERSION" -o build/diffs-osx ./cmd/diffs
-GOOS=linux GOARCH=amd64 go build -ldflags "-X roci.dev/diff-server/util/version.v=$DIFFS_VERSION" -o build/diffs-linux ./cmd/diffs
+GOOS=darwin GOARCH=amd64 go build -ldflags "-X roci.dev/diff-server/util/version.h=$HEAD_HASH" -o build/diffs-osx ./cmd/diffs
+GOOS=linux GOARCH=amd64 go build -ldflags "-X roci.dev/diff-server/util/version.h=$HEAD_HASH" -o build/diffs-linux ./cmd/diffs
 
 # noms tool
 echo "Building noms..."
