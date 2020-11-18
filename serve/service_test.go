@@ -37,11 +37,11 @@ func TestConcurrentAccessUsingMultipleServices(t *testing.T) {
 		httptest.NewRecorder(),
 	}
 
-	req1 := httptest.NewRequest("POST", "/pull", strings.NewReader(`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`))
+	req1 := httptest.NewRequest("POST", "/pull", strings.NewReader(`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid", "version": 2}`))
 	req1.Header.Add("Authorization", "sandbox")
-	req2 := httptest.NewRequest("POST", "/pull", strings.NewReader(`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`))
+	req2 := httptest.NewRequest("POST", "/pull", strings.NewReader(`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid", "version": 2}`))
 	req2.Header.Add("Authorization", "sandbox")
-	req3 := httptest.NewRequest("POST", "/pull", strings.NewReader(`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid"}`))
+	req3 := httptest.NewRequest("POST", "/pull", strings.NewReader(`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid", "version": 2}`))
 	req3.Header.Add("Authorization", "sandbox")
 	mux1 := mux.NewRouter()
 	RegisterHandlers(svc1, mux1)

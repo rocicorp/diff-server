@@ -51,6 +51,11 @@ func (s *Service) pull(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if preq.Version != 2 {
+		clientError(rw, http.StatusBadRequest, "Unsupported PullRequest version", l)
+		return
+	}
+
 	// TODO auth
 	accountName := r.Header.Get("Authorization")
 	if accountName == "" {
