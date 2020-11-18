@@ -9,11 +9,13 @@ import (
 type PullRequest struct {
 	// Version 0 -> uses raw json kv.Operation.Value
 	// Version 1 -> uses stringified json kv.Operation.ValueString
+	// Version 2 -> top-level remove uses replace path="" value="{}" instead of remove path="/"
 	Version        uint32 `json:"version"`
 	ClientViewAuth string `json:"clientViewAuth"`
 	ClientID       string `json:"clientID"`
 	BaseStateID    string `json:"baseStateID"`
 	Checksum       string `json:"checksum"`
+	LastMutationID uint64 `json:"lastMutationID"`
 }
 
 type PullResponse struct {

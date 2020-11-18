@@ -98,22 +98,40 @@ func (s *Service) pull(rw http.ResponseWriter, r *http.Request) {
 		ClientID: preq.ClientID,
 	}
 	syncID := r.Header.Get("X-Replicache-SyncID")
-	cvInfo := maybeGetAndStoreNewClientView(db, preq.ClientViewAuth, clientViewURL, s.clientViewGetter, cvReq, syncID, l)
-
 	head := db.Head()
-	patch, err := db.Diff(preq.Version, fromHash, *fromChecksum, head, l)
-	if err != nil {
-		serverError(rw, err, l)
-		return
+	// minLastMutationID is the smallest last mutation id we will accept from the client view
+	minLastMutationID := uint64(head.Value.LastMutationID)
+	if preq.LastMutationID > minLastMutationID {
+		minLastMutationID = preq.LastMutationID
 	}
-	hsresp := servetypes.PullResponse{
-		StateID:        head.NomsStruct.Hash().String(),
-		LastMutationID: uint64(head.Value.LastMutationID),
-		Patch:          patch,
-		Checksum:       string(head.Value.Checksum),
-		ClientViewInfo: cvInfo,
+	cvInfo := maybeGetAndStoreNewClientView(db, preq.ClientViewAuth, clientViewURL, s.clientViewGetter, cvReq, minLastMutationID, syncID, l)
+
+	head = db.Head()  // head could have changed in maybeGetAndStoreNewClientView
+	var presp servetypes.PullResponse
+	if uint64(head.Value.LastMutationID) < preq.LastMutationID {
+		// Refuse to send the client backwards in time.
+		presp = servetypes.PullResponse{
+			StateID:        preq.BaseStateID,
+			LastMutationID: preq.LastMutationID,
+			Patch:          make([]kv.Operation, 0),
+			Checksum:       preq.Checksum,
+			ClientViewInfo: cvInfo,
+		}
+	} else {
+		patch, err := db.Diff(preq.Version, fromHash, *fromChecksum, head, l)
+		if err != nil {
+			serverError(rw, err, l)
+			return
+		}
+		presp = servetypes.PullResponse{
+			StateID:        head.NomsStruct.Hash().String(),
+			LastMutationID: uint64(head.Value.LastMutationID),
+			Patch:          patch,
+			Checksum:       string(head.Value.Checksum),
+			ClientViewInfo: cvInfo,
+		}
 	}
-	resp, err := json.Marshal(hsresp)
+	resp, err := json.Marshal(presp)
 	if err != nil {
 		serverError(rw, err, l)
 		return
@@ -137,7 +155,7 @@ func (s *Service) pull(rw http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func maybeGetAndStoreNewClientView(db *db.DB, clientViewAuth string, url string, cvg clientViewGetter, cvReq servetypes.ClientViewRequest, syncID string, l zl.Logger) servetypes.ClientViewInfo {
+func maybeGetAndStoreNewClientView(db *db.DB, clientViewAuth string, url string, cvg clientViewGetter, cvReq servetypes.ClientViewRequest, minLastMutationID uint64, syncID string, l zl.Logger) servetypes.ClientViewInfo {
 	clientViewInfo := servetypes.ClientViewInfo{}
 	var err error
 	defer func() {
@@ -157,7 +175,12 @@ func maybeGetAndStoreNewClientView(db *db.DB, clientViewAuth string, url string,
 		return clientViewInfo
 	}
 
-	err = storeClientView(db, cvResp, l)
+	// Refuse to go backwards in time. minLastMutationID is the greater of
+	// the last mutation id of the client and head, the minimum lmid we will
+	// accept from the client view.
+	if cvResp.LastMutationID >= minLastMutationID {
+		err = storeClientView(db, cvResp, l)
+	}
 	return clientViewInfo
 }
 

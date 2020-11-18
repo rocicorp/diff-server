@@ -38,7 +38,7 @@ func TestAPI(t *testing.T) {
 	}{
 		// Unsupported method
 		{"GET",
-			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid", "version": 2}`,
+			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "lastMutationID": 0, "clientID": "clientid", "version": 2}`,
 			"accountID",
 			"",
 			"",
@@ -62,7 +62,7 @@ func TestAPI(t *testing.T) {
 			""},
 		// No client view to fetch from.
 		{"POST",
-			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid", "version": 2}`,
+			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "lastMutationID": 0, "clientID": "clientid", "version": 2}`,
 			"accountID",
 			"",
 			"",
@@ -75,7 +75,7 @@ func TestAPI(t *testing.T) {
 
 		// Successful client view fetch.
 		{"POST",
-			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
+			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "lastMutationID": 0, "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
 			"accountID",
 			"cv",
 			"",
@@ -87,7 +87,7 @@ func TestAPI(t *testing.T) {
 			""},
 		// Successful client view fetch via override.
 		{"POST",
-			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
+			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "lastMutationID": 0, "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
 			"accountID",
 			"",
 			"override",
@@ -100,7 +100,7 @@ func TestAPI(t *testing.T) {
 
 		// Successful client view fetch via override (with override).
 		{"POST",
-			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
+			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "lastMutationID": 0, "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
 			"accountID",
 			"cv",
 			"override",
@@ -113,7 +113,7 @@ func TestAPI(t *testing.T) {
 
 		// Successful nop client view fetch where lastMutationID does not change.
 		{"POST",
-			`{"baseStateID": "s3n5j759kirvvs3fqeott07a43lk41ud", "checksum": "c4e7090d", "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
+			`{"baseStateID": "s3n5j759kirvvs3fqeott07a43lk41ud", "checksum": "c4e7090d", "lastMutationID": 1, "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
 			"accountID",
 			"cv",
 			"",
@@ -126,7 +126,7 @@ func TestAPI(t *testing.T) {
 
 		// Successful nop client view fetch where lastMutationID does change.
 		{"POST",
-			`{"baseStateID": "s3n5j759kirvvs3fqeott07a43lk41ud", "checksum": "c4e7090d", "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
+			`{"baseStateID": "s3n5j759kirvvs3fqeott07a43lk41ud", "checksum": "c4e7090d", "lastMutationID": 1, "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
 			"accountID",
 			"cv",
 			"",
@@ -137,9 +137,22 @@ func TestAPI(t *testing.T) {
 			`{"stateID":"pi99ftvp6nchoej3i58flsqm8enqg4vd","lastMutationID":77,"patch":[],"checksum":"c4e7090d","clientViewInfo":{"httpStatusCode":200,"errorMessage":""}}`,
 			""},
 
+		// Client view returns LMID < diffserver's => nop
+		{"POST",
+			`{"baseStateID": "s3n5j759kirvvs3fqeott07a43lk41ud", "checksum": "c4e7090d", "lastMutationID": 1, "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
+			"accountID",
+			"cv",
+			"",
+			"clientauth",
+			servetypes.ClientViewResponse{ClientView: map[string]json.RawMessage{"foo": b(`"bar"`)}, LastMutationID: 0},
+			200,
+			nil,
+			`{"stateID":"s3n5j759kirvvs3fqeott07a43lk41ud","lastMutationID":1,"patch":[],"checksum":"c4e7090d","clientViewInfo":{"httpStatusCode":200,"errorMessage":""}}`,
+			""},
+
 		// Fetch errors out.
 		{"POST",
-			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
+			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "lastMutationID": 0, "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
 			"accountID",
 			"cv",
 			"",
@@ -150,9 +163,22 @@ func TestAPI(t *testing.T) {
 			`{"stateID":"s3n5j759kirvvs3fqeott07a43lk41ud","lastMutationID":1,"patch":[{"op":"replace","path":"","valueString":"{}"},{"op":"add","path":"/foo","valueString":"\"bar\""}],"checksum":"c4e7090d","clientViewInfo":{"httpStatusCode":200,"errorMessage":""}}`,
 			""},
 
+		// Diffserver has LMID < client's => nop (fetch is also erroring in this one, but that's incidental)
+		{"POST",
+			`{"baseStateID": "12345000000000000000000000000000", "checksum": "12345678", "lastMutationID": 22, "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
+			"accountID",
+			"cv",
+			"",
+			"clientauth",
+			servetypes.ClientViewResponse{},
+			0,
+			errors.New("boom"),
+			`{"stateID":"12345000000000000000000000000000","lastMutationID":22,"patch":[],"checksum":"12345678","clientViewInfo":{"httpStatusCode":0,"errorMessage":""}}`,
+			""},
+
 		// No Authorization header.
 		{"POST",
-			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
+			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "lastMutationID": 0, "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
 			"",
 			"",
 			"",
@@ -165,7 +191,7 @@ func TestAPI(t *testing.T) {
 
 		// Unsupported version
 		{"POST",
-			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid", "clientViewAuth": "clientauth", "version": 1}`,
+			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "lastMutationID": 0, "clientID": "clientid", "clientViewAuth": "clientauth", "version": 1}`,
 			"accountID",
 			"",
 			"",
@@ -178,7 +204,7 @@ func TestAPI(t *testing.T) {
 
 		// Unknown account passed in Authorization header.
 		{"POST",
-			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
+			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "lastMutationID": 0, "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
 			"BONK",
 			"",
 			"",
@@ -191,7 +217,7 @@ func TestAPI(t *testing.T) {
 
 		// No clientID passed in.
 		{"POST",
-			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientViewAuth": "clientauth", "version": 2}`,
+			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "lastMutationID": 0, "clientViewAuth": "clientauth", "version": 2}`,
 			"accountID",
 			"",
 			"",
@@ -204,7 +230,7 @@ func TestAPI(t *testing.T) {
 
 		// Invalid baseStateID.
 		{"POST",
-			`{"baseStateID": "beep", "checksum": "00000000", "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
+			`{"baseStateID": "beep", "checksum": "00000000", "clientID": "clientid", "lastMutationID": 0, "clientViewAuth": "clientauth", "version": 2}`,
 			"accountID",
 			"",
 			"",
@@ -217,7 +243,7 @@ func TestAPI(t *testing.T) {
 
 		// No baseStateID is fine (first pull).
 		{"POST",
-			`{"baseStateID": "", "checksum": "00000000", "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
+			`{"baseStateID": "", "checksum": "00000000", "lastMutationID": 0, "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
 			"accountID",
 			"cv",
 			"",
@@ -230,7 +256,7 @@ func TestAPI(t *testing.T) {
 
 		// Invalid checksum.
 		{"POST",
-			`{"baseStateID": "00000000000000000000000000000000", "checksum": "not", "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
+			`{"baseStateID": "00000000000000000000000000000000", "checksum": "not", "lastMutationID": 0, "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
 			"accountID",
 			"",
 			"",
@@ -243,7 +269,7 @@ func TestAPI(t *testing.T) {
 
 		// Ensure it canonicalizes the client view JSON.
 		{"POST",
-			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
+			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "lastMutationID": 0, "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
 			"accountID",
 			"cv",
 			"",
