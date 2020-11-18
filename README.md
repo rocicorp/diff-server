@@ -58,3 +58,23 @@ git push origin v<semver>
 5. Save the release.
 
 Done. Customers can now run `tools/build.sh` to get the new version [as described here](https://github.com/rocicorp/replicache-sdk-js#get-binaries).
+
+## Debug in production
+
+```
+# Get noms: https://github.com/attic-labs/noms#install
+# db spec below is something like aws:replicant/aa-replicant2/3
+# This only works if you have proper AWS credentials, obv.
+
+# delete client
+noms ds -d <db-spec>::<client-id>
+
+# chain diffs 
+noms log <db spec>::client/<client id>
+
+# chain
+noms log --oneline <db spec>::client/<client id> | cut -d' ' -f1 | xargs -I{} noms show <db spec>::#{}
+
+# see the value
+noms log <db spec>::client/<client id>.value.data@target
+```
