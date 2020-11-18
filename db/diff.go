@@ -16,20 +16,14 @@ func fullSync(version uint32, db *DB, from hash.Hash, l zl.Logger) ([]kv.Operati
 	l.Debug().Msgf("Requested sync %s basis could not be found - sending a full sync", from.String())
 
 	var op kv.Operation
-	if version < 2 {
-		op = kv.Operation{
-			Op:   kv.OpRemove,
-			Path: "/",
+	// version 2
+	op =
+		kv.Operation{
+			Op:          kv.OpReplace,
+			Path:        "",
+			ValueString: "{}",
 		}
-	} else {
-		op =
-			kv.Operation{
-				Op:          kv.OpReplace,
-				Path:        "",
-				ValueString: "{}",
-			}
 
-	}
 	m := kv.NewMap(db.Noms())
 	return []kv.Operation{op}, makeCommit(db.Noms(), types.Ref{}, datetime.Epoch, db.ds.Database().WriteValue(m.NomsMap()), m.NomsChecksum(), 0 /*lastMutationID*/)
 }
