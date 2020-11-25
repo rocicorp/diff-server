@@ -25,6 +25,11 @@ var (
 			Name:          "Songbook Studio",
 			ClientViewURL: "https://us-central1-songbookstudio.cloudfunctions.net/repliclient/4rzcWwvc83dlTz3CoX9WY8NHUxV2",
 		},
+		serve.Account{
+			ID:            "4",
+			Name:          "Songbook Studio (Vercel)",
+			ClientViewURL: "https://songbook.studio/api/repliclient",
+		},
 	}
 )
 
