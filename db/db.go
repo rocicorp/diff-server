@@ -131,7 +131,6 @@ func (db *DB) MaybePutData(m kv.Map, lastMutationID uint64) (Commit, error) {
 	if err := db.setHeadLocked(commit); err != nil {
 		return Commit{}, err
 	}
-	commit.NomsStruct.IsZeroValue()
 	return commit, nil
 }
 

@@ -110,13 +110,7 @@ func (s *Service) pull(rw http.ResponseWriter, r *http.Request) {
 	var presp servetypes.PullResponse
 	if uint64(head.Value.LastMutationID) < preq.LastMutationID {
 		// Refuse to send the client backwards in time.
-		presp = servetypes.PullResponse{
-			StateID:        preq.BaseStateID,
-			LastMutationID: preq.LastMutationID,
-			Patch:          make([]kv.Operation, 0),
-			Checksum:       preq.Checksum,
-			ClientViewInfo: cvInfo,
-		}
+		presp = nopPull(&preq, &cvInfo)
 	} else {
 		patch, err := db.Diff(preq.Version, fromHash, *fromChecksum, head, l)
 		if err != nil {
@@ -152,6 +146,16 @@ func (s *Service) pull(rw http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		serverError(rw, err, l)
 		return
+	}
+}
+
+func nopPull(pullReq *servetypes.PullRequest, cvInfo *servetypes.ClientViewInfo) servetypes.PullResponse {
+	return servetypes.PullResponse{
+		StateID:        pullReq.BaseStateID,
+		LastMutationID: pullReq.LastMutationID,
+		Patch:          make([]kv.Operation, 0),
+		Checksum:       pullReq.Checksum,
+		ClientViewInfo: *cvInfo,
 	}
 }
 
