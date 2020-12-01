@@ -63,7 +63,7 @@ Done. Customers can now run `tools/build.sh` to get the new version [as describe
 
 ```
 # Get noms: https://github.com/attic-labs/noms#install
-# db spec below is something like aws:replicant/aa-replicant2/3
+# db spec below is something like aws:replicant/aa-replicant2/<accountid>
 # This only works if you have proper AWS credentials, obv.
 
 # delete client
