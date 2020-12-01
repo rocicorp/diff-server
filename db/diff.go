@@ -50,8 +50,13 @@ func (db *DB) Diff(version uint32, fromHash hash.Hash, fromChecksum kv.Checksum,
 	var err error
 	v := db.Noms().ReadValue(fromHash)
 	if v == nil {
-		// Unknown basis is not an error: maybe it's really old or we're starting up cold.
-		l.Info().Msgf("Sending full sync: unknown basis %s", fromHash)
+		// Unknown basis is not really en error: maybe it's really old
+		// or we're starting up cold. But it is an interesting situation
+		// so for now (small number of clients, still early in integration)
+		// we report it as an error so we can take a look and verify that
+		// nothing is amiss. We can turn it back into an info once we have
+		// more confidence.
+		l.Error().Msgf("Sending full sync: unknown basis %s", fromHash)
 		r, fc = fullSync(version, db, fromHash, l)
 	} else {
 		fc, err = maybeDecodeCommit(v, fromHash, fromChecksum, l)
