@@ -23,19 +23,29 @@ func TestServe(t *testing.T) {
 	accounts.AddTestAcccount()
 	dir, err := ioutil.TempDir("", "")
 	assert.NoError(err)
+	defer func() { assert.NoError(os.RemoveAll(dir)) }()
 	fmt.Println(dir)
+
+	accountDBDir, err := ioutil.TempDir("", "")
+	assert.NoError(err)
+	defer func() { assert.NoError(os.RemoveAll(accountDBDir)) }()
 
 	defer time.SetFake()()
 
-	args := append([]string{"--db=" + dir, "serve", "--port=8674"})
+	args := append([]string{"--db=" + dir, "--account-db=" + accountDBDir, "serve", "--signup-template-dir=../../serve/signup", "--port=8674"})
 	go impl(args, strings.NewReader(""), os.Stdout, os.Stderr, func(_ int) {})
 
 	// Wait for server to start...
+	i := 0
 	for {
+		i++
 		gt.Sleep(100 * gt.Millisecond)
 		resp, err := http.Get("http://localhost:8674/")
 		if err == nil && resp.StatusCode == http.StatusOK {
 			break
+		}
+		if i > 20 {
+			panic("server never started")
 		}
 	}
 
