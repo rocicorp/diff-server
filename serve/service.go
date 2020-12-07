@@ -28,7 +28,7 @@ var (
 	pathRegex = regexp.MustCompile(`^\/([\w-]+)\/([\w-]+)\/([\w-]+)\/?$`)
 )
 
-// Service is a running instance of the Replicant service.
+// Service is an instance of the Replicache Diffserver services.
 type Service struct {
 	storageRoot          string
 	urlPrefix            string
@@ -47,8 +47,8 @@ type clientViewGetter interface {
 	Get(url string, req servetypes.ClientViewRequest, authToken string, syncID string) (servetypes.ClientViewResponse, int, error)
 }
 
-// Account is information about a customer of Replicant. This is a stand-in for what will eventually be
-// an accounts database.
+// Account represents a regular customer account (as opposed to an auto-signup account). 
+// This is a temporary stand-in that will be replaced by the account service.
 type Account struct {
 	ID            string
 	Name          string
