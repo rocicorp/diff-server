@@ -79,10 +79,11 @@ func (db *DB) setHead(newHead Commit) error {
 }
 
 func (db *DB) setHeadLocked(newHead Commit) error {
-	_, err := db.Noms().FastForward(db.ds, newHead.Ref())
+	ds, err := db.Noms().FastForward(db.ds, newHead.Ref())
 	if err != nil {
 		return err
 	}
+	db.ds = ds
 	db.head = newHead
 	return nil
 }
@@ -94,6 +95,7 @@ func (db *DB) Hash() hash.Hash {
 func (db *DB) Reload() error {
 	db.lock()()
 	db.ds.Database().Rebase()
+	db.ds = db.ds.Database().GetDataset(db.ds.ID())
 	return db.initLocked()
 }
 
