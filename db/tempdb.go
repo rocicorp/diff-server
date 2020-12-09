@@ -11,6 +11,11 @@ func LoadTempDB(assert *assert.Assertions) (r *DB, dir string) {
 	td, err := ioutil.TempDir("", "")
 	assert.NoError(err)
 
+	r = LoadTempDBWithPath(assert, td)
+	return r, td
+}
+
+func LoadTempDBWithPath(assert *assert.Assertions, td string) (r *DB) {
 	sp, err := spec.ForDatabase(td)
 	assert.NoError(err)
 
@@ -18,5 +23,5 @@ func LoadTempDB(assert *assert.Assertions) (r *DB, dir string) {
 	r, err = New(noms.GetDataset("foo"))
 	assert.NoError(err)
 
-	return r, td
+	return r
 }

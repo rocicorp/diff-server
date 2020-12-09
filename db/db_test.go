@@ -1,12 +1,38 @@
 package db
 
 import (
+	"os"
 	"testing"
 
 	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
 	"roci.dev/diff-server/kv"
+	"roci.dev/diff-server/util/time"
 )
+
+func TestReload(t *testing.T) {
+	assert := assert.New(t)
+	db, dir := LoadTempDB(assert)
+	defer func() { assert.NoError(os.RemoveAll(dir)) }()
+	genesis := db.Head()
+
+	// Change head behind db's back.
+	db2 := LoadTempDBWithPath(assert, dir)
+	me := kv.NewMap(db2.Noms()).Edit()
+	assert.NoError(me.Set("key", types.Bool(true)))
+	m := me.Build()
+	valueRef := db2.Noms().WriteValue(m.NomsMap())
+	newCommit := makeCommit(db2.Noms(), types.NewRef(genesis.NomsStruct), time.DateTime(), valueRef, m.NomsChecksum(), 123)
+	db2.Noms().WriteValue(newCommit.NomsStruct)
+	err := db2.setHead(newCommit)
+	assert.NoError(err)
+	assert.False(genesis.NomsStruct.Equals(newCommit.NomsStruct))
+	assert.True(newCommit.NomsStruct.Equals(db2.Head().NomsStruct))
+
+	// Now check that db picks up the change.
+	assert.NoError(db.Reload())
+	assert.True(newCommit.NomsStruct.Equals(db.Head().NomsStruct))
+}
 
 func TestGenesis(t *testing.T) {
 	assert := assert.New(t)
