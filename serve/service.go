@@ -47,7 +47,7 @@ type clientViewGetter interface {
 	Get(url string, req servetypes.ClientViewRequest, authToken string, syncID string) (servetypes.ClientViewResponse, int, error)
 }
 
-// Account represents a regular customer account (as opposed to an auto-signup account). 
+// Account represents a regular customer account (as opposed to an auto-signup account).
 // This is a temporary stand-in that will be replaced by the account service.
 type Account struct {
 	ID            string
