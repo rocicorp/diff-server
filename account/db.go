@@ -19,10 +19,9 @@ type DB struct {
 	head Commit
 }
 
-// Commit is the git-like commit structure noms uses to store values.
+// Commit is the Git-like commit structure Noms uses to store values.
 // The account database keeps a single Commit at the head of its dataset
-// as opposed to a chain of Commits representing changes. Noms requires
-// a Commit structure like this.
+// containing all current entries.
 type Commit struct {
 	// Parents and Meta are unused.
 	Parents []types.Ref `noms:",set"`
@@ -59,7 +58,8 @@ func NewDB(ds datas.Dataset) (*DB, error) {
 	return &r, nil
 }
 
-// ASIDs are issued in a separate range from regular accounts. See RFC.
+// ASIDs are issued in a separate range from regular accounts.
+// See RFC: https://github.com/rocicorp/repc/issues/269
 const LowestASID uint32 = 1000000
 
 func (db *DB) initLocked() error {
@@ -78,7 +78,7 @@ func (db *DB) initLocked() error {
 	}
 	// Noms roundtrips empty maps as nil, so ensure we have a map.
 	if head.Value.AutoSignup == nil {
-		head.Value.AutoSignup = make(map[uint32]ASAccount)
+		head.Value.AutoSignup = map[uint32]ASAccount{}
 	}
 
 	db.head = head
