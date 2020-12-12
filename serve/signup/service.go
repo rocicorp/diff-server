@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/attic-labs/noms/go/spec"
 	"github.com/gorilla/mux"
 	zl "github.com/rs/zerolog"
 	"roci.dev/diff-server/account"
@@ -41,6 +40,7 @@ type Service struct {
 
 // NewService instantiates the signup service. Handlers need to be registered with
 // RegisterHandlers.
+// TODO NewService should probably take an account.DB instead of its storageroot
 func NewService(logger zl.Logger, tmpl *template.Template, storageRoot string) *Service {
 	return &Service{logger, tmpl, storageRoot}
 }
@@ -54,12 +54,14 @@ func RegisterHandlers(s *Service, router *mux.Router) {
 }
 
 func (s *Service) handle(w http.ResponseWriter, r *http.Request) {
-	// TODO hook ASID check into Diffserver service
+	// TODO auto-add ASID client view urls
+	// TODO enable multiple URLs for all accounts
 	// TODO hook it up for vercel (serve/prod.go)
 	// TODO better error messages for errors in POST
 	// TODO light form validation eg missing email
 	// TODO retry if concurrent POSTs step on each other + test
 	// TODO logging
+	// TODO cache account.Records, eg only re-read every N second
 	// TODO rate limiting
 	// TODO add more text/explanation to POST template (currently just has the ID)
 	// TODO figure out how to recommend they contact us and include in templates
@@ -79,21 +81,25 @@ func (s *Service) handle(w http.ResponseWriter, r *http.Request) {
 		name := r.FormValue(GetTemplateNameField)
 		email := r.FormValue(GetTemplateEmailField)
 		// See TODOs above: we need light validation and better error messages
-		db, err := GetDB(s.storageRoot)
+		db, err := account.NewDB(s.storageRoot)
 		if err != nil {
 			serverError(w, err, s.logger)
 			return
 		}
-		accounts := db.HeadValue()
+		accounts, err := account.ReadRecords(db)
+		if err != nil {
+			serverError(w, err, s.logger)
+			return
+		}
 		id := accounts.NextASID
-		accounts.AutoSignup[id] = account.ASAccount{
-			ASID:        id,
+		accounts.Record[id] = account.Record{
+			ID:          id,
 			Name:        name,
 			Email:       email,
 			DateCreated: time.Now().String(),
 		}
 		accounts.NextASID++
-		if err := db.SetHeadWithValue(accounts); err != nil {
+		if err := account.WriteRecords(db, accounts); err != nil {
 			// See TODOs above: retry if head was changed from under us.
 			serverError(w, err, s.logger)
 			return
@@ -121,16 +127,6 @@ type getTemplateArgs struct {
 
 type postTemplateArgs struct {
 	ID string // The newly created account id.
-}
-
-// GetDB returns the account DB.
-func GetDB(storageRoot string) (*account.DB, error) {
-	sp, err := spec.ForDatabase(fmt.Sprintf("%s/accounts", storageRoot))
-	if err != nil {
-		return nil, err
-	}
-	noms := sp.GetDatabase()
-	return account.NewDB(noms.GetDataset(fmt.Sprintf("websignup")))
 }
 
 func unsupportedMethodError(w http.ResponseWriter, m string, l zl.Logger) {

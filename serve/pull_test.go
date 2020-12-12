@@ -8,11 +8,13 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
+	"roci.dev/diff-server/account"
 	"roci.dev/diff-server/db"
 	"roci.dev/diff-server/kv"
 	servetypes "roci.dev/diff-server/serve/types"
@@ -22,6 +24,8 @@ import (
 func TestAPI(t *testing.T) {
 	assert := assert.New(t)
 	defer time.SetFake()()
+
+	unittestID := fmt.Sprintf("%d", account.UnittestID)
 
 	tc := []struct {
 		pullMethod  string
@@ -39,7 +43,7 @@ func TestAPI(t *testing.T) {
 		// Unsupported method
 		{"GET",
 			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "lastMutationID": 0, "clientID": "clientid", "version": 2}`,
-			"accountID",
+			unittestID,
 			"",
 			"",
 			"",
@@ -51,7 +55,7 @@ func TestAPI(t *testing.T) {
 		// Supports OPTIONS for cors headers
 		{"OPTIONS",
 			``,
-			"accountID",
+			unittestID,
 			"",
 			"",
 			"",
@@ -63,7 +67,7 @@ func TestAPI(t *testing.T) {
 		// No client view to fetch from.
 		{"POST",
 			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "lastMutationID": 0, "clientID": "clientid", "version": 2}`,
-			"accountID",
+			unittestID,
 			"",
 			"",
 			"",
@@ -76,7 +80,7 @@ func TestAPI(t *testing.T) {
 		// Successful client view fetch.
 		{"POST",
 			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "lastMutationID": 0, "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
-			"accountID",
+			unittestID,
 			"cv",
 			"",
 			"clientauth",
@@ -88,7 +92,7 @@ func TestAPI(t *testing.T) {
 		// Successful client view fetch via override.
 		{"POST",
 			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "lastMutationID": 0, "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
-			"accountID",
+			unittestID,
 			"",
 			"override",
 			"clientauth",
@@ -101,7 +105,7 @@ func TestAPI(t *testing.T) {
 		// Successful client view fetch via override (with override).
 		{"POST",
 			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "lastMutationID": 0, "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
-			"accountID",
+			unittestID,
 			"cv",
 			"override",
 			"clientauth",
@@ -114,7 +118,7 @@ func TestAPI(t *testing.T) {
 		// Successful nop client view fetch where lastMutationID does not change.
 		{"POST",
 			`{"baseStateID": "s3n5j759kirvvs3fqeott07a43lk41ud", "checksum": "c4e7090d", "lastMutationID": 1, "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
-			"accountID",
+			unittestID,
 			"cv",
 			"",
 			"clientauth",
@@ -127,7 +131,7 @@ func TestAPI(t *testing.T) {
 		// Successful nop client view fetch where lastMutationID does change.
 		{"POST",
 			`{"baseStateID": "s3n5j759kirvvs3fqeott07a43lk41ud", "checksum": "c4e7090d", "lastMutationID": 1, "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
-			"accountID",
+			unittestID,
 			"cv",
 			"",
 			"clientauth",
@@ -140,7 +144,7 @@ func TestAPI(t *testing.T) {
 		// Client view returns LMID < diffserver's => nop
 		{"POST",
 			`{"baseStateID": "s3n5j759kirvvs3fqeott07a43lk41ud", "checksum": "c4e7090d", "lastMutationID": 1, "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
-			"accountID",
+			unittestID,
 			"cv",
 			"",
 			"clientauth",
@@ -153,7 +157,7 @@ func TestAPI(t *testing.T) {
 		// Fetch errors out.
 		{"POST",
 			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "lastMutationID": 0, "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
-			"accountID",
+			unittestID,
 			"cv",
 			"",
 			"clientauth",
@@ -166,7 +170,7 @@ func TestAPI(t *testing.T) {
 		// Diffserver has LMID < client's => nop (fetch is also erroring in this one, but that's incidental)
 		{"POST",
 			`{"baseStateID": "12345000000000000000000000000000", "checksum": "12345678", "lastMutationID": 22, "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
-			"accountID",
+			unittestID,
 			"cv",
 			"",
 			"clientauth",
@@ -192,7 +196,7 @@ func TestAPI(t *testing.T) {
 		// Unsupported version
 		{"POST",
 			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "lastMutationID": 0, "clientID": "clientid", "clientViewAuth": "clientauth", "version": 1}`,
-			"accountID",
+			unittestID,
 			"",
 			"",
 			"",
@@ -218,7 +222,7 @@ func TestAPI(t *testing.T) {
 		// No clientID passed in.
 		{"POST",
 			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "lastMutationID": 0, "clientViewAuth": "clientauth", "version": 2}`,
-			"accountID",
+			unittestID,
 			"",
 			"",
 			"",
@@ -231,7 +235,7 @@ func TestAPI(t *testing.T) {
 		// Invalid baseStateID.
 		{"POST",
 			`{"baseStateID": "beep", "checksum": "00000000", "clientID": "clientid", "lastMutationID": 0, "clientViewAuth": "clientauth", "version": 2}`,
-			"accountID",
+			unittestID,
 			"",
 			"",
 			"",
@@ -244,7 +248,7 @@ func TestAPI(t *testing.T) {
 		// No baseStateID is fine (first pull).
 		{"POST",
 			`{"baseStateID": "", "checksum": "00000000", "lastMutationID": 0, "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
-			"accountID",
+			unittestID,
 			"cv",
 			"",
 			"clientauth",
@@ -257,7 +261,7 @@ func TestAPI(t *testing.T) {
 		// Invalid checksum.
 		{"POST",
 			`{"baseStateID": "00000000000000000000000000000000", "checksum": "not", "lastMutationID": 0, "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
-			"accountID",
+			unittestID,
 			"",
 			"",
 			"",
@@ -270,7 +274,7 @@ func TestAPI(t *testing.T) {
 		// Ensure it canonicalizes the client view JSON.
 		{"POST",
 			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "lastMutationID": 0, "clientID": "clientid", "clientViewAuth": "clientauth", "version": 2}`,
-			"accountID",
+			unittestID,
 			"cv",
 			"",
 			"clientauth",
@@ -284,8 +288,14 @@ func TestAPI(t *testing.T) {
 	for i, t := range tc {
 		fcvg := &fakeClientViewGet{resp: t.CVResponse, code: t.CVCode, err: t.CVErr}
 		td, _ := ioutil.TempDir("", "")
-		s := NewService(td, []Account{Account{ID: "accountID", Name: "accountID", Pubkey: nil, ClientViewURL: t.accountCV}}, t.overrideCV, fcvg, true)
-		noms, err := s.getNoms("accountID")
+		defer func() { assert.NoError(os.RemoveAll(td)) }()
+
+		adb, adir := account.LoadTempDB(assert)
+		defer func() { assert.NoError(os.RemoveAll(adir)) }()
+		account.AddUnittestAccountWithURL(assert, adb, t.accountCV)
+
+		s := NewService(td, adb, t.overrideCV, fcvg, true)
+		noms, err := s.getNoms(unittestID)
 		assert.NoError(err)
 		db, err := db.New(noms.GetDataset("client/clientid"))
 		assert.NoError(err)

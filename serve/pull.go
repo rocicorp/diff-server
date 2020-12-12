@@ -17,6 +17,7 @@ import (
 	"github.com/attic-labs/noms/go/types"
 	zl "github.com/rs/zerolog"
 
+	"roci.dev/diff-server/account"
 	"roci.dev/diff-server/db"
 	"roci.dev/diff-server/kv"
 	servetypes "roci.dev/diff-server/serve/types"
@@ -56,13 +57,17 @@ func (s *Service) pull(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO auth
 	accountName := r.Header.Get("Authorization")
 	if accountName == "" {
 		clientError(rw, http.StatusBadRequest, "Missing Authorization header", l)
 		return
 	}
-	acct, ok := lookupAccount(accountName, s.accounts)
+	accounts, err := account.ReadRecords(s.accountDB)
+	if err != nil {
+		serverError(rw, err, l)
+		return
+	}
+	acct, ok := account.Lookup(accounts, accountName)
 	if !ok {
 		clientError(rw, http.StatusBadRequest, fmt.Sprintf("Unknown account: %s", accountName), l)
 		return
@@ -90,7 +95,11 @@ func (s *Service) pull(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	clientViewURL := acct.ClientViewURL
+	clientViewURL := ""
+	// TODO enable multiple client view URLs and auto-add ASID URLs.
+	if len(acct.ClientViewURLs) > 0 {
+		clientViewURL = acct.ClientViewURLs[0]
+	}
 	if s.overridClientViewURL != "" {
 		clientViewURL = s.overridClientViewURL
 	}
@@ -106,7 +115,7 @@ func (s *Service) pull(rw http.ResponseWriter, r *http.Request) {
 	}
 	cvInfo := maybeGetAndStoreNewClientView(db, preq.ClientViewAuth, clientViewURL, s.clientViewGetter, cvReq, minLastMutationID, syncID, l)
 
-	head = db.Head()  // head could have changed in maybeGetAndStoreNewClientView
+	head = db.Head() // head could have changed in maybeGetAndStoreNewClientView
 	var presp servetypes.PullResponse
 	if uint64(head.Value.LastMutationID) < preq.LastMutationID {
 		// Refuse to send the client backwards in time.

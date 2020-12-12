@@ -16,7 +16,7 @@ func TestInit(t *testing.T) {
 	defer func() { assert.NoError(os.RemoveAll(dir)) }()
 
 	assert.Equal(account.LowestASID, db.HeadValue().NextASID)
-	assert.Equal(0, len(db.HeadValue().AutoSignup))
+	assert.Equal(0, len(db.HeadValue().Record))
 }
 
 func TestReload(t *testing.T) {
@@ -28,13 +28,13 @@ func TestReload(t *testing.T) {
 	db2 := account.LoadTempDBWithPath(assert, dir)
 	accounts := db2.HeadValue()
 	accounts.NextASID = 2
-	accounts.AutoSignup[2] = account.ASAccount{ASID: 2}
+	accounts.Record[2] = account.Record{ID: 2}
 	assert.NoError(db2.SetHeadWithValue(accounts))
 
 	// Now ensure that if we reload db we see the changes from db2.
 	assert.NoError(db.Reload())
 	assert.Equal(uint32(2), db.HeadValue().NextASID)
-	_, exists := db.HeadValue().AutoSignup[2]
+	_, exists := db.HeadValue().Record[2]
 	assert.True(exists)
 }
 
@@ -45,7 +45,7 @@ func TestSetHead(t *testing.T) {
 
 	accounts := db.HeadValue()
 	accounts.NextASID = 123
-	accounts.AutoSignup[123] = account.ASAccount{ASID: 123}
+	accounts.Record[123] = account.Record{ID: 123}
 	assert.NoError(db.SetHeadWithValue(accounts))
 
 	gotDB := account.LoadTempDBWithPath(assert, dir)
@@ -65,7 +65,7 @@ func TestConcurrentSetHead(t *testing.T) {
 		otherDB := account.LoadTempDBWithPath(assert, dir)
 		accounts := otherDB.HeadValue()
 		accounts.NextASID = 1
-		accounts.AutoSignup[1] = account.ASAccount{ASID: 1}
+		accounts.Record[1] = account.Record{ID: 1}
 		err = otherDB.SetHeadWithValue(accounts)
 		wg.Done()
 	}()
@@ -76,7 +76,7 @@ func TestConcurrentSetHead(t *testing.T) {
 	// when we try to set head.
 	accounts := db.HeadValue()
 	accounts.NextASID = 2
-	accounts.AutoSignup[2] = account.ASAccount{ASID: 2}
+	accounts.Record[2] = account.Record{ID: 2}
 	err = db.SetHeadWithValue(accounts)
 	assert.Error(err)
 	var retryError account.RetryError

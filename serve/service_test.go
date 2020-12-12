@@ -5,31 +5,25 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
+	"roci.dev/diff-server/account"
 )
-
-func getAccounts() []Account {
-	return []Account{
-		Account{
-			ID:     "sandbox",
-			Name:   "Sandbox",
-			Pubkey: nil,
-		},
-	}
-}
 
 func TestConcurrentAccessUsingMultipleServices(t *testing.T) {
 	assert := assert.New(t)
 	td, _ := ioutil.TempDir("", "")
+	defer func() { assert.NoError(os.RemoveAll(td)) }()
 
-	accounts := getAccounts()
+	adb, adir := account.LoadTempDB(assert)
+	defer func() { assert.NoError(os.RemoveAll(adir)) }()
 
-	svc1 := NewService(td, accounts, "", nil, true)
-	svc2 := NewService(td, accounts, "", nil, true)
+	svc1 := NewService(td, adb, "", nil, true)
+	svc2 := NewService(td, adb, "", nil, true)
 
 	res := []*httptest.ResponseRecorder{
 		httptest.NewRecorder(),
@@ -59,8 +53,12 @@ func TestConcurrentAccessUsingMultipleServices(t *testing.T) {
 func TestNo301(t *testing.T) {
 	assert := assert.New(t)
 	td, _ := ioutil.TempDir("", "")
+	defer func() { assert.NoError(os.RemoveAll(td)) }()
 
-	svc := NewService(td, getAccounts(), "", nil, true)
+	adb, adir := account.LoadTempDB(assert)
+	defer func() { assert.NoError(os.RemoveAll(adir)) }()
+
+	svc := NewService(td, adb, "", nil, true)
 	r := httptest.NewRecorder()
 
 	mux := mux.NewRouter()
