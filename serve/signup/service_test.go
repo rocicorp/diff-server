@@ -13,6 +13,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
+	"roci.dev/diff-server/account"
 	"roci.dev/diff-server/serve/signup"
 	"roci.dev/diff-server/util/log"
 )
@@ -51,7 +52,7 @@ func TestPOST(t *testing.T) {
 	service := signup.NewService(log.Default(), tmpl, dir)
 	m := mux.NewRouter()
 	signup.RegisterHandlers(service, m)
-	db, err := signup.GetDB(dir)
+	db, err := account.NewDB(dir)
 	assert.NoError(err)
 	expectedASID := db.HeadValue().NextASID
 
@@ -75,7 +76,7 @@ func TestPOST(t *testing.T) {
 	assert.NoError(db.Reload())
 	hv := db.HeadValue()
 	assert.Equal(expectedASID+1, hv.NextASID)
-	assert.Equal("Larry", hv.AutoSignup[expectedASID].Name)
-	assert.Equal("larry@example.com", hv.AutoSignup[expectedASID].Email)
-	assert.NotEqual("", hv.AutoSignup[expectedASID].DateCreated)
+	assert.Equal("Larry", hv.Record[expectedASID].Name)
+	assert.Equal("larry@example.com", hv.Record[expectedASID].Email)
+	assert.NotEqual("", hv.Record[expectedASID].DateCreated)
 }

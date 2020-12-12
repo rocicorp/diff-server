@@ -13,8 +13,8 @@ import (
 	zl "github.com/rs/zerolog"
 	zlog "github.com/rs/zerolog/log"
 
+	"roci.dev/diff-server/account"
 	"roci.dev/diff-server/serve"
-	"roci.dev/diff-server/serve/accounts"
 	"roci.dev/diff-server/util/loghttp"
 )
 
@@ -45,7 +45,13 @@ func init() {
 					os.Getenv(aws_secret_access_key), ""))))
 	}
 
-	svc := serve.NewService("aws:replicant/aa-replicant2", accounts.Accounts(), "", serve.ClientViewGetter{}, false)
+	storageRoot := "aws:replicant/aa-replicant2"
+	accountDB, err := account.NewDB(storageRoot)
+	if err != nil {
+		panic(err)
+	}
+
+	svc := serve.NewService(storageRoot, accountDB, "", serve.ClientViewGetter{}, false)
 	mux := mux.NewRouter()
 	serve.RegisterHandlers(svc, mux)
 	handler = mux

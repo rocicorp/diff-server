@@ -7,6 +7,7 @@ import (
 
 	"github.com/attic-labs/noms/go/datas"
 	"github.com/attic-labs/noms/go/marshal"
+	"github.com/attic-labs/noms/go/spec"
 	"github.com/attic-labs/noms/go/types"
 )
 
@@ -28,29 +29,24 @@ type Commit struct {
 	Meta    struct {
 	}
 
-	Value Accounts
+	Value Records
 }
 
-// Account records.
-type Accounts struct {
-	NextASID   uint32
-	AutoSignup map[uint32]ASAccount // Map key is the ASID.
-}
-
-// An individual AutoSignup account record.
-type ASAccount struct {
-	ASID        uint32
-	Name        string
-	Email       string
-	DateCreated string
-}
-
-func NewDB(ds datas.Dataset) (*DB, error) {
+// NewDB returns a new account.DB. If we want the flexibility of using DB
+// with multiple Noms databases or datasets we could break those out as
+// parameters, but for now keeping it simpler.
+func NewDB(storageRoot string) (*DB, error) {
+	sp, err := spec.ForDatabase(fmt.Sprintf("%s/%s", storageRoot, DatabaseName))
+	if err != nil {
+		return nil, err
+	}
+	noms := sp.GetDatabase()
+	ds := noms.GetDataset(DatasetName)
 	r := DB{
 		ds: ds,
 	}
 	defer r.lock()()
-	err := r.initLocked()
+	err = r.initLocked()
 	if err != nil {
 		return nil, err
 	}
@@ -58,15 +54,16 @@ func NewDB(ds datas.Dataset) (*DB, error) {
 	return &r, nil
 }
 
-// ASIDs are issued in a separate range from regular accounts.
-// See RFC: https://github.com/rocicorp/repc/issues/269
-const LowestASID uint32 = 1000000
+// TODO change database to "accounts" once we release to reset our
+//      tire-kicking before releasing the feature.
+const DatabaseName = "TODOaccounts"
+const DatasetName = "websignup"
 
 func (db *DB) initLocked() error {
 	if !db.ds.HasHead() {
-		accounts := Accounts{
-			NextASID:   LowestASID,
-			AutoSignup: make(map[uint32]ASAccount),
+		accounts := Records{
+			NextASID: LowestASID,
+			Record:   make(map[uint32]Record),
 		}
 		return db.setHeadLocked(Commit{Value: accounts})
 	}
@@ -77,8 +74,8 @@ func (db *DB) initLocked() error {
 		return err
 	}
 	// Noms roundtrips empty maps as nil, so ensure we have a map.
-	if head.Value.AutoSignup == nil {
-		head.Value.AutoSignup = map[uint32]ASAccount{}
+	if head.Value.Record == nil {
+		head.Value.Record = map[uint32]Record{}
 	}
 
 	db.head = head
@@ -91,7 +88,7 @@ func (db *DB) Noms() datas.Database {
 
 // Callers don't care about the underlying Commit structure, so we have
 // HeadValue and SetHeadWithValue, unlike db/db.go, which has Head and SetHead.
-func (db *DB) HeadValue() Accounts {
+func (db *DB) HeadValue() Records {
 	defer db.lock()()
 	return db.head.Value
 }
@@ -99,7 +96,7 @@ func (db *DB) HeadValue() Accounts {
 // SetHeadWithValue creates a new Commit with accounts as its value and sets head to it.
 // If setHead returns a RetryError, caller should reload head, re-apply changes, and
 // try again (up to a few times).
-func (db *DB) SetHeadWithValue(accounts Accounts) error {
+func (db *DB) SetHeadWithValue(accounts Records) error {
 	defer db.lock()()
 	return db.setHeadLocked(Commit{Value: accounts})
 }

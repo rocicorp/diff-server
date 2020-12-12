@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/pkg/errors"
+	"roci.dev/diff-server/account"
 	servetypes "roci.dev/diff-server/serve/types"
 )
 
@@ -37,7 +38,12 @@ func (s *Service) inject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, ok := lookupAccount(req.AccountID, s.accounts)
+	// This check seems kind of useless given that much account info is public.
+	records, err := account.ReadRecords(s.accountDB)
+	if err != nil {
+		serverError(w, err, l)
+	}
+	_, ok := account.Lookup(records, req.AccountID)
 	if !ok {
 		clientError(w, http.StatusBadRequest, "Unknown accountID", l)
 		return

@@ -7,12 +7,14 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
 
+	"roci.dev/diff-server/account"
 	"roci.dev/diff-server/util/time"
 )
 
@@ -29,7 +31,7 @@ func TestInject(t *testing.T) {
 		wantChange    bool
 	}{
 		// Inject not enabled
-		{false, "POST", `{"accountID": "accountID", "clientID": "clientID", "clientViewResponse": {"clientView":{"foo": "bar"}, "lastTransactionID":"1"}}`, http.StatusNotFound, ``, false},
+		{false, "POST", fmt.Sprintf(`{"accountID": "%d", "clientID": "clientID", "clientViewResponse": {"clientView":{"foo": "bar"}, "lastTransactionID":"1"}}`, account.UnittestID), http.StatusNotFound, ``, false},
 
 		// Invalid method
 		{true, "GET", ``, http.StatusMethodNotAllowed, `Unsupported method: GET`, false},
@@ -47,12 +49,18 @@ func TestInject(t *testing.T) {
 		{true, "POST", `{"accountID": "bonk", "clientID": "clientID", "clientViewResponse": {"clientView":{}, "lastTransactionID":"1"}}`, http.StatusBadRequest, `Unknown accountID`, false},
 
 		// OK
-		{true, "POST", `{"accountID": "accountID", "clientID": "clientID", "clientViewResponse": {"clientView":{"foo": "bar"}, "lastTransactionID":"1"}}`, http.StatusOK, ``, true},
+		{true, "POST", fmt.Sprintf(`{"accountID": "%d", "clientID": "clientID", "clientViewResponse": {"clientView":{"foo": "bar"}, "lastTransactionID":"1"}}`, account.UnittestID), http.StatusOK, ``, true},
 	}
 
 	for i, t := range tc {
 		td, _ := ioutil.TempDir("", "")
-		s := NewService(td, []Account{Account{ID: "accountID", Name: "accountID", Pubkey: nil}}, "", nil, t.injectEnabled)
+		defer func() { assert.NoError(os.RemoveAll(td)) }()
+
+		adb, adir := account.LoadTempDB(assert)
+		defer func() { assert.NoError(os.RemoveAll(adir)) }()
+		account.AddUnittestAccountWithURL(assert, adb, "")
+
+		s := NewService(td, adb, "", nil, t.injectEnabled)
 
 		msg := fmt.Sprintf("test case %d", i)
 		req := httptest.NewRequest(t.method, "/inject", strings.NewReader(t.req))
@@ -67,7 +75,7 @@ func TestInject(t *testing.T) {
 		assert.Equal(t.wantRespBody, string(body.Bytes()), msg)
 
 		if t.wantChange {
-			db, err := s.GetDB("accountID", "clientID")
+			db, err := s.GetDB(fmt.Sprintf("%d", account.UnittestID), "clientID")
 			assert.NoError(err, msg)
 			m := db.Head().Data(db.Noms())
 			v, got := m.MaybeGet(types.String("foo"))

@@ -7,10 +7,12 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
+	"roci.dev/diff-server/account"
 	"roci.dev/diff-server/util/time"
 )
 
@@ -32,7 +34,12 @@ func TestHello(t *testing.T) {
 
 	for i, t := range tc {
 		td, _ := ioutil.TempDir("", "")
-		s := NewService(td, []Account{Account{ID: "accountID", Name: "accountID", Pubkey: nil}}, "", nil, true)
+		defer func() { assert.NoError(os.RemoveAll(td)) }()
+
+		adb, adir := account.LoadTempDB(assert)
+		defer func() { assert.NoError(os.RemoveAll(adir)) }()
+
+		s := NewService(td, adb, "", nil, true)
 
 		msg := fmt.Sprintf("test case %d", i)
 		req := httptest.NewRequest(t.method, "/hello", nil)

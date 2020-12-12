@@ -13,6 +13,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
 
+	"roci.dev/diff-server/account"
 	"roci.dev/diff-server/db"
 	servetypes "roci.dev/diff-server/serve/types"
 
@@ -32,7 +33,7 @@ var (
 type Service struct {
 	storageRoot          string
 	urlPrefix            string
-	accounts             []Account
+	accountDB            *account.DB
 	nomsen               map[string]datas.Database
 	overridClientViewURL string // Overrides account client view URL, eg for testing.
 	enableInject         bool
@@ -47,20 +48,11 @@ type clientViewGetter interface {
 	Get(url string, req servetypes.ClientViewRequest, authToken string, syncID string) (servetypes.ClientViewResponse, int, error)
 }
 
-// Account represents a regular customer account (as opposed to an auto-signup account).
-// This is a temporary stand-in that will be replaced by the account service.
-type Account struct {
-	ID            string
-	Name          string
-	Pubkey        []byte // PEM-formatted ECDSA public key
-	ClientViewURL string
-}
-
 // NewService creates a new instances of the Replicant web service.
-func NewService(storageRoot string, accounts []Account, overrideClientViewURL string, cvg clientViewGetter, enableInject bool) *Service {
+func NewService(storageRoot string, accountDB *account.DB, overrideClientViewURL string, cvg clientViewGetter, enableInject bool) *Service {
 	return &Service{
 		storageRoot:          storageRoot,
-		accounts:             accounts,
+		accountDB:            accountDB,
 		nomsen:               map[string]datas.Database{},
 		overridClientViewURL: overrideClientViewURL,
 		enableInject:         enableInject,
@@ -108,15 +100,6 @@ func (s *Service) getNoms(accountID string) (datas.Database, error) {
 		n.Rebase()
 	}
 	return n, nil
-}
-
-func lookupAccount(accountID string, accounts []Account) (acc Account, ok bool) {
-	for _, a := range accounts {
-		if a.ID == accountID {
-			return a, true
-		}
-	}
-	return Account{}, false
 }
 
 func unsupportedMethodError(w http.ResponseWriter, m string, l zl.Logger) {

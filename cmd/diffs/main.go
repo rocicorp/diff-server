@@ -18,8 +18,8 @@ import (
 	zlog "github.com/rs/zerolog/log"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
+	"roci.dev/diff-server/account"
 	servepkg "roci.dev/diff-server/serve"
-	"roci.dev/diff-server/serve/accounts"
 	"roci.dev/diff-server/serve/signup"
 	"roci.dev/diff-server/util/log"
 	"roci.dev/diff-server/util/version"
@@ -133,7 +133,13 @@ func serve(parent *kingpin.Application, sps *string, ads *string, errs io.Writer
 		if *overrideClientViewURL != "" {
 			l.Info().Msgf("Overriding all client view URLs with %s", *overrideClientViewURL)
 		}
-		svc := servepkg.NewService(*sps, accounts.Accounts(), *overrideClientViewURL, servepkg.ClientViewGetter{}, *enableInject)
+
+		accountDB, err := account.NewDB(*ads)
+		if err != nil {
+			panic(err)
+		}
+
+		svc := servepkg.NewService(*sps, accountDB, *overrideClientViewURL, servepkg.ClientViewGetter{}, *enableInject)
 		mux := mux.NewRouter()
 		servepkg.RegisterHandlers(svc, mux)
 
