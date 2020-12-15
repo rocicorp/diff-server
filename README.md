@@ -19,9 +19,9 @@ go test ./...
 ```
 ./diffs serve --db=/tmp/diffs-data --enable-inject
 
-curl -d '{"accountID":"sandbox", "clientID":"c1", "baseStateID":"00000000000000000000000000000000", "checksum":"00000000"}' http://localhost:7001/pull
+curl -H "Authorization: sandbox" -d '{"version": 2, "clientID":"c1", "baseStateID":"00000000000000000000000000000000", "checksum":"00000000"}' http://localhost:7001/pull
 
-curl -d '{"accountID":"sandbox", "clientID":"c1", "clientViewResponse":{"clientView":{"foo":"bar"},"lastTransactionID":"2"}}' http://localhost:7001/inject
+curl  -H "Authorization: sandbox" -d '{"clientID":"c1", "clientViewResponse":{"clientView":{"foo":"bar"},"lastTransactionID":"2"}}' http://localhost:7001/inject
 ```
 
 ## Deploy
