@@ -5,7 +5,6 @@ import (
 	"html/template"
 	"io"
 	"net/http"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -14,19 +13,33 @@ import (
 	"roci.dev/diff-server/account"
 )
 
-// Add new templates to the list in TemplateFiles below.
-const getTemplate = "get.html"
-const postTemplate = "post.html"
-
-// TemplateFiles returns the paths to the templates this service uses.
-func TemplateFiles(templatesDir string) []string {
-	templates := []string{getTemplate, postTemplate}
-	files := []string{}
-
-	for _, t := range templates {
-		files = append(files, filepath.Join(templatesDir, t))
+// Templates returns the list of Templates the signup service needs.
+// Add new templates to this list!
+func Templates() []Template {
+	return []Template{
+		{Name: GetTemplateName, Content: GetTemplate},
+		{Name: PostTemplateName, Content: PostTemplate},
 	}
-	return files
+}
+
+// Template contains a string with the template content. Normally we'd
+// have the content in a file but I can't figure out how to access files
+// at runtime with Vercel.
+type Template struct {
+	Name    string
+	Content string
+}
+
+func ParseTemplates(templates []Template) (t *template.Template, err error) {
+	t = template.New("")
+
+	for _, tmpl := range templates {
+		if _, err = t.New(tmpl.Name).Parse(tmpl.Content); err != nil {
+			return
+		}
+	}
+
+	return
 }
 
 // Service is an instance of the signup service. It returns a little form
@@ -45,7 +58,9 @@ func NewService(logger zl.Logger, tmpl *template.Template, storageRoot string) *
 	return &Service{logger, tmpl, storageRoot}
 }
 
-// Path is the URL path at which to serve.
+// Path is the URL path at which to serve. It is used when running locally.
+// When running on Vercel we serve from under /api/, but there is a rewrite
+// rule in now.json that maps /signup to the service api path.
 const Path = "/signup"
 
 // RegisterHandlers registers Service's handlers on the given router.
@@ -56,7 +71,6 @@ func RegisterHandlers(s *Service, router *mux.Router) {
 func (s *Service) handle(w http.ResponseWriter, r *http.Request) {
 	// TODO auto-add ASID client view urls
 	// TODO enable multiple URLs for all accounts
-	// TODO hook it up for vercel (serve/prod.go)
 	// TODO better error messages for errors in POST
 	// TODO light form validation eg missing email
 	// TODO retry if concurrent POSTs step on each other + test
@@ -72,7 +86,7 @@ func (s *Service) handle(w http.ResponseWriter, r *http.Request) {
 	//      (ie, remove the noise from us tire-kicking)
 
 	if r.Method == "GET" {
-		if err := s.tmpl.ExecuteTemplate(w, getTemplate, getTemplateArgs{GetTemplateNameField, GetTemplateEmailField}); err != nil {
+		if err := s.tmpl.ExecuteTemplate(w, GetTemplateName, getTemplateArgs{GetTemplateNameField, GetTemplateEmailField}); err != nil {
 			serverError(w, err, s.logger)
 		}
 		return
@@ -105,7 +119,7 @@ func (s *Service) handle(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		templateArgs := postTemplateArgs{ID: fmt.Sprintf("%d", id)}
-		if err := s.tmpl.ExecuteTemplate(w, postTemplate, templateArgs); err != nil {
+		if err := s.tmpl.ExecuteTemplate(w, PostTemplateName, templateArgs); err != nil {
 			serverError(w, err, s.logger)
 		}
 		return

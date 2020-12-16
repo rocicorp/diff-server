@@ -24,7 +24,7 @@ func TestGET(t *testing.T) {
 	assert.NoError(err)
 	defer func() { assert.NoError(os.RemoveAll(dir)) }()
 
-	tmpl := template.Must(template.ParseFiles(signup.TemplateFiles(".")...))
+	tmpl := template.Must(signup.ParseTemplates(signup.Templates()))
 	service := signup.NewService(log.Default(), tmpl, dir)
 	m := mux.NewRouter()
 	signup.RegisterHandlers(service, m)
@@ -48,7 +48,7 @@ func TestPOST(t *testing.T) {
 	assert.NoError(err)
 	defer func() { assert.NoError(os.RemoveAll(dir)) }()
 
-	tmpl := template.Must(template.ParseFiles(signup.TemplateFiles(".")...))
+	tmpl := template.Must(signup.ParseTemplates(signup.Templates()))
 	service := signup.NewService(log.Default(), tmpl, dir)
 	m := mux.NewRouter()
 	signup.RegisterHandlers(service, m)

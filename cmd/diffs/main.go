@@ -125,7 +125,6 @@ func serve(parent *kingpin.Application, sps *string, ads *string, errs io.Writer
 	port := kc.Flag("port", "The port to run on").Default("7001").Int()
 	enableInject := kc.Flag("enable-inject", "Enable /inject endpoint which writes directly to the database for testing").Default("false").Bool()
 	overrideClientViewURL := parent.Flag("client-view", "URL to use for all accounts' Client View").PlaceHolder("http://localhost:8000/replicache-client-view").Default("").String()
-	signupTemplateDir := kc.Flag("signup-template-dir", "Directory containing signup templates (eg diff-server/serve/signup)").Default("").String()
 	kc.Action(func(_ *kingpin.ParseContext) error {
 		l.Info().Msgf("Listening on %d...", *port)
 
@@ -144,7 +143,7 @@ func serve(parent *kingpin.Application, sps *string, ads *string, errs io.Writer
 		servepkg.RegisterHandlers(svc, mux)
 
 		// Set up signup service.
-		tmpl := template.Must(template.ParseFiles(signup.TemplateFiles(*signupTemplateDir)...))
+		tmpl := template.Must(signup.ParseTemplates(signup.Templates()))
 		service := signup.NewService(l, tmpl, *ads)
 		signup.RegisterHandlers(service, mux)
 

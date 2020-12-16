@@ -1,3 +1,10 @@
+package signup
+
+const PostTemplateName = "post"
+
+// PostTemplate is the HTML template rendered in response to a
+// customer signup.
+const PostTemplate = `
 <html>
 
 <head>
@@ -12,3 +19,4 @@
 </body>
 
 </html>
+`
