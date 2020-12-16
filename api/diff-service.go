@@ -1,5 +1,4 @@
-// Package prod implements our top-level production server entrypoint for Zeit Now.
-package prod
+package api
 
 import (
 	"net/http"
@@ -22,10 +21,12 @@ const (
 	aws_access_key_id     = "REPLICANT_AWS_ACCESS_KEY_ID"
 	aws_secret_access_key = "REPLICANT_AWS_SECRET_ACCESS_KEY"
 	aws_region            = "us-west-2"
+
+	storageRoot = "aws:replicant/aa-replicant2"
 )
 
 var (
-	handler            http.Handler
+	diffServiceHandler http.Handler
 	headerLogWhitelist = []string{"Authorization", "Content-Type", "Host", "X-Replicache-SyncID"}
 )
 
@@ -45,7 +46,6 @@ func init() {
 					os.Getenv(aws_secret_access_key), ""))))
 	}
 
-	storageRoot := "aws:replicant/aa-replicant2"
 	accountDB, err := account.NewDB(storageRoot)
 	if err != nil {
 		panic(err)
@@ -54,10 +54,10 @@ func init() {
 	svc := serve.NewService(storageRoot, accountDB, "", serve.ClientViewGetter{}, false)
 	mux := mux.NewRouter()
 	serve.RegisterHandlers(svc, mux)
-	handler = mux
+	diffServiceHandler = mux
 }
 
-// Handler implements the Zeit Now entrypoint for our server.
-func Handler(w http.ResponseWriter, r *http.Request) {
-	handler.ServeHTTP(w, r)
+// DiffServiceHandler implements the Vercel entrypoint for the DiffService.
+func DiffServiceHandler(w http.ResponseWriter, r *http.Request) {
+	diffServiceHandler.ServeHTTP(w, r)
 }

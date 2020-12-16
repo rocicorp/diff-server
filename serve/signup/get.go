@@ -1,3 +1,13 @@
+package signup
+
+const GetTemplateName = "get"
+
+// GetTemplate is the HTML template for the page a customer uses to sign up.
+// The template is included statically because I cannot figure out how
+// to get Vercel to include template files so they are accessible at function
+// startup time. (I tried both "functions" with includeFiles and static
+// build rules.)
+const GetTemplate = `
 <!doctype html>
 <html>
 
@@ -26,3 +36,4 @@
 </body>
 
 </html>
+`

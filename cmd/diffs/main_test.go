@@ -33,7 +33,7 @@ func TestServe(t *testing.T) {
 
 	defer time.SetFake()()
 
-	args := append([]string{"--db=" + dir, "--account-db=" + accountDBDir, "serve", "--signup-template-dir=../../serve/signup", "--port=8674"})
+	args := append([]string{"--db=" + dir, "--account-db=" + accountDBDir, "serve", "--port=8674"})
 	go impl(args, strings.NewReader(""), os.Stdout, os.Stderr, func(_ int) {})
 
 	// Wait for server to start...
