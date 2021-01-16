@@ -52,7 +52,7 @@ func (s *Service) pull(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if preq.Version != 2 {
+	if preq.Version < 2 {
 		clientError(rw, http.StatusBadRequest, "Unsupported PullRequest version", l)
 		return
 	}
@@ -62,7 +62,7 @@ func (s *Service) pull(rw http.ResponseWriter, r *http.Request) {
 		clientError(rw, http.StatusBadRequest, "Missing Authorization header", l)
 		return
 	}
-	accounts, err := account.ReadRecords(s.accountDB)
+	accounts, err := account.ReadAllRecords(s.accountDB)
 	if err != nil {
 		serverError(rw, err, l)
 		return
@@ -96,13 +96,31 @@ func (s *Service) pull(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	clientViewURL := ""
-	// TODO enable multiple client view URLs and auto-add ASID URLs.
-	if len(acct.ClientViewURLs) > 0 {
-		clientViewURL = acct.ClientViewURLs[0]
+	if preq.Version >= 3 {
+		if preq.ClientViewURL == "" {
+			clientError(rw, http.StatusBadRequest, "clientViewURL not provided in request", l)
+			return
+		}
+		clientViewURL = preq.ClientViewURL
+		authorized, err := account.ClientViewURLAuthorized(s.maxASClientViewURLs, s.accountDB, accounts, acct.ID, clientViewURL)
+		if err != nil {
+			serverError(rw, err, l)
+			return
+		}
+		if !authorized {
+			clientError(rw, http.StatusForbidden, "clientViewURL is not authorized; please contact support@replicache.dev", l)
+			return
+		}
+	} else {
+		// TODO remove this block when Version 2 is deprecated.
+		if len(acct.ClientViewURLs) > 0 {
+			clientViewURL = acct.ClientViewURLs[0]
+		}
+		if s.overridClientViewURL != "" {
+			clientViewURL = s.overridClientViewURL
+		}
 	}
-	if s.overridClientViewURL != "" {
-		clientViewURL = s.overridClientViewURL
-	}
+
 	cvReq := servetypes.ClientViewRequest{
 		ClientID: preq.ClientID,
 	}

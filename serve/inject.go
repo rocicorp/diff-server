@@ -39,7 +39,7 @@ func (s *Service) inject(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// This check seems kind of useless given that much account info is public.
-	records, err := account.ReadRecords(s.accountDB)
+	records, err := account.ReadAllRecords(s.accountDB)
 	if err != nil {
 		serverError(w, err, l)
 	}

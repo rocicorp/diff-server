@@ -58,9 +58,9 @@ func TestInject(t *testing.T) {
 
 		adb, adir := account.LoadTempDB(assert)
 		defer func() { assert.NoError(os.RemoveAll(adir)) }()
-		account.AddUnittestAccountWithURL(assert, adb, "")
+		account.AddUnittestAccount(assert, adb)
 
-		s := NewService(td, adb, "", nil, t.injectEnabled)
+		s := NewService(td, account.MaxASClientViewURLs, adb, "", nil, t.injectEnabled)
 
 		msg := fmt.Sprintf("test case %d", i)
 		req := httptest.NewRequest(t.method, "/inject", strings.NewReader(t.req))

@@ -86,8 +86,12 @@ func (db *DB) Noms() datas.Database {
 	return db.ds.Database()
 }
 
-// Callers don't care about the underlying Commit structure, so we have
-// HeadValue and SetHeadWithValue, unlike db/db.go, which has Head and SetHead.
+// HeadValue returns the value at head. Note that the Records returned contains
+// pointer types (eg, a map) so any changes to the pointer members of the Records
+// returned will be visible to any other caller to whom this Records has been
+// returned. Use CopyRecords to get a value that is safe to change. This is
+// not a good pattern, especially because Noms might require retry on write,
+// but luckily this is a temporary thing. (Reader two years in the future: <smirks>.)
 func (db *DB) HeadValue() Records {
 	defer db.lock()()
 	return db.head.Value
