@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
@@ -29,7 +30,12 @@ func TestServe(t *testing.T) {
 	assert.NoError(err)
 	defer func() { assert.NoError(os.RemoveAll(accountDBDir)) }()
 	accountDB := account.LoadTempDBWithPath(assert, accountDBDir)
-	account.AddUnittestAccountWithURL(assert, accountDB, "")
+	account.AddUnittestAccount(assert, accountDB)
+
+	cvServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+		w.Write([]byte(`{"clientView": {}}`))
+	}))
 
 	defer time.SetFake()()
 
@@ -59,9 +65,9 @@ func TestServe(t *testing.T) {
 		expectedError    string
 	}{
 		{"pull",
-			`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid", "version": 2}`,
+			fmt.Sprintf(`{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid", "clientViewURL": "%s", "version": 3}`, cvServer.URL),
 			fmt.Sprintf("%d", account.UnittestID),
-			`{"stateID":"r0d74qu25vi4dr8fmf58oike0cj4jpth","lastMutationID":0,"patch":[{"op":"replace","path":"","valueString":"{}"}],"checksum":"00000000","clientViewInfo":{"httpStatusCode":0,"errorMessage":""}}`,
+			`{"stateID":"r0d74qu25vi4dr8fmf58oike0cj4jpth","lastMutationID":0,"patch":[{"op":"replace","path":"","valueString":"{}"}],"checksum":"00000000","clientViewInfo":{"httpStatusCode":200,"errorMessage":""}}`,
 			""},
 	}
 
@@ -79,6 +85,8 @@ func TestServe(t *testing.T) {
 		assert.NoError(err, msg)
 		assert.Equal(t.expectedResponse+"\n", string(body.Bytes()), msg)
 	}
+
+	cvServer.Close()
 }
 
 func TestEmptyInput(t *testing.T) {

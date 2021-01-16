@@ -22,10 +22,19 @@ func LoadTempDBWithPath(assert *assert.Assertions, td string) (r *DB) {
 
 const UnittestID = 0xFFFFFFFF
 
-func AddUnittestAccountWithURL(assert *assert.Assertions, db *DB, clientViewURL string) {
-	accounts, err := ReadRecords(db)
+func AddUnittestAccount(assert *assert.Assertions, db *DB) {
+	accounts, err := ReadAllRecords(db)
 	assert.NoError(err)
-	record := Record{ID: UnittestID, Name: "Unittest", ClientViewURLs: []string{clientViewURL}}
+	record := Record{ID: UnittestID, Name: "Unittest", ClientViewURLs: []string{}}
 	accounts.Record[record.ID] = record
+	assert.NoError(WriteRecords(db, accounts))
+}
+
+func AddUnittestAccountURL(assert *assert.Assertions, db *DB, url string) {
+	accounts, err := ReadAllRecords(db)
+	assert.NoError(err)
+	record := accounts.Record[UnittestID]
+	record.ClientViewURLs = append(record.ClientViewURLs, url)
+	accounts.Record[UnittestID] = record
 	assert.NoError(WriteRecords(db, accounts))
 }

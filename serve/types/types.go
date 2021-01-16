@@ -10,7 +10,9 @@ type PullRequest struct {
 	// Version 0 -> uses raw json kv.Operation.Value
 	// Version 1 -> uses stringified json kv.Operation.ValueString
 	// Version 2 -> top-level remove uses replace path="" value="{}" instead of remove path="/"
+	// Version 3 -> request explicitly specifies client view URL
 	Version        uint32 `json:"version"`
+	ClientViewURL  string `json:"clientViewURL"`
 	ClientViewAuth string `json:"clientViewAuth"`
 	ClientID       string `json:"clientID"`
 	BaseStateID    string `json:"baseStateID"`

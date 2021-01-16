@@ -1,10 +1,11 @@
 package account
 
 var (
-	regularAccounts = []Record{
+	RegularAccounts = []Record{
 		{
-			ID:   0,
-			Name: "Sandbox",
+			ID:             0,
+			Name:           "Sandbox",
+			ClientViewURLs: []string{"http://replicache.dev"},
 		},
 		{
 			ID:             1,

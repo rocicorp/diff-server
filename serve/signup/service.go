@@ -69,11 +69,11 @@ func RegisterHandlers(s *Service, router *mux.Router) {
 }
 
 func (s *Service) handle(w http.ResponseWriter, r *http.Request) {
-	// TODO auto-add ASID client view urls
-	// TODO enable multiple URLs for all accounts
+	// TODO account authorized clientview URLs should match on domain
 	// TODO better error messages for errors in POST
 	// TODO light form validation eg missing email
 	// TODO retry if concurrent POSTs step on each other + test
+	// TODO retry if saving new clientviewurl fails
 	// TODO logging
 	// TODO cache account.Records, eg only re-read every N second
 	// TODO rate limiting
@@ -100,7 +100,7 @@ func (s *Service) handle(w http.ResponseWriter, r *http.Request) {
 			serverError(w, err, s.logger)
 			return
 		}
-		accounts, err := account.ReadRecords(db)
+		accounts, err := account.ReadAllRecords(db)
 		if err != nil {
 			serverError(w, err, s.logger)
 			return
