@@ -1,6 +1,7 @@
 package account
 
 import (
+	"net/url"
 	"strconv"
 )
 
@@ -26,21 +27,29 @@ func CopyRecords(records Records) Records {
 
 // Record represents a single account record.
 type Record struct {
-	ID             uint32
-	Name           string
-	Email          string
+	ID              uint32
+	Name            string
+	Email           string
+	ClientViewHosts []string
+	DateCreated     string
+
+	// ClientViewURLS is used only by Version 2 clients. It is DEPRECATED
+	// and will go away when Version 2 is not longer supported.
+	// TODO remove when Version 2 is no longer supported.
 	ClientViewURLs []string
-	DateCreated    string
 }
 
 // CopyRecord deep copies a Record (it contains a pointer type).
 func CopyRecord(record Record) Record {
 	copy := Record{
-		ID:             record.ID,
-		Name:           record.Name,
-		Email:          record.Email,
-		ClientViewURLs: make([]string, 0, len(record.ClientViewURLs)),
-		DateCreated:    record.DateCreated,
+		ID:              record.ID,
+		Name:            record.Name,
+		Email:           record.Email,
+		ClientViewHosts: make([]string, 0, len(record.ClientViewHosts)),
+		DateCreated:     record.DateCreated,
+	}
+	for _, url := range record.ClientViewHosts {
+		copy.ClientViewHosts = append(copy.ClientViewHosts, url)
 	}
 	for _, url := range record.ClientViewURLs {
 		copy.ClientViewURLs = append(copy.ClientViewURLs, url)
@@ -52,8 +61,8 @@ func CopyRecord(record Record) Record {
 // See RFC: https://github.com/rocicorp/repc/issues/269
 const LowestASID uint32 = 1000000
 
-// We limit the number of auto-added client view URLs for auto-signup accounts.
-const MaxASClientViewURLs int = 10
+// We limit the number of auto-added client view hosts for auto-signup accounts.
+const MaxASClientViewHosts int = 5
 
 // ReadAllRecords returns the full set of Replicache account records. Reading
 // of Records is separate from Lookup so the caller can cache Records if they
@@ -124,35 +133,40 @@ func WriteRecords(db *DB, records Records) error {
 
 // ClientViewURLAuthorized returns a bool indicating whether the URL the client
 // is attempting to fetch from is authorized. We allow auto-signup accounts to
-// fetch their client view from any URL up to some number of unique URLs. We
+// fetch their client view from any URL from up to some number of unique hosts. We
 // limit this number to prevent spamming and require fixed, explicitly configured
-// URLs for the non-ASID case for security.
+// hosts for the non-ASID case for security.
 //
 // ClientViewURLAuthorized assumes that records is mutable. If the caller doesn't
 // want to see changes from ClientViewURLAuthorized it should pass in a copy from
 // CopyRecords().
-func ClientViewURLAuthorized(maxASClientViewURLs int, db *DB, records Records, ID uint32, url string) (bool, error) {
+func ClientViewURLAuthorized(maxASClientViewHosts int, db *DB, records Records, ID uint32, url string) (bool, error) {
 	record, exists := records.Record[ID]
 	if !exists {
 		return false, nil
 	}
 
-	for _, authorizedURL := range record.ClientViewURLs {
-		if url == authorizedURL {
+	clientViewHost, err := host(url)
+	if err != nil {
+		return false, err
+	}
+
+	for _, authorizedHost := range record.ClientViewHosts {
+		if clientViewHost == authorizedHost {
 			return true, nil
 		}
 	}
-	// Regular accounts have a fixed list of authorized URLs.
+	// Regular accounts have a fixed list of authorized hosts.
 	if !isASID(record.ID) {
 		return false, nil
 	}
 
-	// Here we know this is an auto-signup account and the url is not in the list.
-	if len(record.ClientViewURLs) >= maxASClientViewURLs {
+	// Here we know this is an auto-signup account and the host is not in the list.
+	if len(record.ClientViewHosts) >= maxASClientViewHosts {
 		return false, nil
 	}
 
-	record.ClientViewURLs = append(record.ClientViewURLs, url)
+	record.ClientViewHosts = append(record.ClientViewHosts, clientViewHost)
 	records.Record[record.ID] = record
 	// TODO retry
 	if err := WriteRecords(db, records); err != nil {
@@ -163,4 +177,12 @@ func ClientViewURLAuthorized(maxASClientViewURLs int, db *DB, records Records, I
 
 func isASID(id uint32) bool {
 	return id >= LowestASID
+}
+
+func host(rawurl string) (string, error) {
+	u, err := url.Parse(rawurl)
+	if err != nil {
+		return "", err
+	}
+	return u.Hostname(), nil
 }
