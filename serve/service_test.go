@@ -24,8 +24,8 @@ func TestConcurrentAccessUsingMultipleServices(t *testing.T) {
 	defer func() { assert.NoError(os.RemoveAll(adir)) }()
 
 	fcvg := &fakeClientViewGet{resp: types.ClientViewResponse{}, code: 200, err: nil}
-	svc1 := NewService(td, account.MaxASClientViewURLs, adb, "", fcvg, true)
-	svc2 := NewService(td, account.MaxASClientViewURLs, adb, "", fcvg, true)
+	svc1 := NewService(td, account.MaxASClientViewHosts, adb, "", fcvg, true)
+	svc2 := NewService(td, account.MaxASClientViewHosts, adb, "", fcvg, true)
 
 	res := []*httptest.ResponseRecorder{
 		httptest.NewRecorder(),
@@ -33,7 +33,7 @@ func TestConcurrentAccessUsingMultipleServices(t *testing.T) {
 		httptest.NewRecorder(),
 	}
 
-	reqBody := `{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid", "clientViewURL": "http://replicache.dev", "version": 3}`
+	reqBody := `{"baseStateID": "00000000000000000000000000000000", "checksum": "00000000", "clientID": "clientid", "clientViewURL": "http://localhost:8000/client-view", "version": 3}`
 
 	req1 := httptest.NewRequest("POST", "/pull", strings.NewReader(reqBody))
 	req1.Header.Add("Authorization", "sandbox")
@@ -62,7 +62,7 @@ func TestNo301(t *testing.T) {
 	adb, adir := account.LoadTempDB(assert)
 	defer func() { assert.NoError(os.RemoveAll(adir)) }()
 
-	svc := NewService(td, account.MaxASClientViewURLs, adb, "", nil, true)
+	svc := NewService(td, account.MaxASClientViewHosts, adb, "", nil, true)
 	r := httptest.NewRecorder()
 
 	mux := mux.NewRouter()

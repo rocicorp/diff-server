@@ -3,6 +3,7 @@ package account_test
 import (
 	"fmt"
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -101,7 +102,7 @@ func TestWriteRecords(t *testing.T) {
 
 	accounts, err := account.ReadAllRecords(db)
 	assert.NoError(err)
-	newAccount := account.Record{ID: account.LowestASID + 42, Name: "Larry", ClientViewURLs: []string{"url"}}
+	newAccount := account.Record{ID: account.LowestASID + 42, Name: "Larry", ClientViewHosts: []string{"host.com"}}
 	accounts.Record[newAccount.ID] = newAccount
 	assert.NoError(account.WriteRecords(db, accounts))
 	accounts, err = account.ReadAllRecords(db)
@@ -110,7 +111,7 @@ func TestWriteRecords(t *testing.T) {
 	assert.True(found)
 	assert.Equal(newAccount.ID, got.ID)
 	assert.Equal(newAccount.Name, got.Name)
-	assert.Equal(newAccount.ClientViewURLs, got.ClientViewURLs)
+	assert.True(reflect.DeepEqual(newAccount.ClientViewHosts, got.ClientViewHosts))
 }
 
 func TestClientViewURLAuthorized(t *testing.T) {
@@ -126,7 +127,7 @@ func TestClientViewURLAuthorized(t *testing.T) {
 		{
 			"no such account",
 			123,
-			"url",
+			"http://authorized.com",
 			false,
 			"",
 			false,
@@ -134,7 +135,7 @@ func TestClientViewURLAuthorized(t *testing.T) {
 		{
 			"regular account, unauthorized url",
 			0,
-			"UNauthorized",
+			"http://UNauthorized.com",
 			false,
 			"",
 			false,
@@ -142,7 +143,15 @@ func TestClientViewURLAuthorized(t *testing.T) {
 		{
 			"regular account, authorized url",
 			0,
-			"authorized",
+			"http://authorized.com",
+			true,
+			"",
+			false,
+		},
+		{
+			"regular account, authorized url includes port",
+			0,
+			"http://authorized.com:1234/somepath",
 			true,
 			"",
 			false,
@@ -150,7 +159,7 @@ func TestClientViewURLAuthorized(t *testing.T) {
 		{
 			"auto account, authorized url",
 			account.LowestASID,
-			"authorized",
+			"http://authorized.com",
 			true,
 			"",
 			false,
@@ -158,7 +167,7 @@ func TestClientViewURLAuthorized(t *testing.T) {
 		{
 			"auto account, new url",
 			account.LowestASID,
-			"new should be authorized",
+			"http://newhost.shouldbeauthorized.com",
 			true,
 			"",
 			true,
@@ -171,14 +180,14 @@ func TestClientViewURLAuthorized(t *testing.T) {
 			records := account.Records{
 				0,
 				map[uint32]account.Record{
-					0:                  {ID: 0, ClientViewURLs: []string{"authorized"}},
-					account.LowestASID: {ID: account.LowestASID, ClientViewURLs: []string{"authorized"}},
+					0:                  {ID: 0, ClientViewHosts: []string{"authorized.com"}},
+					account.LowestASID: {ID: account.LowestASID, ClientViewHosts: []string{"authorized.com"}},
 				},
 			}
 			assert.NoError(account.WriteRecords(db, records))
 			recordsCopy := account.CopyRecords(records)
 
-			gotAuthorized, err := account.ClientViewURLAuthorized(account.MaxASClientViewURLs, db, recordsCopy, tt.ID, tt.url)
+			gotAuthorized, err := account.ClientViewURLAuthorized(account.MaxASClientViewHosts, db, recordsCopy, tt.ID, tt.url)
 			if tt.wantErr != "" {
 				assert.Error(err)
 				assert.Contains(err.Error(), tt.wantErr)
@@ -190,8 +199,8 @@ func TestClientViewURLAuthorized(t *testing.T) {
 				if exists {
 					recordsAfter, err := account.ReadRecords(db)
 					assert.NoError(err)
-					urlAdded := len(originalRecord.ClientViewURLs) != len(recordsAfter.Record[tt.ID].ClientViewURLs)
-					assert.Equal(tt.wantAdded, urlAdded, "%s: URLs before: %v, URLs after: %v", tt.name, originalRecord.ClientViewURLs, recordsAfter.Record[tt.ID].ClientViewURLs)
+					urlAdded := len(originalRecord.ClientViewHosts) != len(recordsAfter.Record[tt.ID].ClientViewHosts)
+					assert.Equal(tt.wantAdded, urlAdded, "%s: URLs before: %v, URLs after: %v", tt.name, originalRecord.ClientViewHosts, recordsAfter.Record[tt.ID].ClientViewHosts)
 				}
 			}
 		})
@@ -204,17 +213,38 @@ func TestClientViewURLAuthorizedWithMaxedURLs(t *testing.T) {
 	records := account.Records{
 		0,
 		map[uint32]account.Record{
-			account.LowestASID: {ID: account.LowestASID, ClientViewURLs: []string{}},
+			account.LowestASID: {ID: account.LowestASID, ClientViewHosts: []string{}},
 		},
 	}
 	record := records.Record[account.LowestASID]
-	for i := 0; i < account.MaxASClientViewURLs; i++ {
-		record.ClientViewURLs = append(record.ClientViewURLs, fmt.Sprintf("%d", i))
+	for i := 0; i < account.MaxASClientViewHosts; i++ {
+		record.ClientViewHosts = append(record.ClientViewHosts, fmt.Sprintf("%d.com", i))
 	}
 	records.Record[account.LowestASID] = record
 	assert.NoError(account.WriteRecords(db, records))
 
-	gotAuthorized, err := account.ClientViewURLAuthorized(account.MaxASClientViewURLs, db, records, account.LowestASID, "some url")
+	gotAuthorized, err := account.ClientViewURLAuthorized(account.MaxASClientViewHosts, db, records, account.LowestASID, "http://somenewhost.com")
 	assert.NoError(err)
 	assert.False(gotAuthorized)
+}
+
+func TestCopyRecord(t *testing.T) {
+	assert := assert.New(t)
+
+	record := account.Record{
+		ID:              1,
+		Name:            "name",
+		Email:           "email",
+		ClientViewHosts: []string{"host1"},
+		DateCreated:     "date",
+		ClientViewURLs:  []string{"url1"},
+	}
+	copy := account.CopyRecord(record)
+	assert.True(reflect.DeepEqual(record, copy))
+
+	// Ensure no aliasing.
+	copy.ClientViewHosts = append(copy.ClientViewHosts, "host2")
+	assert.NotEqual(len(record.ClientViewHosts), len(copy.ClientViewHosts))
+	copy.ClientViewURLs = append(copy.ClientViewURLs, "url2")
+	assert.NotEqual(len(record.ClientViewURLs), len(copy.ClientViewURLs))
 }

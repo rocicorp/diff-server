@@ -138,7 +138,7 @@ func serve(parent *kingpin.Application, sps *string, ads *string, errs io.Writer
 			panic(err)
 		}
 
-		svc := servepkg.NewService(*sps, account.MaxASClientViewURLs, accountDB, *overrideClientViewURL, servepkg.ClientViewGetter{}, *enableInject)
+		svc := servepkg.NewService(*sps, account.MaxASClientViewHosts, accountDB, *overrideClientViewURL, servepkg.ClientViewGetter{}, *enableInject)
 		mux := mux.NewRouter()
 		servepkg.RegisterHandlers(svc, mux)
 
