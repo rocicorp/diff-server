@@ -33,7 +33,7 @@ var (
 func init() {
 	// Zeit now has a 4kb log limit per request, so set up some aggressive HTTP log filters.
 	loghttp.Filters = append(loghttp.Filters, loghttp.NewBodyElider(500).Filter)
-	loghttp.Filters = append(loghttp.Filters, loghttp.NewHeaderWhitelist(headerLogAllowlist).Filter)
+	loghttp.Filters = append(loghttp.Filters, loghttp.NewHeaderAllowlist(headerLogAllowlist).Filter)
 
 	zl.SetGlobalLevel(zl.DebugLevel)
 	zlog.Logger = zlog.Output(zl.ConsoleWriter{Out: os.Stderr, TimeFormat: "02 Jan 06 15:04:05.000 -0700", NoColor: true})
