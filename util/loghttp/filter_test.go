@@ -4,10 +4,10 @@ import (
 	"testing"
 )
 
-func TestHeaderWhitelist_Filter(t *testing.T) {
+func TestHeaderAllowlist_Filter(t *testing.T) {
 	tests := []struct {
 		name      string
-		whitelist []string
+		allowlist []string
 		httpReq   string
 		want      string
 	}{
@@ -24,25 +24,25 @@ func TestHeaderWhitelist_Filter(t *testing.T) {
 			"This is not HTTP",
 		},
 		{
-			"request: empty whitelist, no headers or body",
+			"request: empty allowlist, no headers or body",
 			[]string{},
 			"GET / HTTP/1.0\r\n\r\n",
 			"GET / HTTP/1.0\r\n\r\n",
 		},
 		{
-			"request: empty whitelist, no headers or body",
+			"request: empty allowlist, no headers or body",
 			[]string{},
 			"GET / HTTP/1.0\r\n\r\n",
 			"GET / HTTP/1.0\r\n\r\n",
 		},
 		{
-			"request: empty whitelist, headers no body",
+			"request: empty allowlist, headers no body",
 			[]string{},
 			"GET / HTTP/1.0\r\nFoo: bar\r\n\r\n",
 			"GET / HTTP/1.0\r\n\r\n",
 		},
 		{
-			"request: empty whitelist, headers and body",
+			"request: empty allowlist, headers and body",
 			[]string{},
 			"GET / HTTP/1.0\r\nFoo: bar\r\n\r\nbody",
 			"GET / HTTP/1.0\r\n\r\nbody",
@@ -74,10 +74,10 @@ func TestHeaderWhitelist_Filter(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			hw := NewHeaderWhitelist(tt.whitelist)
+			hw := NewHeaderAllowlist(tt.allowlist)
 			got := string(hw.Filter([]byte(tt.httpReq)))
 			if got != tt.want {
-				t.Errorf("HeaderWhitelist.Filter() = %q, want %q", got, tt.want)
+				t.Errorf("HeaderAllowlist.Filter() = %q, want %q", got, tt.want)
 			}
 		})
 	}

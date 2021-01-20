@@ -10,30 +10,30 @@ import (
 // header lines.
 type FilterFunc func([]byte) []byte
 
-// HeaderWhitelist is a FilterFunc that removes all headers not on
-// its whitelist. An empty whitelist filters all headers.
-type HeaderWhitelist struct {
+// HeaderAllowlist is a FilterFunc that removes all headers not on
+// its allowlist. An empty allowlist filters all headers.
+type HeaderAllowlist struct {
 	re *regexp.Regexp
 }
 
-// NewHeaderWhitelist returns a new HeaderWhitelist that filters
-// all but the headers listed in whitelist.
-func NewHeaderWhitelist(whitelist []string) HeaderWhitelist {
-	// Build a regexp that will match header lines on the whitelist.
+// NewHeaderAllowlist returns a new HeaderAllowlist that filters
+// all but the headers listed in allowlist.
+func NewHeaderAllowlist(allolist []string) HeaderAllowlist {
+	// Build a regexp that will match header lines on the allowlist.
 	// Default to matching none.
 	reStr := "^$"
-	if len(whitelist) > 0 {
-		reStr = fmt.Sprintf(`^(%s`, whitelist[0])
-		for i := 1; i < len(whitelist); i++ {
-			reStr = fmt.Sprintf("%s|%s", reStr, whitelist[i])
+	if len(allolist) > 0 {
+		reStr = fmt.Sprintf(`^(%s`, allolist[0])
+		for i := 1; i < len(allolist); i++ {
+			reStr = fmt.Sprintf("%s|%s", reStr, allolist[i])
 		}
 		reStr = fmt.Sprintf("%s):", reStr)
 	}
-	return HeaderWhitelist{regexp.MustCompile(reStr)}
+	return HeaderAllowlist{regexp.MustCompile(reStr)}
 }
 
 // Filter filters the given HTTP request/response dump.
-func (hw HeaderWhitelist) Filter(httpReq []byte) []byte {
+func (hw HeaderAllowlist) Filter(httpReq []byte) []byte {
 	endHeadersIndex := bytes.Index(httpReq, []byte("\r\n\r\n"))
 	if endHeadersIndex == -1 {
 		return httpReq
