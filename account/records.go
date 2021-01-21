@@ -34,7 +34,7 @@ type Record struct {
 	DateCreated     string
 
 	// ClientViewURLS is used only by Version 2 clients. It is DEPRECATED
-	// and will go away when Version 2 is not longer supported.
+	// and will go away when Version 2 is no longer supported.
 	// TODO remove when Version 2 is no longer supported.
 	ClientViewURLs []string
 }
@@ -47,6 +47,7 @@ func CopyRecord(record Record) Record {
 		Email:           record.Email,
 		ClientViewHosts: make([]string, 0, len(record.ClientViewHosts)),
 		DateCreated:     record.DateCreated,
+		ClientViewURLs:  make([]string, 0, len(record.ClientViewURLs)),
 	}
 	for _, url := range record.ClientViewHosts {
 		copy.ClientViewHosts = append(copy.ClientViewHosts, url)
