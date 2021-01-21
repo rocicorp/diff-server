@@ -1,10 +1,10 @@
 package signup
 
-const PostTemplateName = "post"
+const PostSuccessTemplateName = "post_success"
 
-// PostTemplate is the HTML template rendered in response to a
-// customer signup.
-const PostTemplate = `
+// PostSuccessTemplate is the HTML template rendered in response to a
+// successful customer signup.
+const PostSuccessTemplate = `
 <html>
 
 <head>
