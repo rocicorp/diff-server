@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"roci.dev/diff-server/account"
+	"roci.dev/diff-server/util/log"
 )
 
 func TestReadAllRecordsAndLookup(t *testing.T) {
@@ -187,7 +188,7 @@ func TestClientViewURLAuthorized(t *testing.T) {
 			assert.NoError(account.WriteRecords(db, records))
 			recordsCopy := account.CopyRecords(records)
 
-			gotAuthorized, err := account.ClientViewURLAuthorized(account.MaxASClientViewHosts, db, recordsCopy, tt.ID, tt.url)
+			gotAuthorized, err := account.ClientViewURLAuthorized(account.MaxASClientViewHosts, db, recordsCopy, tt.ID, tt.url, log.Default())
 			if tt.wantErr != "" {
 				assert.Error(err)
 				assert.Contains(err.Error(), tt.wantErr)
@@ -223,7 +224,7 @@ func TestClientViewURLAuthorizedWithMaxedURLs(t *testing.T) {
 	records.Record[account.LowestASID] = record
 	assert.NoError(account.WriteRecords(db, records))
 
-	gotAuthorized, err := account.ClientViewURLAuthorized(account.MaxASClientViewHosts, db, records, account.LowestASID, "http://somenewhost.com")
+	gotAuthorized, err := account.ClientViewURLAuthorized(account.MaxASClientViewHosts, db, records, account.LowestASID, "http://somenewhost.com", log.Default())
 	assert.NoError(err)
 	assert.False(gotAuthorized)
 }

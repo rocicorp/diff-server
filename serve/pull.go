@@ -106,7 +106,7 @@ func (s *Service) pull(rw http.ResponseWriter, r *http.Request) {
 			return
 		}
 		clientViewURL = preq.ClientViewURL
-		authorized, err := account.ClientViewURLAuthorized(s.maxASClientViewURLs, s.accountDB, accounts, acct.ID, clientViewURL)
+		authorized, err := account.ClientViewURLAuthorized(s.maxASClientViewURLs, s.accountDB, accounts, acct.ID, clientViewURL, l)
 		if err != nil {
 			serverError(rw, err, l)
 			return
