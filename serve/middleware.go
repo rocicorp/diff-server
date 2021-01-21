@@ -44,7 +44,7 @@ func logger(r *http.Request) zl.Logger {
 		}
 	}
 	l := log.Default()
-	l.Info().Msg("zlogger missing from request context (this is expected in unit tests)")
+	l.Error().Msgf("zlogger missing from request context for %s (this is expected in unit tests)", r.URL)
 	return l
 }
 

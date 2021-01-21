@@ -3,6 +3,8 @@ package account
 import (
 	"net/url"
 	"strconv"
+
+	zl "github.com/rs/zerolog"
 )
 
 // Records contains the set of Replicache account records (all of them
@@ -141,7 +143,7 @@ func WriteRecords(db *DB, records Records) error {
 // ClientViewURLAuthorized assumes that records is mutable. If the caller doesn't
 // want to see changes from ClientViewURLAuthorized it should pass in a copy from
 // CopyRecords().
-func ClientViewURLAuthorized(maxASClientViewHosts int, db *DB, records Records, ID uint32, url string) (bool, error) {
+func ClientViewURLAuthorized(maxASClientViewHosts int, db *DB, records Records, ID uint32, url string, l zl.Logger) (bool, error) {
 	record, exists := records.Record[ID]
 	if !exists {
 		return false, nil
@@ -173,6 +175,7 @@ func ClientViewURLAuthorized(maxASClientViewHosts int, db *DB, records Records, 
 	if err := WriteRecords(db, records); err != nil {
 		return false, err
 	}
+	l.Debug().Msgf("Added clientViewHost %s for account %d (now %v)", clientViewHost, ID, record.ClientViewHosts)
 	return true, nil
 }
 

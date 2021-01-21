@@ -122,6 +122,7 @@ func (s *Service) handle(w http.ResponseWriter, r *http.Request) {
 		if err := s.tmpl.ExecuteTemplate(w, PostTemplateName, templateArgs); err != nil {
 			serverError(w, err, s.logger)
 		}
+		s.logger.Info().Msgf("Created auto-signup account: %#v", accounts.Record[id])
 		return
 
 	} else {
