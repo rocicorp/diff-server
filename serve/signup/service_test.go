@@ -42,7 +42,7 @@ func TestGET(t *testing.T) {
 	assert.True(strings.Contains(body, `type="submit"`))
 }
 
-func TestPOST(t *testing.T) {
+func TestPOSTSuccess(t *testing.T) {
 	assert := assert.New(t)
 	dir, err := ioutil.TempDir("", "")
 	assert.NoError(err)
@@ -79,4 +79,42 @@ func TestPOST(t *testing.T) {
 	assert.Equal("Larry", hv.Record[expectedASID].Name)
 	assert.Equal("larry@example.com", hv.Record[expectedASID].Email)
 	assert.NotEqual("", hv.Record[expectedASID].DateCreated)
+}
+
+func TestPOSTFailure(t *testing.T) {
+	assert := assert.New(t)
+	dir, err := ioutil.TempDir("", "")
+	assert.NoError(err)
+	defer func() { assert.NoError(os.RemoveAll(dir)) }()
+
+	tmpl := template.Must(signup.ParseTemplates(signup.Templates()))
+	service := signup.NewService(log.Default(), tmpl, dir)
+	m := mux.NewRouter()
+	signup.RegisterHandlers(service, m)
+	db, err := account.NewDB(dir)
+	assert.NoError(err)
+	expectedNextASID := db.HeadValue().NextASID
+
+	postData := url.Values{}
+	postData.Set(signup.GetTemplateNameField, "")       // Empty name
+	postData.Set(signup.GetTemplateEmailField, "larry") // No @
+	postForm := httptest.NewRequest("POST", signup.Path, bytes.NewBufferString(postData.Encode()))
+	postForm.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	postFormRecorder := httptest.NewRecorder()
+	m.ServeHTTP(postFormRecorder, postForm)
+	resp := postFormRecorder.Result()
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	assert.NoError(err)
+
+	// Ensure repsonse is what we expect.
+	assert.Equal(200, resp.StatusCode)
+	body := string(bodyBytes)
+	assert.True(strings.Contains(body, "enter a Name"))
+	assert.True(strings.Contains(body, "enter a valid email address"))
+	assert.False(strings.Contains(body, "Success"))
+
+	// Ensure the account db was updated.
+	assert.NoError(db.Reload())
+	hv := db.HeadValue()
+	assert.Equal(expectedNextASID, hv.NextASID)
 }
