@@ -18,7 +18,7 @@ import (
 func Templates() []Template {
 	return []Template{
 		{Name: GetTemplateName, Content: GetTemplate},
-		{Name: PostTemplateName, Content: PostTemplate},
+		{Name: PostSuccessTemplateName, Content: PostSuccessTemplate},
 	}
 }
 
@@ -119,7 +119,7 @@ func (s *Service) handle(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		templateArgs := postTemplateArgs{ID: fmt.Sprintf("%d", id)}
-		if err := s.tmpl.ExecuteTemplate(w, PostTemplateName, templateArgs); err != nil {
+		if err := s.tmpl.ExecuteTemplate(w, PostSuccessTemplateName, templateArgs); err != nil {
 			serverError(w, err, s.logger)
 		}
 		s.logger.Info().Msgf("Created auto-signup account: %#v", accounts.Record[id])
