@@ -18,6 +18,7 @@ import (
 func Templates() []Template {
 	return []Template{
 		{Name: GetTemplateName, Content: GetTemplate},
+		{Name: PostFailureTemplateName, Content: PostFailureTemplate},
 		{Name: PostSuccessTemplateName, Content: PostSuccessTemplate},
 	}
 }
@@ -69,12 +70,8 @@ func RegisterHandlers(s *Service, router *mux.Router) {
 }
 
 func (s *Service) handle(w http.ResponseWriter, r *http.Request) {
-	// TODO account authorized clientview URLs should match on domain
-	// TODO better error messages for errors in POST
-	// TODO light form validation eg missing email
 	// TODO retry if concurrent POSTs step on each other + test
 	// TODO retry if saving new clientviewurl fails
-	// TODO logging
 	// TODO cache account.Records, eg only re-read every N second
 	// TODO rate limiting
 	// TODO add more text/explanation to POST template (currently just has the ID)
@@ -94,7 +91,23 @@ func (s *Service) handle(w http.ResponseWriter, r *http.Request) {
 	} else if r.Method == "POST" {
 		name := r.FormValue(GetTemplateNameField)
 		email := r.FormValue(GetTemplateEmailField)
-		// See TODOs above: we need light validation and better error messages
+
+		// The lightest of all possible lightweight form validations.
+		validationFailures := []string{}
+		if name == "" {
+			validationFailures = append(validationFailures, "Please enter a Name (either your personal name or an entity, eg your company).")
+		}
+		if strings.Index(email, "@") == -1 {
+			validationFailures = append(validationFailures, "Please enter a valid email address so we can contact you in the event of problems.")
+		}
+		if len(validationFailures) > 0 {
+			templateArgs := postFailureTemplateArgs{Reasons: validationFailures}
+			if err := s.tmpl.ExecuteTemplate(w, PostFailureTemplateName, templateArgs); err != nil {
+				serverError(w, err, s.logger)
+			}
+			return
+		}
+
 		db, err := account.NewDB(s.storageRoot)
 		if err != nil {
 			serverError(w, err, s.logger)
@@ -118,7 +131,7 @@ func (s *Service) handle(w http.ResponseWriter, r *http.Request) {
 			serverError(w, err, s.logger)
 			return
 		}
-		templateArgs := postTemplateArgs{ID: fmt.Sprintf("%d", id)}
+		templateArgs := postSuccessTemplateArgs{ID: fmt.Sprintf("%d", id)}
 		if err := s.tmpl.ExecuteTemplate(w, PostSuccessTemplateName, templateArgs); err != nil {
 			serverError(w, err, s.logger)
 		}
@@ -140,8 +153,12 @@ type getTemplateArgs struct {
 	Email string
 }
 
-type postTemplateArgs struct {
+type postSuccessTemplateArgs struct {
 	ID string // The newly created account id.
+}
+
+type postFailureTemplateArgs struct {
+	Reasons []string
 }
 
 func unsupportedMethodError(w http.ResponseWriter, m string, l zl.Logger) {

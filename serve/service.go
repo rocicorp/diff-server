@@ -31,11 +31,11 @@ var (
 
 // Service is an instance of the Replicache Diffserver services.
 type Service struct {
-	storageRoot           string
-	urlPrefix             string
-	maxASClientViewURLs   int
-	accountDB             *account.DB
-	nomsen                map[string]datas.Database
+	storageRoot         string
+	urlPrefix           string
+	maxASClientViewURLs int
+	accountDB           *account.DB
+	nomsen              map[string]datas.Database
 	// TODO remove when Version 2 is deprecated.
 	overrideClientViewURL string // Overrides account client view URL, eg for testing.
 	enableInject          bool
