@@ -97,6 +97,10 @@ func (s *Service) pull(rw http.ResponseWriter, r *http.Request) {
 
 	clientViewURL := ""
 	if preq.Version >= 3 {
+		// TODO remove check when Version 2 is deprecated.
+		if s.overrideClientViewURL != "" {
+			l.Info().Msgf("Ignoring --client-view=%s (clientViewURL is instead passed explicitly in the PullRequest in Version 3)", s.overrideClientViewURL)
+		}
 		if preq.ClientViewURL == "" {
 			clientError(rw, http.StatusBadRequest, "clientViewURL not provided in request", l)
 			return
@@ -116,8 +120,8 @@ func (s *Service) pull(rw http.ResponseWriter, r *http.Request) {
 		if len(acct.ClientViewURLs) > 0 {
 			clientViewURL = acct.ClientViewURLs[0]
 		}
-		if s.overridClientViewURL != "" {
-			clientViewURL = s.overridClientViewURL
+		if s.overrideClientViewURL != "" {
+			clientViewURL = s.overrideClientViewURL
 		}
 	}
 

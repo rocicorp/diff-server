@@ -31,14 +31,15 @@ var (
 
 // Service is an instance of the Replicache Diffserver services.
 type Service struct {
-	storageRoot          string
-	urlPrefix            string
-	maxASClientViewURLs  int
-	accountDB            *account.DB
-	nomsen               map[string]datas.Database
-	overridClientViewURL string // Overrides account client view URL, eg for testing.
-	enableInject         bool
-	mu                   sync.Mutex
+	storageRoot           string
+	urlPrefix             string
+	maxASClientViewURLs   int
+	accountDB             *account.DB
+	nomsen                map[string]datas.Database
+	// TODO remove when Version 2 is deprecated.
+	overrideClientViewURL string // Overrides account client view URL, eg for testing.
+	enableInject          bool
+	mu                    sync.Mutex
 
 	// cvg may be nil, in which case the server skips the client view request in pull, which is
 	// useful if you are populating the db directly or in tests.
@@ -52,14 +53,14 @@ type clientViewGetter interface {
 // NewService creates a new instances of the Replicant web service.
 func NewService(storageRoot string, maxASClientViewURLs int, accountDB *account.DB, overrideClientViewURL string, cvg clientViewGetter, enableInject bool) *Service {
 	return &Service{
-		storageRoot:          storageRoot,
-		maxASClientViewURLs:  maxASClientViewURLs,
-		accountDB:            accountDB,
-		nomsen:               map[string]datas.Database{},
-		overridClientViewURL: overrideClientViewURL,
-		enableInject:         enableInject,
-		mu:                   sync.Mutex{},
-		clientViewGetter:     cvg,
+		storageRoot:           storageRoot,
+		maxASClientViewURLs:   maxASClientViewURLs,
+		accountDB:             accountDB,
+		nomsen:                map[string]datas.Database{},
+		overrideClientViewURL: overrideClientViewURL,
+		enableInject:          enableInject,
+		mu:                    sync.Mutex{},
+		clientViewGetter:      cvg,
 	}
 }
 
