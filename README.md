@@ -17,11 +17,15 @@ go test ./...
 ## Run (Development Mode)
 
 ```
-./diffs serve --db=/tmp/diffs-data --enable-inject
+./diffs serve --db=/tmp/diffs-data --account-db=/tmp/diffs-accounts --enable-inject
 
-curl -H "Authorization: sandbox" -d '{"version": 2, "clientID":"c1", "baseStateID":"00000000000000000000000000000000", "checksum":"00000000"}' http://localhost:7001/pull
+# Pull from a Client View served from http://localhost:8000/replicache-client-view (replace clientViewURL as appropriate):
+curl -H "Authorization: sandbox" -d '{"version": 3, "clientID":"c1", "baseStateID":"00000000000000000000000000000000", "checksum":"00000000", "clientViewURL":  "http://localhost:8000/replicache-client-view"}' http://localhost:7001/pull
 
+# Or inject a clientview...
 curl  -H "Authorization: sandbox" -d '{"clientID":"c1", "clientViewResponse":{"clientView":{"foo":"bar"},"lastTransactionID":"2"}}' http://localhost:7001/inject
+# ... and then pull it (allowing localhost clientview fetch to fail):
+curl -H "Authorization: sandbox" -d '{"version": 3, "clientID":"c1", "baseStateID":"00000000000000000000000000000000", "checksum":"00000000", "clientViewURL":  "http://localhost:8000/replicache-client-view"}' http://localhost:7001/pull
 ```
 
 ## Deploy
