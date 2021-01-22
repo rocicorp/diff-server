@@ -110,7 +110,7 @@ func TestPOSTFailure(t *testing.T) {
 	assert.Equal(200, resp.StatusCode)
 	body := string(bodyBytes)
 	assert.True(strings.Contains(body, "enter a Name"))
-	assert.True(strings.Contains(body, "enter a valid email address"))
+	assert.True(strings.Contains(body, "enter a valid Email Address"))
 	assert.False(strings.Contains(body, "Success"))
 
 	// Ensure the account db was updated.

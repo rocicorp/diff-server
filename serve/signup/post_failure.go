@@ -21,9 +21,8 @@ const PostFailureTemplate = `
 	{{end}}
 	</ul>
 
-	<p>Please hit "back", correct the problem(s), and submit again. If
-	you feel that you've reached this page in error, our apologies,
-	please email <a href="mailto:support@replicache.dev">support@replicache.dev</a>. 
+	<p>Please hit "back", correct the problem(s), and submit again. If you feel that you've reached this<br>
+	page in error, our apologies, please email <a href="mailto:support@replicache.dev">support@replicache.dev</a>.<br>
 	Thanks! 
  </body>
 

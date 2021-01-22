@@ -19,13 +19,15 @@ const GetTemplate = `
     <h2>Replicache Account Signup</h2>
 
     <p>Please fill out the form below to generate an Account ID for Replicache.<br>
-        You need to include your Account ID in the <i>diffServerAuth</i> field when<br>
-        you <a href="https://github.com/rocicorp/replicache-sdk-js#%EF%B8%8F-instantiate">instantiate Replicache</a>
-        in your JavaScript application.
+    You need to include your Account ID in the <i>diffServerAuth</i> field when<br>
+    you <a href="https://github.com/rocicorp/replicache-sdk-js#%EF%B8%8F-instantiate">instantiate Replicache</a>
+    in your JavaScript application.
 
-    <p>Note that while your Account ID will be useful for <strong>evaluating</strong> Replicache,<br>
-        it maybe subject to certain limits that make it unsuitable for large-scale production use. <br>
-        Please contact us by TODO in order to have your account upgraded for production use.<br><br>
+	<p>Note that your account will be suitable for <big><big><strong>evaluation purposes</strong></big></big>, but<br>
+	due to licensing and default account limitations, it will not be suitable for<br>
+	deployment to end users in production "for real." In order to deploy Replicache<br>
+	to end users in production for non-evaluation purposes, please email us<br>
+	at <a href="mailto:support@replicache.dev">support@replicache.dev</a> to upgrade your account.<br><br>
 
     <form method="POST" action="/signup">
         <label>Name: <input type="text" name="{{.Name}}"></label><br>
