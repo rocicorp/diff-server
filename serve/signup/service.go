@@ -70,18 +70,6 @@ func RegisterHandlers(s *Service, router *mux.Router) {
 }
 
 func (s *Service) handle(w http.ResponseWriter, r *http.Request) {
-	// TODO retry if concurrent POSTs step on each other + test
-	// TODO retry if saving new clientviewurl fails
-	// TODO cache account.Records, eg only re-read every N second
-	// TODO rate limiting
-	// TODO add more text/explanation to POST template (currently just has the ID)
-	// TODO figure out how to recommend they contact us and include in templates
-	// TODO purty
-	// TODO update setup instructions and docs to point to this service
-	// TODO update diffs instructions to include account-db and template-path
-	// TODO wipe prod account db to clean slate when we launch this feature
-	//      (ie, remove the noise from us tire-kicking)
-
 	if r.Method == "GET" {
 		if err := s.tmpl.ExecuteTemplate(w, GetTemplateName, getTemplateArgs{GetTemplateNameField, GetTemplateEmailField}); err != nil {
 			serverError(w, err, s.logger)
@@ -98,7 +86,7 @@ func (s *Service) handle(w http.ResponseWriter, r *http.Request) {
 			validationFailures = append(validationFailures, "Please enter a Name (either your personal name or an entity, eg your company).")
 		}
 		if strings.Index(email, "@") == -1 {
-			validationFailures = append(validationFailures, "Please enter a valid email address so we can contact you in the event of problems.")
+			validationFailures = append(validationFailures, "Please enter a valid Email Address so we can contact you in the event of problems.")
 		}
 		if len(validationFailures) > 0 {
 			templateArgs := postFailureTemplateArgs{Reasons: validationFailures}
@@ -127,7 +115,7 @@ func (s *Service) handle(w http.ResponseWriter, r *http.Request) {
 		}
 		accounts.NextASID++
 		if err := account.WriteRecords(db, accounts); err != nil {
-			// See TODOs above: retry if head was changed from under us.
+			// TODO: retry if head was changed from under us.
 			serverError(w, err, s.logger)
 			return
 		}
