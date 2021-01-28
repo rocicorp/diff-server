@@ -60,7 +60,7 @@ func TestInject(t *testing.T) {
 		defer func() { assert.NoError(os.RemoveAll(adir)) }()
 		account.AddUnittestAccount(assert, adb)
 
-		s := NewService(td, account.MaxASClientViewHosts, adb, "", nil, t.injectEnabled)
+		s := NewService(td, account.MaxASClientViewHosts, adb, false, nil, t.injectEnabled)
 
 		msg := fmt.Sprintf("test case %d", i)
 		req := httptest.NewRequest(t.method, "/inject", strings.NewReader(t.req))

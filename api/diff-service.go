@@ -51,7 +51,7 @@ func init() {
 		panic(err)
 	}
 
-	svc := serve.NewService(storageRoot, account.MaxASClientViewHosts, accountDB, "", serve.ClientViewGetter{}, false)
+	svc := serve.NewService(storageRoot, account.MaxASClientViewHosts, accountDB, false, serve.ClientViewGetter{}, false)
 	mux := mux.NewRouter()
 	serve.RegisterHandlers(svc, mux)
 	diffServiceHandler = mux

@@ -39,7 +39,7 @@ func TestHello(t *testing.T) {
 		adb, adir := account.LoadTempDB(assert)
 		defer func() { assert.NoError(os.RemoveAll(adir)) }()
 
-		s := NewService(td, account.MaxASClientViewHosts, adb, "", nil, true)
+		s := NewService(td, account.MaxASClientViewHosts, adb, false, nil, true)
 
 		msg := fmt.Sprintf("test case %d", i)
 		req := httptest.NewRequest(t.method, "/hello", nil)

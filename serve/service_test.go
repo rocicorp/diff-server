@@ -24,8 +24,8 @@ func TestConcurrentAccessUsingMultipleServices(t *testing.T) {
 	defer func() { assert.NoError(os.RemoveAll(adir)) }()
 
 	fcvg := &fakeClientViewGet{resp: types.ClientViewResponse{}, code: 200, err: nil}
-	svc1 := NewService(td, account.MaxASClientViewHosts, adb, "", fcvg, true)
-	svc2 := NewService(td, account.MaxASClientViewHosts, adb, "", fcvg, true)
+	svc1 := NewService(td, account.MaxASClientViewHosts, adb, false, fcvg, true)
+	svc2 := NewService(td, account.MaxASClientViewHosts, adb, false, fcvg, true)
 
 	res := []*httptest.ResponseRecorder{
 		httptest.NewRecorder(),
@@ -62,7 +62,7 @@ func TestNo301(t *testing.T) {
 	adb, adir := account.LoadTempDB(assert)
 	defer func() { assert.NoError(os.RemoveAll(adir)) }()
 
-	svc := NewService(td, account.MaxASClientViewHosts, adb, "", nil, true)
+	svc := NewService(td, account.MaxASClientViewHosts, adb, false, nil, true)
 	r := httptest.NewRecorder()
 
 	mux := mux.NewRouter()
