@@ -124,14 +124,13 @@ func serve(parent *kingpin.Application, sps *string, ads *string, errs io.Writer
 	kc := parent.Command("serve", "Starts a local diff-server.")
 	port := kc.Flag("port", "The port to run on").Default("7001").Int()
 	enableInject := kc.Flag("enable-inject", "Enable /inject endpoint which writes directly to the database for testing").Default("false").Bool()
-	// TODO remove when Version 2 is deprecated.
-	overrideClientViewURL := parent.Flag("client-view", "URL to use for all accounts' Client View").PlaceHolder("http://localhost:8000/replicache-client-view").Default("").String()
+	disableAuth := parent.Flag("disable-auth", "Disable auth check in pull").Default("false").Bool()
 	kc.Action(func(_ *kingpin.ParseContext) error {
 		l.Info().Msgf("Listening on %d...", *port)
 
 		// Set up diffserver service (pull, inject, etc).
-		if *overrideClientViewURL != "" {
-			l.Info().Msgf("Overriding all client view URLs with %s", *overrideClientViewURL)
+		if *disableAuth {
+			l.Info().Msg("Pull auth check disabled")
 		}
 
 		accountDB, err := account.NewDB(*ads)
@@ -139,7 +138,7 @@ func serve(parent *kingpin.Application, sps *string, ads *string, errs io.Writer
 			panic(err)
 		}
 
-		svc := servepkg.NewService(*sps, account.MaxASClientViewHosts, accountDB, *overrideClientViewURL, servepkg.ClientViewGetter{}, *enableInject)
+		svc := servepkg.NewService(*sps, account.MaxASClientViewHosts, accountDB, *disableAuth, servepkg.ClientViewGetter{}, *enableInject)
 		mux := mux.NewRouter()
 		servepkg.RegisterHandlers(svc, mux)
 

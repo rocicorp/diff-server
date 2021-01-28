@@ -67,10 +67,14 @@ func (s *Service) pull(rw http.ResponseWriter, r *http.Request) {
 		serverError(rw, err, l)
 		return
 	}
-	acct, ok := account.Lookup(accounts, accountName)
-	if !ok {
-		clientError(rw, http.StatusBadRequest, fmt.Sprintf("Unknown account: %s", accountName), l)
-		return
+	var acct account.Record
+	if !s.disableAuth {
+		var ok bool
+		acct, ok = account.Lookup(accounts, accountName)
+		if !ok {
+			clientError(rw, http.StatusBadRequest, fmt.Sprintf("Unknown account: %s", accountName), l)
+			return
+		}
 	}
 
 	if preq.ClientID == "" {
@@ -97,19 +101,23 @@ func (s *Service) pull(rw http.ResponseWriter, r *http.Request) {
 
 	clientViewURL := ""
 	if preq.Version >= 3 {
-		// TODO remove check when Version 2 is deprecated.
-		if s.overrideClientViewURL != "" {
-			l.Info().Msgf("Ignoring --client-view=%s (clientViewURL is instead passed explicitly in the PullRequest in Version 3)", s.overrideClientViewURL)
-		}
 		if preq.ClientViewURL == "" {
 			clientError(rw, http.StatusBadRequest, "clientViewURL not provided in request", l)
 			return
 		}
 		clientViewURL = preq.ClientViewURL
-		authorized, err := account.ClientViewURLAuthorized(s.maxASClientViewURLs, s.accountDB, accounts, acct.ID, clientViewURL, l)
-		if err != nil {
-			serverError(rw, err, l)
-			return
+
+		var authorized bool
+		if s.disableAuth {
+			l.Info().Msg("Ignoring auth for this request (--disable-auth=true)")
+			authorized = true
+		} else {
+			var err error
+			authorized, err = account.ClientViewURLAuthorized(s.maxASClientViewURLs, s.accountDB, accounts, acct.ID, clientViewURL, l)
+			if err != nil {
+				serverError(rw, err, l)
+				return
+			}
 		}
 		if !authorized {
 			clientError(rw, http.StatusForbidden, "clientViewURL is not authorized; please contact support@replicache.dev", l)
@@ -119,9 +127,6 @@ func (s *Service) pull(rw http.ResponseWriter, r *http.Request) {
 		// TODO remove this block when Version 2 is deprecated.
 		if len(acct.ClientViewURLs) > 0 {
 			clientViewURL = acct.ClientViewURLs[0]
-		}
-		if s.overrideClientViewURL != "" {
-			clientViewURL = s.overrideClientViewURL
 		}
 	}
 

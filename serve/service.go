@@ -36,10 +36,9 @@ type Service struct {
 	maxASClientViewURLs int
 	accountDB           *account.DB
 	nomsen              map[string]datas.Database
-	// TODO remove when Version 2 is deprecated.
-	overrideClientViewURL string // Overrides account client view URL, eg for testing.
-	enableInject          bool
-	mu                    sync.Mutex
+	disableAuth         bool
+	enableInject        bool
+	mu                  sync.Mutex
 
 	// cvg may be nil, in which case the server skips the client view request in pull, which is
 	// useful if you are populating the db directly or in tests.
@@ -51,16 +50,16 @@ type clientViewGetter interface {
 }
 
 // NewService creates a new instances of the Replicant web service.
-func NewService(storageRoot string, maxASClientViewURLs int, accountDB *account.DB, overrideClientViewURL string, cvg clientViewGetter, enableInject bool) *Service {
+func NewService(storageRoot string, maxASClientViewURLs int, accountDB *account.DB, disableAuth bool, cvg clientViewGetter, enableInject bool) *Service {
 	return &Service{
-		storageRoot:           storageRoot,
-		maxASClientViewURLs:   maxASClientViewURLs,
-		accountDB:             accountDB,
-		nomsen:                map[string]datas.Database{},
-		overrideClientViewURL: overrideClientViewURL,
-		enableInject:          enableInject,
-		mu:                    sync.Mutex{},
-		clientViewGetter:      cvg,
+		storageRoot:         storageRoot,
+		maxASClientViewURLs: maxASClientViewURLs,
+		accountDB:           accountDB,
+		nomsen:              map[string]datas.Database{},
+		disableAuth:         disableAuth,
+		enableInject:        enableInject,
+		mu:                  sync.Mutex{},
+		clientViewGetter:    cvg,
 	}
 }
 
