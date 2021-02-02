@@ -54,9 +54,7 @@ func NewDB(storageRoot string) (*DB, error) {
 	return &r, nil
 }
 
-// TODO change database to "accounts" once we release to reset our
-//      tire-kicking before releasing the feature.
-const DatabaseName = "TODOaccounts2"
+const DatabaseName = "accounts"
 const DatasetName = "websignup"
 
 func (db *DB) initLocked() error {
