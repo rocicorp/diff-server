@@ -1,5 +1,11 @@
 ![Go](https://github.com/rocicorp/diff-server/workflows/Go/badge.svg)
 
+# *** DEPRECATED ****
+
+The Replicache Diff Server has been deprecated: its use is no longer recommended and it will not be supported at all after March'21. 
+
+See [https://js.replicache.dev/](https://js.replicache.dev/) for how to set Replicache up without the Diff Server.
+
 # Replicache Diff Server
 
 This repository implements the Replicache Diff Server. See [Replicache](https://github.com/rocicorp/replicache) for more information. See the [contributing guide](https://github.com/rocicorp/replicache/blob/master/contributing.md) there for contributing information.
